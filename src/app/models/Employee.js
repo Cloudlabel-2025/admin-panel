@@ -73,5 +73,7 @@ const EmployeeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+export { EmployeeSchema };
+
 export default mongoose.models.Employee ||
   mongoose.model("Employee", EmployeeSchema);
