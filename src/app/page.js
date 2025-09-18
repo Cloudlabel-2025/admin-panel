@@ -29,7 +29,6 @@ export default function EmployeeForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Handle nested objects (emergencyContact, address)
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
       setFormData((prev) => ({
@@ -44,10 +43,52 @@ export default function EmployeeForm() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitted Data:", formData);
-    // You can POST to your API route here
+
+    try {
+      const response = await fetch("/api/Employee", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("✅ Employee created successfully!");
+        // Optionally reset form or redirect here
+        setFormData({
+          employeeId: "",
+          firstName: "",
+          lastName: "",
+          dob: "",
+          gender: "",
+          email: "",
+          phone: "",
+          joiningDate: "",
+          role: "",
+          emergencyContact: {
+            contactPerson: "",
+            contactNumber: "",
+          },
+          address: {
+            street: "",
+            city: "",
+            state: "",
+            zip: "",
+            country: "",
+          },
+        });
+      } else {
+        alert(`❌ Error: ${data.message || "Failed to create employee"}`);
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("❌ Submission failed. Please try again.");
+    }
   };
 
   return (
@@ -159,9 +200,26 @@ export default function EmployeeForm() {
             <option value="">Select Role</option>
             <option value="Super-admin">Super-admin</option>
             <option value="admin">Admin</option>
+            <option value="Team-Manager">Team-Manager</option>
+            <option value="Team-Lead">Team-Lead</option>
             <option value="Team-admin">Team-admin</option>
             <option value="Employee">Employee</option>
             <option value="Intern">Intern</option>
+          </select>
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Department</label>
+          <select
+            className="form-select"
+            name="department"
+            value={formData.role}
+            onChange={handleChange}
+          >
+            <option value="">Department</option>
+            <option value="Technical">Technical</option>
+            <option value="Functional">Functional</option>
+            <option value="Production">Production</option>
+            <option value="OIC">OIC</option>
           </select>
         </div>
 
