@@ -11,9 +11,12 @@ const EmployeeSchema = new mongoose.Schema(
     phone: { type: String, unique: true },
 
     joiningDate: { type: Date, default: Date.now },
+
+    department: {
+      type: String,
+    },
     role: {
       type: String,
-      enum: ["Super-admin", "admin", "Team-admin", "Employee", "Intern"],
     },
 
     emergencyContact: {
@@ -67,7 +70,8 @@ const EmployeeSchema = new mongoose.Schema(
       currency: { type: String },
     },
   },
-  { timestamps: true } 
+  { timestamps: true }
 );
 
-export default mongoose.models.Employee || mongoose.model("Employee", EmployeeSchema);
+export default mongoose.models.Employee ||
+  mongoose.model("Employee", EmployeeSchema);

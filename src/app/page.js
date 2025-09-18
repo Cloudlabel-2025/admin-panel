@@ -12,6 +12,7 @@ export default function EmployeeForm() {
     email: "",
     phone: "",
     joiningDate: "",
+    department: "",
     role: "",
     emergencyContact: {
       contactPerson: "",
@@ -58,8 +59,7 @@ export default function EmployeeForm() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("✅ Employee created successfully!");
-        // Optionally reset form or redirect here
+        alert("Employee created successfully!");
         setFormData({
           employeeId: "",
           firstName: "",
@@ -69,6 +69,7 @@ export default function EmployeeForm() {
           email: "",
           phone: "",
           joiningDate: "",
+          department: "",
           role: "",
           emergencyContact: {
             contactPerson: "",
@@ -83,7 +84,7 @@ export default function EmployeeForm() {
           },
         });
       } else {
-        alert(`❌ Error: ${data.message || "Failed to create employee"}`);
+        alert(`Error: ${data.message || "Failed to create employee"}`);
       }
     } catch (error) {
       console.error("Submission error:", error);
@@ -190,6 +191,21 @@ export default function EmployeeForm() {
 
         {/* Role */}
         <div className="col-md-6">
+          <label className="form-label">Department</label>
+          <select
+            className="form-select"
+            name="department"
+            value={formData.department}
+            onChange={handleChange}
+          >
+            <option value="">Select Department</option>
+            <option value="Technical">Technical</option>
+            <option value="Functional">Functional</option>
+            <option value="Production">Production</option>
+            <option value="OIC">OIC</option>
+          </select>
+        </div>
+        <div className="col-md-6">
           <label className="form-label">Role</label>
           <select
             className="form-select"
@@ -207,22 +223,6 @@ export default function EmployeeForm() {
             <option value="Intern">Intern</option>
           </select>
         </div>
-        <div className="col-md-6">
-          <label className="form-label">Department</label>
-          <select
-            className="form-select"
-            name="department"
-            value={formData.role}
-            onChange={handleChange}
-          >
-            <option value="">Department</option>
-            <option value="Technical">Technical</option>
-            <option value="Functional">Functional</option>
-            <option value="Production">Production</option>
-            <option value="OIC">OIC</option>
-          </select>
-        </div>
-
         {/* Emergency Contact */}
         <h5 className="mt-4">Emergency Contact</h5>
         <div className="col-md-6">
