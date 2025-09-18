@@ -1,9 +1,253 @@
+"use client";
 
+import { useState } from "react";
 
-export default function Home() {
+export default function EmployeeForm() {
+  const [formData, setFormData] = useState({
+    employeeId: "",
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: "",
+    email: "",
+    phone: "",
+    joiningDate: "",
+    role: "",
+    emergencyContact: {
+      contactPerson: "",
+      contactNumber: "",
+    },
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      zip: "",
+      country: "",
+    },
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // Handle nested objects (emergencyContact, address)
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Submitted Data:", formData);
+    // You can POST to your API route here
+  };
+
   return (
-    <div className="container">
-       <h1>Admin-panel</h1>
+    <div className="container mt-5">
+      <h2 className="mb-4 text-center">Employee Registration Form</h2>
+      <form className="row g-3" onSubmit={handleSubmit}>
+        {/* Basic Info */}
+        <div className="col-md-6">
+          <label className="form-label">Employee ID</label>
+          <input
+            type="text"
+            className="form-control"
+            name="employeeId"
+            value={formData.employeeId}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Joining Date</label>
+          <input
+            type="date"
+            className="form-control"
+            name="joiningDate"
+            value={formData.joiningDate}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="col-md-6">
+          <label className="form-label">First Name</label>
+          <input
+            type="text"
+            className="form-control"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Last Name</label>
+          <input
+            type="text"
+            className="form-control"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="col-md-6">
+          <label className="form-label">Date of Birth</label>
+          <input
+            type="date"
+            className="form-control"
+            name="dob"
+            value={formData.dob}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Gender</label>
+          <select
+            className="form-select"
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+          >
+            <option value="">Select</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        {/* Contact Info */}
+        <div className="col-md-6">
+          <label className="form-label">Email</label>
+          <input
+            type="email"
+            className="form-control"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Phone</label>
+          <input
+            type="text"
+            className="form-control"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Role */}
+        <div className="col-md-6">
+          <label className="form-label">Role</label>
+          <select
+            className="form-select"
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+          >
+            <option value="">Select Role</option>
+            <option value="Super-admin">Super-admin</option>
+            <option value="admin">Admin</option>
+            <option value="Team-admin">Team-admin</option>
+            <option value="Employee">Employee</option>
+            <option value="Intern">Intern</option>
+          </select>
+        </div>
+
+        {/* Emergency Contact */}
+        <h5 className="mt-4">Emergency Contact</h5>
+        <div className="col-md-6">
+          <label className="form-label">Contact Person</label>
+          <input
+            type="text"
+            className="form-control"
+            name="emergencyContact.contactPerson"
+            value={formData.emergencyContact.contactPerson}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Contact Number</label>
+          <input
+            type="text"
+            className="form-control"
+            name="emergencyContact.contactNumber"
+            value={formData.emergencyContact.contactNumber}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Address */}
+        <h5 className="mt-4">Address</h5>
+        <div className="col-12">
+          <label className="form-label">Street</label>
+          <input
+            type="text"
+            className="form-control"
+            name="address.street"
+            value={formData.address.street}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">City</label>
+          <input
+            type="text"
+            className="form-control"
+            name="address.city"
+            value={formData.address.city}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">State</label>
+          <input
+            type="text"
+            className="form-control"
+            name="address.state"
+            value={formData.address.state}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-2">
+          <label className="form-label">Zip</label>
+          <input
+            type="text"
+            className="form-control"
+            name="address.zip"
+            value={formData.address.zip}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="col-md-2">
+          <label className="form-label">Country</label>
+          <input
+            type="text"
+            className="form-control"
+            name="address.country"
+            value={formData.address.country}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Submit */}
+        <div className="col-12 text-center mt-4">
+          <button type="submit" className="btn btn-primary px-5">
+            Submit
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
