@@ -2,22 +2,19 @@ import mongoose from "mongoose";
 
 const EmployeeSchema = new mongoose.Schema(
   {
-    employeeId: { type: String, required: true, unique: true },
+    employeeId: { type: String, unique: true },
+
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     dob: { type: Date },
     gender: { type: String, enum: ["Male", "Female", "Other"] },
-    email: { type: String, unique: true },
-    phone: { type: String, unique: true },
+    email: { type: String },
+    phone: { type: String },
 
     joiningDate: { type: Date, default: Date.now },
 
-    department: {
-      type: String,
-    },
-    role: {
-      type: String,
-    },
+    department: { type: String },
+    role: { type: String },
 
     emergencyContact: {
       contactPerson: { type: String },
@@ -72,8 +69,6 @@ const EmployeeSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-export { EmployeeSchema };
 
 export default mongoose.models.Employee ||
   mongoose.model("Employee", EmployeeSchema);

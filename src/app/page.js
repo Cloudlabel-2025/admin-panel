@@ -68,7 +68,7 @@ export default function EmployeeForm() {
     try {
       // send only the fields needed for validation (keeps payload small)
       const payload = {
-        employeeId: formData.employeeId,
+      
         email: formData.email,
         phone: formData.phone,
         emergencyContact: { contactNumber: formData.emergencyContact.contactNumber },
@@ -129,7 +129,7 @@ export default function EmployeeForm() {
     setLoading(true);
 
     // Ensure required front-end fields present
-    if (!formData.employeeId || !formData.email || !formData.phone || !formData.department || !formData.emergencyContact.contactNumber) {
+    if ( !formData.email || !formData.phone || !formData.department || !formData.emergencyContact.contactNumber) {
       alert("Please fill Employee ID, Email, Phone, Department and Emergency Contact Number.");
       setLoading(false);
       return;
@@ -183,18 +183,7 @@ export default function EmployeeForm() {
       <h2 className="mb-4 text-center">Employee Registration Form</h2>
       <form className="row g-3" onSubmit={handleSubmit}>
         {/* Employee ID */}
-        <div className="col-md-6">
-          <label className="form-label">Employee ID</label>
-          <input
-            type="text"
-            
-            name="employeeId"
-            value={formData.employeeId}
-            onChange={handleChange}
-            className="form-control"
-            required
-          />
-        </div>
+       
 
         {/* First Name */}
         <div className="col-md-6">
