@@ -1,39 +1,57 @@
 import connectMongoose from "../../utilis/connectMongoose";
-import Employee from "../../models/Employee";
+import Employee, { EmployeeSchema } from "../../../models/Employee";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
+// 🔹 Utility to get department model dynamically
+function getDepartmentModel(department) {
+  const collectionName = department.toLowerCase() + "_department";
+  return (
+    mongoose.models[collectionName] ||
+    mongoose.model(collectionName, EmployeeSchema, collectionName)
+  );
+}
+
+// ✅ POST: Create new employee with duplicate checks
 export async function POST(req) {
   try {
     await connectMongoose();
-
     const body = await req.json();
-    const { department } = body;
+    const { employeeId, email, phone, emergencyContact, department } = body;
 
-    if (!department) {
+    if (!employeeId || !email || !phone || !emergencyContact?.contactNumber || !department) {
       return NextResponse.json(
-        { error: "Department is required" },
+        { error: "employeeId, email, phone, emergency contact, and department are required" },
         { status: 400 }
       );
     }
 
-    // 1️⃣ Save in main employees collection
+    // 🔎 Check for duplicates
+    const duplicate = await Employee.findOne({
+      $or: [
+        { employeeId },
+        { email },
+        { phone },
+        { "emergencyContact.contactNumber": emergencyContact.contactNumber },
+      ],
+    });
+
+    if (duplicate) {
+      return NextResponse.json(
+        { error: "Employee with same ID, email, phone, or emergency contact already exists" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Save in main collection
     const employee = await Employee.create(body);
 
-    // 2️⃣ Save in dynamic department collection with flexible schema
-    const collectionName = department.toLowerCase() + "_department";
-    const DepartmentSchema = new mongoose.Schema({}, { strict: false });
-    const DepartmentModel =
-      mongoose.models[collectionName] ||
-      mongoose.model(collectionName, DepartmentSchema, collectionName);
-
+    // ✅ Save in department collection
+    const DepartmentModel = getDepartmentModel(department);
     await DepartmentModel.create(body);
 
     return NextResponse.json(
-      {
-        message: `Employee saved in employees and ${collectionName} collections`,
-        employee,
-      },
+      { message: "Employee created successfully", employee },
       { status: 201 }
     );
   } catch (err) {
@@ -42,30 +60,3 @@ export async function POST(req) {
   }
 }
 
-export async function GET(req) {
-  try {
-    await connectMongoose();
-
-    const { searchParams } = new URL(req.url);
-    const department = searchParams.get("department"); // optional query param
-
-    if (department) {
-      // Fetch from dynamic department collection
-      const collectionName = department.toLowerCase() + "_department";
-      const DepartmentSchema = new mongoose.Schema({}, { strict: false });
-      const DepartmentModel =
-        mongoose.models[collectionName] ||
-        mongoose.model(collectionName, DepartmentSchema, collectionName);
-
-      const employees = await DepartmentModel.find();
-      return NextResponse.json(employees, { status: 200 });
-    } else {
-      // Fetch all employees from main collection
-      const employees = await Employee.find();
-      return NextResponse.json(employees, { status: 200 });
-    }
-  } catch (err) {
-    console.error("Error fetching employees:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
