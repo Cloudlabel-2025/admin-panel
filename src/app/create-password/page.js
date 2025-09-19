@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 
-export default function CreatePasswordPage() {
-  const searchParams = useSearchParams();
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function CreatePasswordPage({ searchParams }) {
   const router = useRouter();
-  const email = searchParams.get("email");
+  const email = searchParams?.email;
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +24,7 @@ export default function CreatePasswordPage() {
       } else {
         router.push("/login");
       }
-    } catch (err) {
+    } catch {
       setError("Server error. Try again.");
     }
   };
