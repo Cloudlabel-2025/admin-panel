@@ -316,6 +316,7 @@ export default function EmployeeForm() {
         <div className="col-md-6">
           <label className="form-label">Emergency Contact Person</label>
           <input
+          
             type="text"
             name="emergencyContact.contactPerson"
             value={formData.emergencyContact.contactPerson}
