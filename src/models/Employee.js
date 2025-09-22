@@ -87,7 +87,17 @@ EmployeeSchema.pre("save", async function (next) {
   next();
 });
 
-export { EmployeeSchema};
+// Dynamic model creation based on department
+export function createEmployeeModel(department) {
+  const collectionName = `${department.toLowerCase()}_department`;
+  
+  // Return existing model if already created
+  if (mongoose.models[collectionName]) {
+    return mongoose.models[collectionName];
+  }
+  
+  // Create new model for the department
+  return mongoose.model(collectionName, EmployeeSchema, collectionName);
+}
 
-export default mongoose.models.Employee ||
-  mongoose.model("Employee", EmployeeSchema);
+export { EmployeeSchema };

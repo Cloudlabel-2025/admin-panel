@@ -1,15 +1,22 @@
 import connectMongoose from "../../../utilis/connectMongoose";
-import Employee, { EmployeeSchema } from "../../../../models/Employee";
+import { createEmployeeModel } from "../../../../models/Employee";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
-// 🔹 Utility to get department model dynamically
-function getDepartmentModel(department) {
-  const collectionName = department.toLowerCase() + "_department";
-  return (
-    mongoose.models[collectionName] ||
-    mongoose.model(collectionName, EmployeeSchema, collectionName)
+// Helper to find employee across all department collections
+async function findEmployeeInDepartments(employeeId) {
+  const departmentCollections = Object.keys(mongoose.models).filter(name =>
+    name.endsWith("_department")
   );
+  
+  for (const collName of departmentCollections) {
+    const Model = mongoose.models[collName];
+    const employee = await Model.findOne({ employeeId });
+    if (employee) {
+      return { employee, department: collName.replace("_department", "") };
+    }
+  }
+  return null;
 }
 
 // ✅ GET: Single employee
@@ -18,12 +25,12 @@ export async function GET(req, { params }) {
     await connectMongoose();
     const { employeeId } = params;
 
-    const employee = await Employee.findOne({ employeeId });
-    if (!employee) {
+    const result = await findEmployeeInDepartments(employeeId);
+    if (!result) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
-    return NextResponse.json(employee, { status: 200 });
+    return NextResponse.json(result.employee, { status: 200 });
   } catch (err) {
     console.error("Error fetching employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -36,61 +43,61 @@ export async function PATCH(req, { params }) {
     await connectMongoose();
     const { employeeId } = params;
     const body = await req.json();
-    const { department, ...updates } = body;
+    const { department: newDepartment, ...updates } = body;
 
-    const employee = await Employee.findOne({ employeeId });
-    if (!employee) {
+    const result = await findEmployeeInDepartments(employeeId);
+    if (!result) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
-    const oldDepartment = employee.department;
-
-    // Update main employee
-    employee.set({ ...updates, department });
-    await employee.save();
+    const { employee, department: oldDepartment } = result;
+    const updatedData = { ...employee.toObject(), ...updates, department: newDepartment };
 
     // If department changed, move record
-    if (department && department !== oldDepartment) {
-      if (oldDepartment) {
-        const OldDeptModel = getDepartmentModel(oldDepartment);
-        await OldDeptModel.deleteOne({ employeeId });
-      }
-      const NewDeptModel = getDepartmentModel(department);
-      await NewDeptModel.create(employee.toObject());
-    } else if (department) {
-      const CurrentDeptModel = getDepartmentModel(department);
-      await CurrentDeptModel.updateOne({ employeeId }, employee.toObject());
+    if (newDepartment && newDepartment !== oldDepartment) {
+      const OldDeptModel = createEmployeeModel(oldDepartment);
+      await OldDeptModel.deleteOne({ employeeId });
+      
+      const NewDeptModel = createEmployeeModel(newDepartment);
+      const updatedEmployee = await NewDeptModel.create(updatedData);
+      
+      return NextResponse.json(
+        { message: "Employee updated and transferred successfully", employee: updatedEmployee },
+        { status: 200 }
+      );
+    } else {
+      const CurrentDeptModel = createEmployeeModel(oldDepartment);
+      const updatedEmployee = await CurrentDeptModel.findOneAndUpdate(
+        { employeeId },
+        updatedData,
+        { new: true }
+      );
+      
+      return NextResponse.json(
+        { message: "Employee updated successfully", employee: updatedEmployee },
+        { status: 200 }
+      );
     }
-
-    return NextResponse.json(
-      { message: "Employee updated successfully", employee },
-      { status: 200 }
-    );
   } catch (err) {
     console.error("Error updating employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// ✅ DELETE: Remove employee (main + department collection)
+// ✅ DELETE: Remove employee from department collection
 export async function DELETE(req, { params }) {
   try {
     await connectMongoose();
     const { employeeId } = params;
 
-    const employee = await Employee.findOne({ employeeId });
-    if (!employee) {
+    const result = await findEmployeeInDepartments(employeeId);
+    if (!result) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
-    const department = employee.department;
-
-    await Employee.deleteOne({ employeeId });
-
-    if (department) {
-      const DeptModel = getDepartmentModel(department);
-      await DeptModel.deleteOne({ employeeId });
-    }
+    const { department } = result;
+    const DeptModel = createEmployeeModel(department);
+    await DeptModel.deleteOne({ employeeId });
 
     return NextResponse.json(
       { message: "Employee deleted successfully" },
