@@ -3,20 +3,17 @@ import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
 export default function TimecardPage() {
-  const employeeId = "EMP001";
+  const employeeId = "CHC001";
   const [timecards, setTimecards] = useState([]);
   const [current, setCurrent] = useState(null);
   const [permission, setPermission] = useState(0); // in hours
   const [reason, setReason] = useState("");
+  const [permissionLocked, setPermissionLocked] = useState(false);
 
   // Helpers
   const getTimeString = () =>
-    new Date().toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const getDateString = () => new Date().toISOString().split("T")[0];
-
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const d = new Date(dateStr);
@@ -36,12 +33,11 @@ export default function TimecardPage() {
       setCurrent(today);
       setPermission(Number(today.permission) || 0);
       setReason(today.reason || "");
+      if (today.permission && today.reason) {
+        setPermissionLocked(true); // disable inputs if already saved
+      }
     } else {
-      const newEntry = {
-        employeeId,
-        date: getDateString(),
-        logIn: getTimeString(),
-      };
+      const newEntry = { employeeId, date: getDateString(), logIn: getTimeString() };
       const res2 = await fetch("/api/timecard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,27 +67,24 @@ export default function TimecardPage() {
     const data = await res.json();
     if (data.timecard) {
       setCurrent(data.timecard);
-      fetchTimecards();
+      setTimecards((prev) =>
+        prev.map((t) => (t._id === data.timecard._id ? data.timecard : t))
+      );
     }
   };
 
   // Actions
   const handleLogOut = () => updateTimecard({ logOut: getTimeString() });
-
-  // Separate Lunch Out / In
   const handleLunchOut = () => {
     if (!current?.lunchOut) updateTimecard({ lunchOut: getTimeString() });
   };
-
   const handleLunchIn = () => {
-    if (current?.lunchOut && !current?.lunchIn)
-      updateTimecard({ lunchIn: getTimeString() });
+    if (current?.lunchOut && !current?.lunchIn) updateTimecard({ lunchIn: getTimeString() });
   };
-
   const handleSavePermission = () => {
     updateTimecard({ permission, reason });
+    setPermissionLocked(true); // disable further edits
   };
-
   const handleLock = () => updateTimecard({ lockTime: getTimeString() });
 
   // Hours calculation
@@ -113,6 +106,8 @@ export default function TimecardPage() {
 
     if (t.permission) worked -= Number(t.permission) * 60;
 
+    if (worked < 0) worked = 0; // clamp to prevent negatives
+
     const hh = String(Math.floor(worked / 60)).padStart(2, "0");
     const mm = String(worked % 60).padStart(2, "0");
     return `${hh}:${mm}`;
@@ -128,7 +123,6 @@ export default function TimecardPage() {
   // Export Excel
   const exportReport = () => {
     if (!timecards.length) return;
-
     const wsData = timecards.map((t) => ({
       Date: formatDate(t.date),
       LogIn: t.logIn || "-",
@@ -139,7 +133,6 @@ export default function TimecardPage() {
       Reason: t.reason || "-",
       TotalHours: calcTotalHours(t),
     }));
-
     const ws = XLSX.utils.json_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
@@ -158,63 +151,22 @@ export default function TimecardPage() {
 
       {/* Lunch Buttons */}
       <div className="mt-3">
-        <button
-          className="btn btn-warning me-2"
-          onClick={handleLunchOut}
-          disabled={!!current?.lunchOut}
-        >
-          Lunch Out
-        </button>
-        <button
-          className="btn btn-success"
-          onClick={handleLunchIn}
-          disabled={!current?.lunchOut || !!current?.lunchIn}
-        >
-          Lunch In
-        </button>
+        <button className="btn btn-warning me-2" onClick={handleLunchOut} disabled={!!current?.lunchOut}>Lunch Out</button>
+        <button className="btn btn-success" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn}>Lunch In</button>
       </div>
-
-      <p className="mt-2">
-        Lunch Out: {current?.lunchOut || "-"} | Lunch In: {current?.lunchIn || "-"}
-      </p>
+      <p className="mt-2">Lunch Out: {current?.lunchOut || "-"} | Lunch In: {current?.lunchIn || "-"}</p>
 
       {/* Permission */}
       <div className="mt-3 d-flex gap-2">
-        <input
-          type="number"
-          min="0"
-          className="form-control w-auto"
-          value={permission}
-          onChange={(e) => setPermission(Number(e.target.value))}
-          placeholder="Permission (hours)"
-        />
-        <input
-          type="text"
-          className="form-control w-auto"
-          placeholder="Reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        <button onClick={handleSavePermission} className="btn btn-primary">
-          Save Permission & Reason
-        </button>
+        <input type="number" min="0" className="form-control w-auto" value={permission} onChange={(e) => setPermission(Number(e.target.value))} placeholder="Permission (hours)" disabled={permissionLocked} />
+        <input type="text" className="form-control w-auto" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} disabled={permissionLocked} />
+        <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked}>Save</button>
       </div>
 
       {/* Actions */}
       <div className="mt-3 d-flex gap-2">
-        <button
-          onClick={handleLogOut}
-          disabled={!!current?.logOut}
-          className="btn btn-danger"
-        >
-          LogOut
-        </button>
-        <button onClick={exportReport} className="btn btn-success">
-          Export Monthly Report
-        </button>
-        <button onClick={handleLock} className="btn btn-warning">
-          System Lock
-        </button>
+        <button onClick={handleLogOut} disabled={!!current?.logOut} className="btn btn-danger">LogOut</button>
+        <button onClick={exportReport} className="btn btn-success">Export Monthly Report</button>
       </div>
 
       {/* Monthly Table */}
@@ -242,9 +194,7 @@ export default function TimecardPage() {
               <td>{t.lunchIn || "-"}</td>
               <td>{t.permission ? `${t.permission} hr` : "-"}</td>
               <td>{t.reason || "-"}</td>
-              <td className={isShort(t) ? "text-danger fw-bold" : ""}>
-                {calcTotalHours(t)}
-              </td>
+              <td className={isShort(t) ? "text-danger fw-bold" : ""}>{calcTotalHours(t)}</td>
             </tr>
           ))}
         </tbody>
