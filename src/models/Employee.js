@@ -1,26 +1,40 @@
 import mongoose from "mongoose";
 
+// Auto-generate employeeId
+async function generateEmployeeId() {
+  const allCollections = Object.keys(mongoose.connection.collections);
+  let maxId = 0;
+
+  for (const name of allCollections) {
+    if (name.endsWith("_department")) {
+      const collection = mongoose.connection.collections[name];
+      const doc = await collection.find().sort({ employeeId: -1 }).limit(1).toArray();
+      if (doc.length > 0) {
+        const num = parseInt(doc[0].employeeId.replace("CHC", ""));
+        if (num > maxId) maxId = num;
+      }
+    }
+  }
+  const nextId = maxId + 1;
+  return "CHC" + nextId.toString().padStart(4, "0");
+}
+
 const EmployeeSchema = new mongoose.Schema(
   {
     employeeId: { type: String, unique: true },
-
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     dob: { type: Date },
     gender: { type: String, enum: ["Male", "Female", "Other"] },
-    email: { type: String },
-    phone: { type: String },
-
+    email: { type: String, unique: true },
+    phone: { type: String, unique: true },
     joiningDate: { type: Date, default: Date.now },
-
     department: { type: String },
     role: { type: String },
-
     emergencyContact: {
       contactPerson: { type: String },
       contactNumber: { type: String },
     },
-
     address: {
       street: { type: String },
       city: { type: String },
@@ -28,7 +42,6 @@ const EmployeeSchema = new mongoose.Schema(
       zip: { type: String },
       country: { type: String },
     },
-
     documents: [
       {
         docType: { type: String },
@@ -38,7 +51,6 @@ const EmployeeSchema = new mongoose.Schema(
         fileUrl: { type: String },
       },
     ],
-
     skills: [
       {
         name: { type: String },
@@ -47,7 +59,6 @@ const EmployeeSchema = new mongoose.Schema(
         certifications: { type: String },
       },
     ],
-
     projects: [
       {
         projectId: { type: String },
@@ -59,7 +70,6 @@ const EmployeeSchema = new mongoose.Schema(
         technologies: { type: String },
       },
     ],
-
     payroll: {
       salary: { type: String },
       bonus: { type: String },
@@ -69,6 +79,15 @@ const EmployeeSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+EmployeeSchema.pre("save", async function (next) {
+  if (!this.employeeId) {
+    this.employeeId = await generateEmployeeId();
+  }
+  next();
+});
+
+export { EmployeeSchema};
 
 export default mongoose.models.Employee ||
   mongoose.model("Employee", EmployeeSchema);

@@ -1,29 +1,68 @@
-import connectMongoose from "@/app/utilis/connectMongoose";
-import User from "../../../models/User";
-import Employee from "@/models/Employee";
+import connectMongoose from "../../utilis/connectMongoose";
+import mongoose from "mongoose";
+import Employee from "../../models/Employee";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
     await connectMongoose();
-    const { email, password } = await req.json();
-    if (!email || !password) return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+    const body = await req.json();
+    const { department } = body;
 
-    const employee = await Employee.findOne({ email });
-    if (!employee) return NextResponse.json({ error: "Employee email not found" }, { status: 400 });
+    if (!department) return NextResponse.json({ error: "Department required" }, { status: 400 });
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return NextResponse.json({ error: "User already exists" }, { status: 400 });
+    // Create employee object
+    const employee = new Employee(body);
+    await employee.save();
 
-    const user = await User.create({
-      employeeId: employee.employeeId,
-      name: `${employee.firstName} ${employee.lastName}`,
-      email,
-      password, // In production, hash the password
-    });
+    // Save in department-specific collection
+    const collectionName = department.toLowerCase() + "_department";
+    const DepartmentSchema = new mongoose.Schema({}, { strict: false });
+    const DepartmentModel =
+      mongoose.models[collectionName] ||
+      mongoose.model(collectionName, DepartmentSchema, collectionName);
 
-    return NextResponse.json({ message: "User created", user }, { status: 201 });
+    await DepartmentModel.create(employee.toObject());
+
+    return NextResponse.json({ message: "Employee saved", employee }, { status: 201 });
   } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function GET(req) {
+  try {
+    await connectMongoose();
+    const { searchParams } = new URL(req.url);
+    const department = searchParams.get("department");
+
+    if (!department) {
+      // Fetch all employees from all departments
+      const allCollections = Object.keys(mongoose.connection.collections).filter(name =>
+        name.endsWith("_department")
+      );
+
+      let allEmployees = [];
+      for (const coll of allCollections) {
+        const collection = mongoose.connection.collections[coll];
+        const docs = await collection.find().toArray();
+        allEmployees = allEmployees.concat(docs);
+      }
+      return NextResponse.json(allEmployees, { status: 200 });
+    }
+
+    // Fetch specific department
+    const collectionName = department.toLowerCase() + "_department";
+    const DepartmentSchema = new mongoose.Schema({}, { strict: false });
+    const DepartmentModel =
+      mongoose.models[collectionName] ||
+      mongoose.model(collectionName, DepartmentSchema, collectionName);
+
+    const employees = await DepartmentModel.find();
+    return NextResponse.json(employees, { status: 200 });
+  } catch (err) {
+    console.error(err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

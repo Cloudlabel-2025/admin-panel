@@ -8,6 +8,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [employeeName, setEmployeeName] = useState(""); // store name after validation
   const router = useRouter();
 
   // Step 1: Validate email exists in Employee DB
@@ -25,6 +26,9 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok) return alert(data.error);
+
+      // store employee name
+      setEmployeeName(data.employee.firstName + " " + data.employee.lastName);
       setStep(2); // Show password field
     } catch (err) {
       console.error(err);
@@ -79,16 +83,27 @@ export default function SignupPage() {
         </div>
 
         {step === 2 && (
-          <div className="mb-3">
-            <label>Password</label>
-            <input
-              type="password"
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          <>
+            <div className="mb-3">
+              <label>Employee Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={employeeName}
+                disabled
+              />
+            </div>
+            <div className="mb-3">
+              <label>Password</label>
+              <input
+                type="password"
+                className="form-control"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </>
         )}
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
