@@ -1,6 +1,6 @@
 import connectMongoose from "../../../utilis/connectMongoose";
-import Employee from "../../../../models/Employee";
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 
 // ✅ POST: Validate if fields already exist
 export async function POST(req) {
@@ -15,26 +15,37 @@ export async function POST(req) {
       );
     }
 
+    const departmentCollections = Object.keys(mongoose.models).filter(name =>
+      name.endsWith("_department")
+    );
+    
     let duplicate = null;
     let field = null;
 
-    if (employeeId) {
-      duplicate = await Employee.findOne({ employeeId });
-      if (duplicate) field = "Employee ID";
-    }
-    if (!duplicate && email) {
-      duplicate = await Employee.findOne({ email });
-      if (duplicate) field = "Email";
-    }
-    if (!duplicate && phone) {
-      duplicate = await Employee.findOne({ phone });
-      if (duplicate) field = "Phone";
-    }
-    if (!duplicate && emergencyContact?.contactNumber) {
-      duplicate = await Employee.findOne({
-        "emergencyContact.contactNumber": emergencyContact.contactNumber,
-      });
-      if (duplicate) field = "Emergency Contact Number";
+    // Check across all department collections
+    for (const collName of departmentCollections) {
+      const Model = mongoose.models[collName];
+      
+      if (employeeId && !duplicate) {
+        duplicate = await Model.findOne({ employeeId });
+        if (duplicate) field = "Employee ID";
+      }
+      if (email && !duplicate) {
+        duplicate = await Model.findOne({ email });
+        if (duplicate) field = "Email";
+      }
+      if (phone && !duplicate) {
+        duplicate = await Model.findOne({ phone });
+        if (duplicate) field = "Phone";
+      }
+      if (emergencyContact?.contactNumber && !duplicate) {
+        duplicate = await Model.findOne({
+          "emergencyContact.contactNumber": emergencyContact.contactNumber,
+        });
+        if (duplicate) field = "Emergency Contact Number";
+      }
+      
+      if (duplicate) break;
     }
 
     if (duplicate) {

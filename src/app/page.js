@@ -111,6 +111,7 @@ export default function EmployeeForm() {
         <div className="col-md-6">
           <label className="form-label">First Name</label>
           <input
+          
             type="text"
             className="form-control"
             name="firstName"

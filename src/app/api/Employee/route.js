@@ -1,5 +1,5 @@
 import connectMongoose from "../../utilis/connectMongoose";
-import Employee from "../../../models/Employee";
+import { createEmployeeModel } from "../../../models/Employee";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
@@ -39,11 +39,8 @@ export async function POST(req) {
       );
     }
 
-    // Build department collection name
-    const collectionName = department.toLowerCase() + "_department";
-    const DepartmentModel =
-      mongoose.models[collectionName] ||
-      mongoose.model(collectionName, Employee.schema, collectionName);
+    // Create department-specific model
+    const DepartmentModel = createEmployeeModel(department);
 
     // Duplicate check across ALL departments
     const departmentCollections = Object.keys(mongoose.models).filter(name =>
