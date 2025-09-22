@@ -1,62 +1,69 @@
 import mongoose from "mongoose";
 
-// function to convert hours
-
+// Helper: Convert "HH:mm" string to decimal hours
 function timeToHours(timeStr) {
   if (!timeStr) return 0;
   const [h, m] = timeStr.split(":").map(Number);
   return h + m / 60;
 }
 
-//function to calculate total hours
-
+// Calculate total working hours
 function calculatedTotalHours(logIn, logOut, lunchOut, lunchIn, permission) {
-  if (!logIn || !logOut || !lunchOut || !lunchIn || !permission) return 0;
+  if (!logIn || !logOut) return 0; // must have logIn and logOut
+
   const [logInH, logInM] = logIn.split(":").map(Number);
   const [logOutH, logOutM] = logOut.split(":").map(Number);
-  const [lunchOutH, lunchOutM] = lunchOut.split(":").map(Number);
-  const [lunchInH, lunchInM] = lunchIn.split(":").map(Number);
 
   const logInDate = new Date(0, 0, 0, logInH, logInM);
   const logOutDate = new Date(0, 0, 0, logOutH, logOutM);
-  const lunchOutDate = new Date(0, 0, 0, lunchOutH, lunchOutM);
-  const lunchInDate = new Date(0, 0, 0, lunchInH, lunchInM);
 
-  const workDuration = (logOutDate - logInDate) / (1000 * 60 * 60); // total working hours
-  const lunchDuration = (lunchInDate - lunchOutDate) / (1000 * 60 * 60); // lunch hours
-  const permissionDuration = timeToHours(permission); //permission hours
+  let workDuration = (logOutDate - logInDate) / (1000 * 60 * 60); // base working hours
 
-  return workDuration - lunchDuration - permissionDuration;
+  // subtract lunch break if both times exist
+  if (lunchOut && lunchIn) {
+    const [lunchOutH, lunchOutM] = lunchOut.split(":").map(Number);
+    const [lunchInH, lunchInM] = lunchIn.split(":").map(Number);
+    const lunchOutDate = new Date(0, 0, 0, lunchOutH, lunchOutM);
+    const lunchInDate = new Date(0, 0, 0, lunchInH, lunchInM);
+    const lunchDuration = (lunchInDate - lunchOutDate) / (1000 * 60 * 60);
+    workDuration -= lunchDuration;
+  }
+
+  // subtract manual permission hours
+  const permissionDuration = timeToHours(permission);
+  workDuration -= permissionDuration;
+
+  return workDuration;
 }
 
 const TimecardSchema = new mongoose.Schema({
   employeeId: {
     type: String,
-    required: [true, "employeeId is required"],
+    required: [true, "Employee ID is required"],
   },
   date: {
     type: Date,
-    required: [true, "Date is required"],
+    default: Date.now, // system date
   },
   logIn: {
     type: String,
-    required: [true, "Log-In Time is required"],
+    default: "", // auto-filled when login button clicked
   },
   logOut: {
     type: String,
-    required: [true, "Log-Out Time is required"],
+    default: "", // auto-filled when logout button clicked
   },
   lunchOut: {
     type: String,
-    required: [true, "Lunch-Out Time is required"],
+    default: "", // auto-filled when lunch checkbox checked
   },
   lunchIn: {
     type: String,
-    required: [true, "Lunch-In Time is required"],
+    default: "", // auto-filled when lunch checkbox unchecked
   },
   permission: {
     type: String,
-    default: "00:00",
+    default: "00:00", // manually entered
   },
   reason: {
     type: String,
@@ -72,8 +79,7 @@ const TimecardSchema = new mongoose.Schema({
   },
 });
 
-//middleware to calculate hours
-
+// Middleware to calculate hours on save
 TimecardSchema.pre("save", function (next) {
   this.totalHours = calculatedTotalHours(
     this.logIn,
@@ -85,10 +91,10 @@ TimecardSchema.pre("save", function (next) {
   next();
 });
 
-// recalc on update
+// Middleware to recalc hours on update
 TimecardSchema.pre("findOneAndUpdate", function (next) {
   const update = this.getUpdate();
-  if (update.logIn && update.logOut && update.lunchOut && update.lunchIn) {
+  if (update.logIn && update.logOut) {
     update.totalHours = calculatedTotalHours(
       update.logIn,
       update.logOut,
