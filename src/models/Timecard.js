@@ -86,7 +86,7 @@ TimecardSchema.pre("save", function (next) {
     this.logOut,
     this.lunchOut,
     this.lunchIn,
-    this.permission
+    this.permission,
   );
   next();
 });
@@ -100,7 +100,7 @@ TimecardSchema.pre("findOneAndUpdate", function (next) {
       update.logOut,
       update.lunchOut,
       update.lunchIn,
-      update.permission || "00:00"
+      update.permission || "00:00",
     );
     this.setUpdate(update);
   }
