@@ -1,6 +1,6 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import User from "../../../models/User";
-import Employee from "../../../models/Employee";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
@@ -13,7 +13,20 @@ export async function POST(req) {
         { status: 400 }
       );
 
-    const employee = await Employee.findOne({ email });
+    // Search in all department collections
+    const allCollections = Object.keys(mongoose.connection.collections).filter(name =>
+      name.endsWith("_department")
+    );
+
+    let employee = null;
+    for (const coll of allCollections) {
+      const collection = mongoose.connection.collections[coll];
+      const doc = await collection.findOne({ email });
+      if (doc) {
+        employee = doc;
+        break;
+      }
+    }
     if (!employee)
       return NextResponse.json(
         { error: "Employee email not found" },
