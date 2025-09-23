@@ -1,10 +1,9 @@
 import mongoose from "mongoose";
 const DailyTaskSchema = new mongoose.Schema({
-   employee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Employee",
-    required: true,
-  },
+  employeeId: { type: String, required: true },
+  employeeName: { type: String, required: true },
+  designation: { type: String, default: "" },
+
   date: { type: Date, default: Date.now },
 
   tasks: [
