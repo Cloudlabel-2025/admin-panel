@@ -1,6 +1,6 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import User from "../../../models/User";
-import Employee from "@/models/Employee";
+import Employee from "../../../models/Employee";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
