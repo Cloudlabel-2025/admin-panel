@@ -54,6 +54,9 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
                 Timecard Entry
               </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
+                Daily Task
+              </button>
             </>
           )}
         </nav>

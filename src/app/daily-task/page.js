@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
+import Layout from "../components/Layout";
 
 export default function DailyTaskComponent({
   employeeId = "CHC001",
@@ -178,7 +179,8 @@ export default function DailyTaskComponent({
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div className="container-fluid mt-4">
+   <Layout>
+     <div className="container-fluid mt-4">
       <div className="row mb-3 align-items-center">
         <div className="col-12 col-md-6 mb-2">
           <h2 className="mb-0">Daily Task Management</h2>
@@ -327,5 +329,6 @@ export default function DailyTaskComponent({
         </button>
       </div>
     </div>
+   </Layout>
   );
 }
