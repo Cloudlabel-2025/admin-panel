@@ -59,16 +59,19 @@ export default function DailyTaskComponent({
     fetchData();
   }, []);
 
-  // Sync task times with Timecard
+  // Sync existing tasks with Timecard (only for existing tasks)
   useEffect(() => {
     setDailyTasks((prevTasks) =>
       prevTasks.map((task) => ({
         ...task,
-        startTime: timecard.logIn || task.startTime,
-        endTime: timecard.logOut || task.endTime,
-        remarks: `Lunch Out: ${timecard.lunchOut || "--:--"}, Lunch In: ${
-          timecard.lunchIn || "--:--"
-        }`,
+        startTime: task.startTime || timecard.logIn,
+        endTime: task.endTime || timecard.logOut,
+        // Only update remarks if it already contains lunch info
+        remarks: task.remarks.includes("Lunch")
+          ? `Lunch Out: ${timecard.lunchOut || "--:--"}, Lunch In: ${
+              timecard.lunchIn || "--:--"
+            }`
+          : task.remarks,
       }))
     );
   }, [timecard]);
@@ -83,22 +86,21 @@ export default function DailyTaskComponent({
         startTime: timecard.logIn,
         endTime: timecard.logOut,
         status: "In Progress",
-        remarks: `Lunch Out: ${timecard.lunchOut || "--:--"}, Lunch In: ${
-          timecard.lunchIn || "--:--"
-        }`,
+        remarks: "", // Empty for new task
         link: "",
         feedback: "",
       },
     ]);
   };
 
+  // Handle input changes
   const handleChange = (index, field, value) => {
     const updated = [...dailyTasks];
     updated[index][field] = value;
     setDailyTasks(updated);
   };
 
-  // Save/Update tasks
+  // Save or update tasks
   const saveTasks = async () => {
     try {
       if (!dailyTasks.length) return alert("No tasks to save");
@@ -177,7 +179,7 @@ export default function DailyTaskComponent({
 
   return (
     <div className="container-fluid mt-4">
-      <div className="row mb-3">
+      <div className="row mb-3 align-items-center">
         <div className="col-12 col-md-6 mb-2">
           <h2 className="mb-0">Daily Task Management</h2>
         </div>
@@ -186,7 +188,7 @@ export default function DailyTaskComponent({
             <strong>Date:</strong> {new Date().toLocaleDateString()}
           </div>
           <div>
-            <strong>Employee ID:</strong> {employeeId} &nbsp;&nbsp;
+            <strong>ID:</strong> {employeeId} &nbsp;&nbsp;
             <strong>Name:</strong> {employeeName} &nbsp;&nbsp;
             <strong>Designation:</strong> {designation}
           </div>
@@ -195,7 +197,7 @@ export default function DailyTaskComponent({
 
       {/* Timecard Info */}
       <div className="row mb-3">
-        <div className="col-12 d-flex flex-wrap gap-3">
+        <div className="col-12 d-flex flex-wrap gap-2">
           <span className="badge bg-primary">
             Log In: {timecard.logIn || "--:--"}
           </span>
