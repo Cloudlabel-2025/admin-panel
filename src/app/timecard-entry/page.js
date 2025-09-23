@@ -1,9 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
+import Layout from "../components/Layout";
 
 export default function TimecardPage() {
-  const employeeId = "CHC001";
+  const router = useRouter();
+  const [employeeId, setEmployeeId] = useState("");
   const [timecards, setTimecards] = useState([]);
   const [current, setCurrent] = useState(null);
   const [permission, setPermission] = useState(0); // in hours
@@ -21,9 +24,20 @@ export default function TimecardPage() {
     return d.toLocaleDateString("en-GB") + ` (${dayName})`;
   };
 
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    const empId = localStorage.getItem("employeeId");
+    if (role !== "employee" || !empId) {
+      router.push("/");
+      return;
+    }
+    setEmployeeId(empId);
+  }, [router]);
+
   // Fetch all records
   const fetchTimecards = async () => {
-    const res = await fetch("/api/timecard");
+    if (!employeeId) return;
+    const res = await fetch(`/api/timecard?employeeId=${employeeId}`);
     if (!res.ok) return;
     const data = await res.json();
     setTimecards(data);
@@ -52,8 +66,10 @@ export default function TimecardPage() {
   };
 
   useEffect(() => {
-    fetchTimecards();
-  }, []);
+    if (employeeId) {
+      fetchTimecards();
+    }
+  }, [employeeId]);
 
   // Update record
   const updateTimecard = async (updates) => {
@@ -139,9 +155,13 @@ export default function TimecardPage() {
     XLSX.writeFile(wb, "Monthly_Report.xlsx");
   };
 
+  if (!employeeId) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="container py-4">
-      <h1 className="mb-3">Timecard</h1>
+    <Layout>
+      <h1>Timecard</h1>
       <p>
         Employee ID: <b>{employeeId}</b>
       </p>
@@ -199,6 +219,6 @@ export default function TimecardPage() {
           ))}
         </tbody>
       </table>
-    </div>
+    </Layout>
   );
 }

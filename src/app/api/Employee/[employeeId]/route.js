@@ -23,7 +23,7 @@ async function findEmployeeInDepartments(employeeId) {
 export async function GET(req, { params }) {
   try {
     await connectMongoose();
-    const { employeeId } = params;
+    const { employeeId } = await params;
 
     const result = await findEmployeeInDepartments(employeeId);
     if (!result) {
@@ -41,7 +41,7 @@ export async function GET(req, { params }) {
 export async function PATCH(req, { params }) {
   try {
     await connectMongoose();
-    const { employeeId } = params;
+    const { employeeId } = await params;
     const body = await req.json();
     const { department: newDepartment, ...updates } = body;
 
@@ -88,7 +88,7 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await connectMongoose();
-    const { employeeId } = params;
+    const { employeeId } = await params;
 
     const result = await findEmployeeInDepartments(employeeId);
     if (!result) {

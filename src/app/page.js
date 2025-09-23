@@ -1,301 +1,127 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function EmployeeForm() {
-  const [formData, setFormData] = useState({
-    employeeId: "",
-    firstName: "",
-    lastName: "",
-    dob: "",
-    gender: "",
-    email: "",
-    phone: "",
-    joiningDate: "",
-    department: "",
-    role: "",
-    emergencyContact: {
-      contactPerson: "",
-      contactNumber: "",
-    },
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      zip: "",
-      country: "",
-    },
-  });
+export default function HomePage() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      // Check if super admin
+      if (email === "admin@gmail.com" && password === "Admin") {
+        localStorage.setItem("userRole", "super-admin");
+        localStorage.setItem("userEmail", email);
+        alert("Super Admin login successful");
+        router.push("/admin-dashboard");
+        return;
+      }
 
-    if (name.includes(".")) {
-      const [parent, child] = name.split(".");
-      setFormData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      // Regular employee login
+      const res = await fetch("/api/User/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error);
+
+      localStorage.setItem("employeeId", data.user.employeeId);
+      localStorage.setItem("userRole", "employee");
+      localStorage.setItem("userEmail", email);
+      alert("Employee login successful");
+      router.push("/timecard-entry");
+    } catch (err) {
+      console.error(err);
+      alert("Login failed");
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-
     try {
-      const response = await fetch("/api/Employee", {
+      const res = await fetch("/api/User/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        alert("Employee created successfully!");
-        setFormData({
-          employeeId: "",
-          firstName: "",
-          lastName: "",
-          dob: "",
-          gender: "",
-          email: "",
-          phone: "",
-          joiningDate: "",
-          department: "",
-          role: "",
-          emergencyContact: {
-            contactPerson: "",
-            contactNumber: "",
-          },
-          address: {
-            street: "",
-            city: "",
-            state: "",
-            zip: "",
-            country: "",
-          },
-        });
-      } else {
-        alert(`Error: ${data.message || "Failed to create employee"}`);
-      }
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("❌ Submission failed. Please try again.");
+      alert("Signup successful! You can now login.");
+      setIsLogin(true);
+      setEmail("");
+      setPassword("");
+    } catch (err) {
+      console.error(err);
+      alert("Signup failed");
     }
   };
 
   return (
     <div className="container mt-5">
-      <h2 className="mb-4 text-center">Employee Registration Form</h2>
-      <form className="row g-3" onSubmit={handleSubmit}>
-        {/* Basic Info */}
+      <div className="row justify-content-center">
         <div className="col-md-6">
-          <label className="form-label">Joining Date</label>
-          <input
-            type="date"
-            className="form-control"
-            name="joiningDate"
-            value={formData.joiningDate}
-            onChange={handleChange}
-          />
+          <div className="card">
+            <div className="card-body">
+              <h2 className="card-title text-center mb-4">
+                {isLogin ? "Login" : "Employee Signup"}
+              </h2>
+              
+              <form onSubmit={isLogin ? handleLogin : handleSignup}>
+                <div className="mb-3">
+                  <label className="form-label">Email</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary w-100">
+                  {isLogin ? "Login" : "Sign Up"}
+                </button>
+              </form>
+              
+              <div className="text-center mt-3">
+                <button 
+                  className="btn btn-link"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setEmail("");
+                    setPassword("");
+                  }}
+                >
+                  {isLogin ? "New employee? Sign up here" : "Already have account? Login here"}
+                </button>
+              </div>
+              
+              {isLogin && (
+                <div className="text-center mt-2">
+                  <small className="text-muted">
+                    Super Admin: admin@gmail.com / Admin
+                  </small>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-
-        <div className="col-md-6">
-          <label className="form-label">First Name</label>
-          <input
-          
-            type="text"
-            className="form-control"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Last Name</label>
-          <input
-            type="text"
-            className="form-control"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <div className="col-md-6">
-          <label className="form-label">Date of Birth</label>
-          <input
-            type="date"
-            className="form-control"
-            name="dob"
-            value={formData.dob}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Gender</label>
-          <select
-            className="form-select"
-            name="gender"
-            value={formData.gender}
-            onChange={handleChange}
-          >
-            <option value="">Select</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        {/* Contact Info */}
-        <div className="col-md-6">
-          <label className="form-label">Email</label>
-          <input
-            type="email"
-            className="form-control"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Phone</label>
-          <input
-            type="text"
-            className="form-control"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Role */}
-        <div className="col-md-6">
-          <label className="form-label">Department</label>
-          <select
-            className="form-select"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-          >
-            <option value="">Select Department</option>
-            <option value="Technical">Technical</option>
-            <option value="Functional">Functional</option>
-            <option value="Production">Production</option>
-            <option value="OIC">OIC</option>
-          </select>
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Role</label>
-          <select
-            className="form-select"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-          >
-            <option value="">Select Role</option>
-            <option value="Super-admin">Super-admin</option>
-            <option value="admin">Admin</option>
-            <option value="Team-Manager">Team-Manager</option>
-            <option value="Team-Lead">Team-Lead</option>
-            <option value="Team-admin">Team-admin</option>
-            <option value="Employee">Employee</option>
-            <option value="Intern">Intern</option>
-          </select>
-        </div>
-        {/* Emergency Contact */}
-        <h5 className="mt-4">Emergency Contact</h5>
-        <div className="col-md-6">
-          <label className="form-label">Contact Person</label>
-          <input
-            type="text"
-            className="form-control"
-            name="emergencyContact.contactPerson"
-            value={formData.emergencyContact.contactPerson}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Contact Number</label>
-          <input
-            type="text"
-            className="form-control"
-            name="emergencyContact.contactNumber"
-            value={formData.emergencyContact.contactNumber}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Address */}
-        <h5 className="mt-4">Address</h5>
-        <div className="col-12">
-          <label className="form-label">Street</label>
-          <input
-            type="text"
-            className="form-control"
-            name="address.street"
-            value={formData.address.street}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">City</label>
-          <input
-            type="text"
-            className="form-control"
-            name="address.city"
-            value={formData.address.city}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">State</label>
-          <input
-            type="text"
-            className="form-control"
-            name="address.state"
-            value={formData.address.state}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-2">
-          <label className="form-label">Zip</label>
-          <input
-            type="text"
-            className="form-control"
-            name="address.zip"
-            value={formData.address.zip}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="col-md-2">
-          <label className="form-label">Country</label>
-          <input
-            type="text"
-            className="form-control"
-            name="address.country"
-            value={formData.address.country}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Submit */}
-        <div className="col-12 text-center mt-4">
-          <button type="submit" className="btn btn-primary px-5">
-            Submit
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

@@ -20,8 +20,17 @@ export  async function POST(req,res){
 export  async function GET(req,res) {
     try{
     await connectMongoose();
-    const timecards = await Timecard.find().sort({date:-1});
-    return NextResponse.json(timecards,{status:200});
+    const { searchParams } = new URL(req.url);
+    const employeeId = searchParams.get("employeeId");
+    const isAdmin = searchParams.get("admin");
+    
+    let query = {};
+    if (employeeId && !isAdmin) {
+      query.employeeId = employeeId;
+    }
+    
+    const timecards = await Timecard.find(query).sort({date:-1});
+    return NextResponse.json(isAdmin ? { timecards } : timecards, {status:200});
     }
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

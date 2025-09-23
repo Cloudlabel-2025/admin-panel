@@ -27,7 +27,12 @@ export async function POST(req) {
 
     // Return only necessary fields for frontend
     return NextResponse.json({
-      message: "Login successful",user
+      message: "Login successful",
+      user: {
+        employeeId: user.employeeId,
+        name: user.name,
+        email: user.email
+      }
     });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
