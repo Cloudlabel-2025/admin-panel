@@ -1,290 +1,224 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
+import Layout from "../components/Layout";
 
-export default function DailyTaskComponent({ employeeId = "CHC001" }) {
-  const [dailyTasks, setDailyTasks] = useState([]);
-  const [employee, setEmployee] = useState({ name: "", designation: "" });
-  const [timecard, setTimecard] = useState({
-    logIn: "",
-    logOut: "",
-    lunchOut: "",
-    lunchIn: "",
-  });
-  const [loading, setLoading] = useState(true);
+export default function TimecardPage() {
+  const router = useRouter();
+  const [employeeId, setEmployeeId] = useState("");
+  const [timecards, setTimecards] = useState([]);
+  const [current, setCurrent] = useState(null);
+  const [permission, setPermission] = useState(0); // in hours
+  const [reason, setReason] = useState("");
+  const [permissionLocked, setPermissionLocked] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // 1️⃣ Fetch employee info
-      const empRes = await fetch(`/api/employee?employeeId=${employeeId}`);
-      const empData = await empRes.json();
-      if (!empData) return alert("Employee not found");
-      setEmployee({ name: empData.name, designation: empData.designation });
+  // Helpers
+  const getTimeString = () =>
+    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const getDateString = () => new Date().toISOString().split("T")[0];
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    const dayName = d.toLocaleDateString("en-GB", { weekday: "short" });
+    return d.toLocaleDateString("en-GB") + ` (${dayName})`;
+  };
 
-      // 2️⃣ Fetch today's Timecard
-      const tcRes = await fetch(`/api/timecard?employeeId=${employeeId}`);
-      const tcData = await tcRes.json();
-      const todayTimecard = tcData.length ? tcData[0] : {};
-      setTimecard({
-        logIn: todayTimecard.logIn || "",
-        logOut: todayTimecard.logOut || "",
-        lunchOut: todayTimecard.lunchOut || "",
-        lunchIn: todayTimecard.lunchIn || "",
-      });
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    const empId = localStorage.getItem("employeeId");
+    if (role !== "employee" || !empId) {
+      router.push("/");
+      return;
+    }
+    setEmployeeId(empId);
+  }, [router]);
 
-      // 3️⃣ Fetch today's tasks
-      const today = new Date().toISOString().split("T")[0];
-      const dtRes = await fetch(
-        `/api/daily-task?employeeId=${employeeId}&date=${today}`
-      );
-      const dtData = await dtRes.json();
-      if (dtData.length) {
-        // Map tasks and sync with Timecard
-        setDailyTasks(
-          dtData[0].tasks.map((t, i) => ({
-            ...t,
-            Serialno: i + 1,
-            _id: dtData[0]._id,
-            startTime: t.startTime || todayTimecard.logIn || "",
-            endTime: t.endTime || todayTimecard.logOut || "",
-            remarks: t.remarks || "", // Keep remarks empty if no manual input
-          }))
-        );
-      } else {
-        setDailyTasks([]);
+  // Fetch all records
+  const fetchTimecards = async () => {
+    if (!employeeId) return;
+    const res = await fetch(`/api/timecard?employeeId=${employeeId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    setTimecards(data);
+
+    const today = data.find((t) => t.date?.startsWith(getDateString()));
+    if (today) {
+      setCurrent(today);
+      setPermission(Number(today.permission) || 0);
+      setReason(today.reason || "");
+      if (today.permission && today.reason) {
+        setPermissionLocked(true); // disable inputs if already saved
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    } else {
+      const newEntry = { employeeId, date: getDateString(), logIn: getTimeString() };
+      const res2 = await fetch("/api/timecard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEntry),
+      });
+      const data2 = await res2.json();
+      if (data2.timecard) {
+        setCurrent(data2.timecard);
+        setTimecards([data2.timecard, ...data]);
+      }
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (employeeId) {
+      fetchTimecards();
+    }
+  }, [employeeId]);
 
-  // Add new task
-  const addTask = () => {
-    setDailyTasks([
-      ...dailyTasks,
-      {
-        Serialno: dailyTasks.length + 1,
-        details: "",
-        startTime: timecard.logIn || "",
-        endTime: timecard.logOut || "",
-        status: "In Progress",
-        remarks: "", // Do not populate remarks automatically
-        link: "",
-        feedback: "",
-      },
-    ]);
-  };
-
-  const handleChange = (index, field, value) => {
-    const updated = [...dailyTasks];
-    updated[index][field] = value;
-    setDailyTasks(updated);
-  };
-
-  const saveTasks = async () => {
-    if (!dailyTasks.length) return alert("No tasks to save");
-    const existing = dailyTasks[0]._id;
-    const payload = {
-      employeeId,
-      tasks: dailyTasks,
-      _id: existing,
-    };
-
-    const res = await fetch("/api/daily-task", {
-      method: existing ? "PUT" : "POST",
+  // Update record
+  const updateTimecard = async (updates) => {
+    if (!current?._id) return;
+    const res = await fetch("/api/timecard", {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ _id: current._id, ...updates }),
     });
-
+    if (!res.ok) return;
     const data = await res.json();
-    if (res.ok) alert("Daily Tasks saved!");
-    else alert(data.error || "Failed to save tasks");
-    fetchData();
+    if (data.timecard) {
+      setCurrent(data.timecard);
+      setTimecards((prev) =>
+        prev.map((t) => (t._id === data.timecard._id ? data.timecard : t))
+      );
+    }
   };
 
-  const generateMonthlyReport = async () => {
-    const month = new Date().getMonth() + 1;
-    const year = new Date().getFullYear();
-    const res = await fetch(`/api/daily-task?month=${month}&year=${year}`);
-    const data = await res.json();
+  // Actions
+  const handleLogOut = () => updateTimecard({ logOut: getTimeString() });
+  const handleLunchOut = () => {
+    if (!current?.lunchOut) updateTimecard({ lunchOut: getTimeString() });
+  };
+  const handleLunchIn = () => {
+    if (current?.lunchOut && !current?.lunchIn) updateTimecard({ lunchIn: getTimeString() });
+  };
+  const handleSavePermission = () => {
+    updateTimecard({ permission, reason });
+    setPermissionLocked(true); // disable further edits
+  };
+  const handleLock = () => updateTimecard({ lockTime: getTimeString() });
 
-    const wsData = [];
-    data.forEach((dt) => {
-      dt.tasks.forEach((t) => {
-        wsData.push({
-          Date: new Date(dt.date).toLocaleDateString(),
-          EmployeeId: dt.employee.employeeId,
-          EmployeeName: dt.employee.name,
-          Designation: dt.employee.designation,
-          Serialno: t.Serialno,
-          Details: t.details,
-          StartTime: t.startTime,
-          EndTime: t.endTime,
-          LunchOut: timecard.lunchOut,
-          LunchIn: timecard.lunchIn,
-          Status: t.status,
-          Remarks: t.remarks,
-          Link: t.link,
-          Feedback: t.feedback,
-        });
-      });
-    });
+  // Hours calculation
+  const calcTotalHours = (t) => {
+    if (!t.logIn || !t.logOut) return "-";
+    const [liH, liM] = t.logIn.split(":").map(Number);
+    const [loH, loM] = t.logOut.split(":").map(Number);
+    let start = liH * 60 + liM;
+    let end = loH * 60 + loM;
+    if (end < start) end += 24 * 60;
 
+    let worked = end - start;
+
+    if (t.lunchOut && t.lunchIn) {
+      const [lo1, lo2] = t.lunchOut.split(":").map(Number);
+      const [li1, li2] = t.lunchIn.split(":").map(Number);
+      worked -= li1 * 60 + li2 - (lo1 * 60 + lo2);
+    }
+
+    if (t.permission) worked -= Number(t.permission) * 60;
+
+    if (worked < 0) worked = 0; // clamp to prevent negatives
+
+    const hh = String(Math.floor(worked / 60)).padStart(2, "0");
+    const mm = String(worked % 60).padStart(2, "0");
+    return `${hh}:${mm}`;
+  };
+
+  const isShort = (t) => {
+    const total = calcTotalHours(t);
+    if (total === "-") return false;
+    const [hh] = total.split(":").map(Number);
+    return hh < 8;
+  };
+
+  // Export Excel
+  const exportReport = () => {
+    if (!timecards.length) return;
+    const wsData = timecards.map((t) => ({
+      Date: formatDate(t.date),
+      LogIn: t.logIn || "-",
+      LogOut: t.logOut || "-",
+      LunchOut: t.lunchOut || "-",
+      LunchIn: t.lunchIn || "-",
+      Permission: t.permission ? `${t.permission} hr` : "-",
+      Reason: t.reason || "-",
+      TotalHours: calcTotalHours(t),
+    }));
     const ws = XLSX.utils.json_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "MonthlyTasks");
-    XLSX.writeFile(wb, `MonthlyTasks_${month}_${year}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
+    XLSX.writeFile(wb, "Monthly_Report.xlsx");
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (!employeeId) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="container-fluid mt-4">
-      <div className="row mb-3">
-        <div className="col-12 col-md-6">
-          <h2>Daily Task Management</h2>
-        </div>
-        <div className="col-12 col-md-6 text-md-end">
-          <div>
-            <strong>Date:</strong> {new Date().toLocaleDateString()}
-          </div>
-          <div>
-            <strong>Employee ID:</strong> {employeeId} &nbsp;
-            <strong>Name:</strong> {employee.name} &nbsp;
-            <strong>Designation:</strong> {employee.designation}
-          </div>
-        </div>
+    <Layout>
+      <h1>Timecard</h1>
+      <p>
+        Employee ID: <b>{employeeId}</b>
+      </p>
+
+      <p>LogIn: {current?.logIn || "-"}</p>
+      <p>LogOut: {current?.logOut || "-"}</p>
+
+      {/* Lunch Buttons */}
+      <div className="mt-3">
+        <button className="btn btn-warning me-2" onClick={handleLunchOut} disabled={!!current?.lunchOut}>Lunch Out</button>
+        <button className="btn btn-success" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn}>Lunch In</button>
+      </div>
+      <p className="mt-2">Lunch Out: {current?.lunchOut || "-"} | Lunch In: {current?.lunchIn || "-"}</p>
+
+      {/* Permission */}
+      <div className="mt-3 d-flex gap-2">
+        <input type="number" min="0" className="form-control w-auto" value={permission} onChange={(e) => setPermission(Number(e.target.value))} placeholder="Permission (hours)" disabled={permissionLocked} />
+        <input type="text" className="form-control w-auto" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} disabled={permissionLocked} />
+        <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked}>Save</button>
       </div>
 
-      {/* Timecard Info */}
-      <div className="row mb-3">
-        <div className="col-12 d-flex flex-wrap gap-3">
-          <span className="badge bg-primary">
-            Log In: {timecard.logIn || "--:--"}
-          </span>
-          <span className="badge bg-success">
-            Log Out: {timecard.logOut || "--:--"}
-          </span>
-          <span className="badge bg-warning text-dark">
-            Lunch Out: {timecard.lunchOut || "--:--"}
-          </span>
-          <span className="badge bg-info text-dark">
-            Lunch In: {timecard.lunchIn || "--:--"}
-          </span>
-        </div>
+      {/* Actions */}
+      <div className="mt-3 d-flex gap-2">
+        <button onClick={handleLogOut} disabled={!!current?.logOut} className="btn btn-danger">LogOut</button>
+        <button onClick={exportReport} className="btn btn-success">Export Monthly Report</button>
       </div>
 
-      {/* Tasks Table */}
-      <div className="table-responsive">
-        <table className="table table-bordered table-hover align-middle">
-          <thead className="table-dark text-center">
-            <tr>
-              <th>Serial No</th>
-              <th>Details</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Status</th>
-              <th>Remarks</th>
-              <th>Link</th>
-              <th>Feedback</th>
+      {/* Monthly Table */}
+      <h2 className="mt-4">Monthly Records</h2>
+      <table className="table table-bordered mt-2">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>LogIn</th>
+            <th>LogOut</th>
+            <th>LunchOut</th>
+            <th>LunchIn</th>
+            <th>Permission</th>
+            <th>Reason</th>
+            <th>Total Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          {timecards.map((t) => (
+            <tr key={t._id}>
+              <td>{formatDate(t.date)}</td>
+              <td>{t.logIn || "-"}</td>
+              <td>{t.logOut || "-"}</td>
+              <td>{t.lunchOut || "-"}</td>
+              <td>{t.lunchIn || "-"}</td>
+              <td>{t.permission ? `${t.permission} hr` : "-"}</td>
+              <td>{t.reason || "-"}</td>
+              <td className={isShort(t) ? "text-danger fw-bold" : ""}>{calcTotalHours(t)}</td>
             </tr>
-          </thead>
-          <tbody>
-            {dailyTasks.map((task, idx) => (
-              <tr key={idx}>
-                <td className="text-center">{task.Serialno}</td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.details}
-                    onChange={(e) =>
-                      handleChange(idx, "details", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    className="form-control form-control-sm"
-                    value={task.startTime}
-                    onChange={(e) =>
-                      handleChange(idx, "startTime", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    className="form-control form-control-sm"
-                    value={task.endTime}
-                    onChange={(e) =>
-                      handleChange(idx, "endTime", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <select
-                    className="form-select form-select-sm"
-                    value={task.status}
-                    onChange={(e) =>
-                      handleChange(idx, "status", e.target.value)
-                    }
-                  >
-                    <option>In Progress</option>
-                    <option>Completed</option>
-                    <option>Pending</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.remarks}
-                    onChange={(e) =>
-                      handleChange(idx, "remarks", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.link}
-                    onChange={(e) => handleChange(idx, "link", e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.feedback}
-                    onChange={(e) =>
-                      handleChange(idx, "feedback", e.target.value)
-                    }
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Buttons */}
-      <div className="d-flex flex-wrap gap-2 mt-3">
-        <button className="btn btn-primary" onClick={addTask}>
-          + Add Task
-        </button>
-        <button className="btn btn-success" onClick={saveTasks}>
-          Save / Update
-        </button>
-        <button className="btn btn-secondary" onClick={generateMonthlyReport}>
-          Generate Monthly Report
-        </button>
-      </div>
-    </div>
+          ))}
+        </tbody>
+      </table>
+    </Layout>
   );
 }
