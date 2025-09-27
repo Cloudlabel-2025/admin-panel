@@ -23,14 +23,23 @@ export  async function GET(req,res) {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get("employeeId");
     const isAdmin = searchParams.get("admin");
+    const dateParam = searchParams.get("date");
     
     let query = {};
     if (employeeId && !isAdmin) {
       query.employeeId = employeeId;
     }
     
+    // Filter by date for admin monitoring
+    if (isAdmin && dateParam) {
+      const start = new Date(dateParam);
+      const end = new Date(dateParam);
+      end.setHours(23, 59, 59);
+      query.date = { $gte: start, $lte: end };
+    }
+    
     const timecards = await Timecard.find(query).sort({date:-1});
-    return NextResponse.json(isAdmin ? { timecards } : timecards, {status:200});
+    return NextResponse.json(isAdmin ? timecards : timecards, {status:200});
     }
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
@@ -47,6 +56,23 @@ export async function PUT(req){
 
     if (!timecard) {
       return NextResponse.json({ error: "Timecard not found" }, { status: 404 });
+    }
+
+    // If logout time is being set, complete daily tasks
+    if (updates.logOut && timecard.employeeId) {
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'complete_on_logout',
+            employeeId: timecard.employeeId,
+            logoutTime: updates.logOut
+          })
+        });
+      } catch (err) {
+        console.error('Failed to complete daily tasks on logout:', err);
+      }
     }
 
     return NextResponse.json({ timecard });

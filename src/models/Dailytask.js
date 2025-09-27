@@ -3,24 +3,26 @@ const DailyTaskSchema = new mongoose.Schema({
   employeeId: { type: String, required: true },
   employeeName: { type: String, required: true },
   designation: { type: String, default: "" },
-
   date: { type: Date, default: Date.now },
 
   tasks: [
     {
-      Serialno: { type: Number }, // Task number (1, 2, 3…)
-      details: { type: String, required: true }, // Task description
-      startTime: { type: String, default: "" }, // HH:mm AM/PM
+      Serialno: { type: Number },
+      details: { type: String, default: "" },
+      startTime: { type: String, default: "" },
       endTime: { type: String, default: "" },
       status: { type: String, enum: ["Completed", "Pending", "In Progress"], default: "In Progress" },
       remarks: { type: String, default: "" },
       link: { type: String, default: "" },
       feedback: { type: String, default: "" },
+      isSaved: { type: Boolean, default: false },
+      isNew: { type: Boolean, default: false }
     },
   ],
 
   createdAt: { type: Date, default: Date.now },
-});
+  updatedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
 
 export default mongoose.models.DailyTask ||
   mongoose.model("DailyTask", DailyTaskSchema);
