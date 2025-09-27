@@ -77,7 +77,7 @@ export default function MonitorEmployees() {
       {/* Timecards Section */}
       <div className="card mb-4">
         <div className="card-header bg-info text-white">
-          <h5 className="mb-0">Today's Timecards</h5>
+          <h5 className="mb-0">Today&apos;s Timecards</h5>
         </div>
         <div className="card-body">
           {timecards.length > 0 ? (
@@ -90,6 +90,8 @@ export default function MonitorEmployees() {
                     <th>Log Out</th>
                     <th>Lunch Out</th>
                     <th>Lunch In</th>
+                    <th>Permission</th>
+                    <th>Reason</th>
                     <th>Total Hours</th>
                   </tr>
                 </thead>
@@ -101,6 +103,8 @@ export default function MonitorEmployees() {
                       <td>{tc.logOut || '-'}</td>
                       <td>{tc.lunchOut || '-'}</td>
                       <td>{tc.lunchIn || '-'}</td>
+                      <td>{tc.permission + 'Hr' || '-'}</td>
+                      <td>{tc.reason|| '-'}</td>
                       <td>{tc.totalHours ? tc.totalHours.toFixed(2) + 'h' : '-'}</td>
                     </tr>
                   ))}
@@ -138,7 +142,7 @@ export default function MonitorEmployees() {
       {/* Daily Tasks Section */}
       <div className="card">
         <div className="card-header bg-primary text-white">
-          <h5 className="mb-0">Today's Employee Tasks</h5>
+          <h5 className="mb-0">Today&apos;s Employee Tasks</h5>
         </div>
         <div className="card-body">
           <div className="mb-3">
