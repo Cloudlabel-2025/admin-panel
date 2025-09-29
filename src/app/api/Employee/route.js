@@ -5,15 +5,17 @@ import mongoose from "mongoose";
 
 // helper: find the latest employeeId across all departments
 async function getNextEmployeeId() {
-  const departmentCollections = Object.keys(mongoose.models).filter(name =>
-    name.endsWith("_department")
-  );
+  const db = mongoose.connection.db;
+  const collections = await db.listCollections().toArray();
+  const departmentCollections = collections
+    .map(col => col.name)
+    .filter(name => name.endsWith("_department"));
 
   let maxId = 0;
 
   for (const collName of departmentCollections) {
-    const Model = mongoose.models[collName];
-    const lastEmp = await Model.findOne().sort({ employeeId: -1 }).exec();
+    const collection = db.collection(collName);
+    const lastEmp = await collection.findOne({}, { sort: { employeeId: -1 } });
 
     if (lastEmp && lastEmp.employeeId) {
       const num = parseInt(lastEmp.employeeId.replace("CHC", ""));
@@ -43,13 +45,15 @@ export async function POST(req) {
     const DepartmentModel = createEmployeeModel(department);
 
     // Duplicate check across ALL departments
-    const departmentCollections = Object.keys(mongoose.models).filter(name =>
-      name.endsWith("_department")
-    );
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const departmentCollections = collections
+      .map(col => col.name)
+      .filter(name => name.endsWith("_department"));
 
     for (const collName of departmentCollections) {
-      const Model = mongoose.models[collName];
-      const dup = await Model.findOne({
+      const collection = db.collection(collName);
+      const dup = await collection.findOne({
         $or: [
           { email },
           { phone },
