@@ -124,6 +124,7 @@ export default function MonitorEmployees() {
         </div>
         <div className="card-body">
           <small>
+            
             <strong>Daily Tasks Count:</strong> {dailyTasks.length}<br/>
             <strong>Timecards Count:</strong> {timecards.length}<br/>
             <strong>Last Fetch:</strong> {new Date().toLocaleTimeString()}
