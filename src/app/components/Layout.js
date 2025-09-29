@@ -57,6 +57,9 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
                 Daily Task
               </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/documents")}>
+               Document Upload
+              </button>
             </>
           )}
         </nav>
