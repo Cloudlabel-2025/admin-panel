@@ -7,9 +7,9 @@ function timeToHours(timeStr) {
   return h + m / 60;
 }
 
-// Calculate total working hours
-function calculatedTotalHours(logIn, logOut, lunchOut, lunchIn, permission) {
-  if (!logIn || !logOut) return 0; // must have logIn and logOut
+// Calculate total working hours (actual hours worked)
+function calculatedTotalHours(logIn, logOut, lunchOut, lunchIn) {
+  if (!logIn || !logOut) return "00:00";
 
   const [logInH, logInM] = logIn.split(":").map(Number);
   const [logOutH, logOutM] = logOut.split(":").map(Number);
@@ -17,7 +17,7 @@ function calculatedTotalHours(logIn, logOut, lunchOut, lunchIn, permission) {
   const logInDate = new Date(0, 0, 0, logInH, logInM);
   const logOutDate = new Date(0, 0, 0, logOutH, logOutM);
 
-  let workDuration = (logOutDate - logInDate) / (1000 * 60 * 60); // base working hours
+  let workDuration = (logOutDate - logInDate) / (1000 * 60 * 60);
 
   // subtract lunch break if both times exist
   if (lunchOut && lunchIn) {
@@ -29,11 +29,10 @@ function calculatedTotalHours(logIn, logOut, lunchOut, lunchIn, permission) {
     workDuration -= lunchDuration;
   }
 
-  // subtract manual permission hours
-  const permissionDuration = timeToHours(permission);
-  workDuration -= permissionDuration;
-
-  return workDuration;
+  workDuration = Math.max(0, workDuration);
+  const hours = Math.floor(workDuration);
+  const minutes = Math.round((workDuration - hours) * 60);
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 const TimecardSchema = new mongoose.Schema({
@@ -64,14 +63,23 @@ const TimecardSchema = new mongoose.Schema({
   permission: {
     type: String,
     default: "00:00", // manually entered
+    validate: {
+      validator: function(v) {
+        if (!v || v === "00:00") return true;
+        const [h, m] = v.split(":").map(Number);
+        const hours = h + m / 60;
+        return hours <= 2;
+      },
+      message: "Permission cannot exceed 2 hours"
+    }
   },
   reason: {
     type: String,
     default: "",
   },
   totalHours: {
-    type: Number,
-    default: 0,
+    type: String,
+    default: "",
   },
   createdAt: {
     type: Date,
@@ -85,25 +93,34 @@ TimecardSchema.pre("save", function (next) {
     this.logIn,
     this.logOut,
     this.lunchOut,
-    this.lunchIn,
-    this.permission,
+    this.lunchIn
   );
   next();
 });
 
 // Middleware to recalc hours on update
-TimecardSchema.pre("findOneAndUpdate", function (next) {
-  const update = this.getUpdate();
-  if (update.logIn && update.logOut) {
-    update.totalHours = calculatedTotalHours(
-      update.logIn,
-      update.logOut,
-      update.lunchOut,
-      update.lunchIn,
-      update.permission || "00:00",
-    );
-    this.setUpdate(update);
+TimecardSchema.pre(["findOneAndUpdate", "updateOne"], async function (next) {
+  try {
+    const update = this.getUpdate();
+    
+    // Get the current document to merge with updates
+    const docToUpdate = await this.model.findOne(this.getQuery());
+    
+    if (docToUpdate) {
+      // Merge current values with updates
+      const logIn = update.logIn !== undefined ? update.logIn : docToUpdate.logIn;
+      const logOut = update.logOut !== undefined ? update.logOut : docToUpdate.logOut;
+      const lunchOut = update.lunchOut !== undefined ? update.lunchOut : docToUpdate.lunchOut;
+      const lunchIn = update.lunchIn !== undefined ? update.lunchIn : docToUpdate.lunchIn;
+      
+      // Always calculate total hours when any time field is updated
+      update.totalHours = calculatedTotalHours(logIn, logOut, lunchOut, lunchIn);
+      this.setUpdate(update);
+    }
+  } catch (error) {
+    console.error('Error in timecard middleware:', error);
   }
+  
   next();
 });
 

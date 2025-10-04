@@ -178,9 +178,22 @@ export default function TimecardPage() {
 
       {/* Permission */}
       <div className="mt-3 d-flex gap-2">
-        <input type="number" min="0" className="form-control w-auto" value={permission} onChange={(e) => setPermission(Number(e.target.value))} placeholder="Permission (hours)" disabled={permissionLocked} />
+        <input 
+          type="number" 
+          min="0" 
+          max="2" 
+          step="0.5" 
+          className="form-control w-auto" 
+          value={permission} 
+          onChange={(e) => {
+            const value = Math.min(2, Math.max(0, Number(e.target.value)));
+            setPermission(value);
+          }} 
+          placeholder="Permission (max 2 hours)" 
+          disabled={permissionLocked} 
+        />
         <input type="text" className="form-control w-auto" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} disabled={permissionLocked} />
-        <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked}>Save</button>
+        <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked || !reason.trim()}>Save</button>
       </div>
 
       {/* Actions */}
