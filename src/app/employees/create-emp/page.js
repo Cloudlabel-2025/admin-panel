@@ -28,6 +28,10 @@ export default function CreateEmployeePage() {
       zip: "",
       country: "",
     },
+    payroll: {
+      salary: "",
+      currency: "INR",
+    },
   });
 
   useEffect(() => {
@@ -92,6 +96,10 @@ export default function CreateEmployeePage() {
             state: "",
             zip: "",
             country: "",
+          },
+          payroll: {
+            salary: "",
+            currency: "INR",
           },
         });
       } else {
@@ -301,6 +309,29 @@ export default function CreateEmployeePage() {
             name="address.country"
             value={formData.address.country}
             onChange={handleChange}
+          />
+        </div>
+
+        {/* Payroll Information */}
+        <h5 className="mt-4">Payroll Information</h5>
+        <div className="col-md-6">
+          <label className="form-label">Base Salary</label>
+          <input
+            type="number"
+            className="form-control"
+            name="payroll.salary"
+            value={formData.payroll.salary}
+            onChange={handleChange}
+            placeholder="Monthly salary"
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Currency</label>
+          <input
+            type="text"
+            className="form-control"
+            value="INR"
+            disabled
           />
         </div>
 

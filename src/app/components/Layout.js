@@ -48,6 +48,10 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
                 Monitor Employees
               </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                Attendance
+              </button>
+              
             </>
           ) : (
             <>

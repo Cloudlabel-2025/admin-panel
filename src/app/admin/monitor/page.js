@@ -9,6 +9,7 @@ export default function MonitorEmployees() {
   const [dailyTasks, setDailyTasks] = useState([]);
   const [timecards, setTimecards] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState('');
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -25,6 +26,7 @@ export default function MonitorEmployees() {
 
   const fetchAllData = async () => {
     await Promise.all([fetchAllDailyTasks(), fetchAllTimecards()]);
+    setLastFetchTime(new Date().toLocaleTimeString());
   };
 
   const fetchAllDailyTasks = async () => {
@@ -105,7 +107,11 @@ export default function MonitorEmployees() {
                       <td>{tc.lunchIn || '-'}</td>
                       <td>{tc.permission + 'Hr' || '-'}</td>
                       <td>{tc.reason|| '-'}</td>
-                      <td>{tc.totalHours ? tc.totalHours.toFixed(2) + 'h' : '-'}</td>
+                      <td>{tc.totalHours ? (() => {
+                        const [h, m] = (tc.totalHours || '0:0').split(':').map(Number);
+                        const hours = h + (m || 0) / 60;
+                        return hours.toFixed(2) + 'h';
+                      })() : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -126,7 +132,7 @@ export default function MonitorEmployees() {
           <small>
             <strong>Daily Tasks Count:</strong> {dailyTasks.length}<br/>
             <strong>Timecards Count:</strong> {timecards.length}<br/>
-            <strong>Last Fetch:</strong> {new Date().toLocaleTimeString()}
+            <strong>Last Fetch:</strong> {lastFetchTime || 'Not fetched yet'}
           </small>
           {dailyTasks.length > 0 && (
             <details className="mt-2">
