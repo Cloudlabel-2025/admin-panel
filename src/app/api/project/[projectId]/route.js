@@ -21,9 +21,10 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   try {
     await connectMongoose();
+    const {projectId} = await params;
     const body = await req.json();
 
-    const project = await Project.findByIdAndUpdate(params.projectId, body, { new: true })
+    const project = await Project.findByIdAndUpdate(projectId, body, { new: true })
       .populate("assignedBy", "employeeId name email ")
       .populate("assignedTo", "employeeId name email ");
 
@@ -39,7 +40,9 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await connectMongoose();
-    const project = await Project.findByIdAndDelete(params.projectId);
+    const {projectId} = await params;
+
+    const project = await Project.findByIdAndDelete(projectId);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     return NextResponse.json({ message: "Project deleted successfully" });
