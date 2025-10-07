@@ -114,7 +114,7 @@ export default function CreateEmployeePage() {
   return (
     <Layout>
       <h2>Employee Registration Form</h2>
-      
+
       <form className="row g-3" onSubmit={handleSubmit}>
         {/* Basic Info */}
         <div className="col-md-6">
@@ -178,26 +178,46 @@ export default function CreateEmployeePage() {
 
         {/* Contact Info */}
         <div className="col-md-6">
-          <label className="form-label">Email</label>
+          <label className="form-label">
+            Email <span className="text-danger">*</span>
+          </label>
           <input
             type="email"
             className="form-control"
             name="email"
             value={formData.email}
-            onChange={handleChange}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                email: e.target.value.toLowerCase(),
+              }))
+            }
             required
           />
         </div>
+
         <div className="col-md-6">
-          <label className="form-label">Phone</label>
+          <label className="form-label">
+            Phone <span className="text-danger">*</span>
+          </label>
           <input
-            type="text"
+            type="tel"
             className="form-control"
             name="phone"
             value={formData.phone}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, ""); // allow only digits
+              if (value.length <= 10) {
+                setFormData((prev) => ({ ...prev, phone: value }));
+              }
+            }}
+            pattern="\d{10}"
+            maxLength="10"
+            required
+            placeholder="Enter 10-digit number"
           />
         </div>
+
 
         {/* Role */}
         <div className="col-md-6">
@@ -228,14 +248,14 @@ export default function CreateEmployeePage() {
             <option value="">Select Role</option>
             <option value="Super-admin">Super-admin</option>
             <option value="admin">Admin</option>
-            <option value="Team-Manager">Team-Manager</option>
+
             <option value="Team-Lead">Team-Lead</option>
             <option value="Team-admin">Team-admin</option>
             <option value="Employee">Employee</option>
             <option value="Intern">Intern</option>
           </select>
         </div>
-        
+
         {/* Emergency Contact */}
         <h5 className="mt-4">Emergency Contact</h5>
         <div className="col-md-6">
@@ -249,15 +269,30 @@ export default function CreateEmployeePage() {
           />
         </div>
         <div className="col-md-6">
-          <label className="form-label">Contact Number</label>
+          <label className="form-label">
+            Contact Number <span className="text-danger">*</span>
+          </label>
           <input
-            type="text"
+            type="tel"
             className="form-control"
             name="emergencyContact.contactNumber"
             value={formData.emergencyContact.contactNumber}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, "");
+              if (value.length <= 10) {
+                setFormData((prev) => ({
+                  ...prev,
+                  emergencyContact: { ...prev.emergencyContact, contactNumber: value },
+                }));
+              }
+            }}
+            pattern="\d{10}"
+            maxLength="10"
+            required
+            placeholder="Enter 10-digit number"
           />
         </div>
+
 
         {/* Address */}
         <h5 className="mt-4">Address</h5>
@@ -315,7 +350,7 @@ export default function CreateEmployeePage() {
         {/* Payroll Information */}
         <h5 className="mt-4">Payroll Information</h5>
         <div className="col-md-6">
-          <label className="form-label">Base Salary</label>
+          <label className="form-label">Base Salary <span className="text-danger">*</span></label>
           <input
             type="number"
             className="form-control"
@@ -323,17 +358,23 @@ export default function CreateEmployeePage() {
             value={formData.payroll.salary}
             onChange={handleChange}
             placeholder="Monthly salary"
+            required
+            min="1000"
           />
         </div>
+
         <div className="col-md-6">
           <label className="form-label">Currency</label>
           <input
             type="text"
             className="form-control"
-            value="INR"
-            disabled
+            name="payroll.currency"
+            value={formData.payroll.currency}
+            onChange={handleChange}
+            readOnly
           />
         </div>
+
 
         {/* Submit */}
         <div className="col-12 text-center mt-4">
