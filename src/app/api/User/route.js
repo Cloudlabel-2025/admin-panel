@@ -54,3 +54,14 @@ export async function POST(req) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function GET() {
+  try {
+    await connectMongoose();
+    const users = await User.find({}, "employeeId name email role");
+    return NextResponse.json(users);
+  } catch (err) {
+    console.error("User GET error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

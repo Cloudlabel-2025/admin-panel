@@ -27,6 +27,31 @@ async function getNextEmployeeId() {
   return "CHC" + nextId.toString().padStart(4, "0");
 }
 
+export async function GET() {
+  try {
+    await connectMongoose();
+
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const departmentCollections = collections
+      .map((col) => col.name)
+      .filter((name) => name.endsWith("_department"));
+
+    let allEmployees = [];
+
+    for (const collName of departmentCollections) {
+      const collection = db.collection(collName);
+      const employees = await collection.find({}).toArray();
+      allEmployees = allEmployees.concat(employees);
+    }
+
+    return NextResponse.json(allEmployees);
+  } catch (err) {
+    console.error("Error fetching employees:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function POST(req) {
   try {
     await connectMongoose();
