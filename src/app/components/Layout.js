@@ -48,6 +48,12 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
                 Monitor Employees
               </button>
+                <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/documents")}>
+               Document Upload
+              </button>
+               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
+              Project
+              </button>
             </>
           ) : (
             <>
@@ -56,9 +62,6 @@ export default function Layout({ children }) {
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
                 Daily Task
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/documents")}>
-               Document Upload
               </button>
             </>
           )}
