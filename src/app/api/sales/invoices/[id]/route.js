@@ -26,7 +26,7 @@ export async function PUT(req,{params}){
     }
 }
 
-export async function PUT(req,{params}){
+export async function DELETE(req,{params}){
     try{
         await connectMongoose();
         await SalesInvoice.findByIdAndDelete(params.id);
