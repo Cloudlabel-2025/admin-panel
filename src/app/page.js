@@ -23,7 +23,7 @@ export default function HomePage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("employeeId", data.user.employeeId);
       localStorage.setItem("userEmail", email);
-      
+
       // Check if super admin
       if (email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || email === "admin@gmail.com") {
         localStorage.setItem("userRole", "super-admin");
@@ -70,17 +70,18 @@ export default function HomePage() {
               <h2 className="card-title text-center mb-4">
                 {isLogin ? "Login" : "Employee Signup"}
               </h2>
-              
+
               <form onSubmit={isLogin ? handleLogin : handleSignup}>
                 <div className="mb-3">
                   <label className="form-label">Email</label>
+
                   <input
-                  
                     type="email"
                     className="form-control"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    suppressHydrationWarning
                   />
                 </div>
                 <div className="mb-3">
@@ -92,26 +93,28 @@ export default function HomePage() {
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     required
+                    suppressHydrationWarning
                   />
                 </div>
-                <button type="submit" className="btn btn-primary w-100">
+                <button type="submit" className="btn btn-primary w-100" suppressHydrationWarning>
                   {isLogin ? "Login" : "Sign Up"}
                 </button>
               </form>
-              
+
               <div className="text-center mt-3">
-                <button 
+                <button
                   className="btn btn-link"
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setEmail("");
                     setPassword("");
                   }}
+                  suppressHydrationWarning
                 >
                   {isLogin ? "New employee? Sign up here" : "Already have account? Login here"}
                 </button>
               </div>
-              
+
               {isLogin && (
                 <div className="text-center mt-2">
                   <small className="text-muted">

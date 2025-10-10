@@ -1,8 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Layout from "../components/Layout";
 
 export default function CashPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const userRole = localStorage.getItem("userRole");
+    if (userRole !== "super-admin") {
+      router.push("/");
+      return;
+    }
+  }, [router]);
   const [transactions, setTransactions] = useState([]);
   const [dateRange, setDateRange] = useState({
     startDate: new Date().toISOString().split('T')[0],
@@ -27,8 +38,9 @@ export default function CashPage() {
   const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + t.amount, 0);
 
   return (
-    <div className="container mt-4">
-      <h1>💵 Cash Management</h1>
+    <Layout>
+      <div className="container-fluid">
+        <h2>💵 Cash Management</h2>
       
       <div className="row mb-4">
         <div className="col-md-6">
@@ -78,7 +90,7 @@ export default function CashPage() {
           <div className="card text-white bg-success">
             <div className="card-body">
               <h5>Total Credits</h5>
-              <h3>${totalCredits}</h3>
+              <h3>₹{totalCredits.toFixed(2)}</h3>
             </div>
           </div>
         </div>
@@ -86,7 +98,7 @@ export default function CashPage() {
           <div className="card text-white bg-danger">
             <div className="card-body">
               <h5>Total Debits</h5>
-              <h3>${totalDebits}</h3>
+              <h3>₹{totalDebits.toFixed(2)}</h3>
             </div>
           </div>
         </div>
@@ -94,7 +106,7 @@ export default function CashPage() {
           <div className="card text-white bg-primary">
             <div className="card-body">
               <h5>Net Cash Flow</h5>
-              <h3>${totalCredits - totalDebits}</h3>
+              <h3>₹{(totalCredits - totalDebits).toFixed(2)}</h3>
             </div>
           </div>
         </div>
@@ -118,7 +130,7 @@ export default function CashPage() {
             <tbody>
               {transactions.map((transaction) => (
                 <tr key={transaction._id}>
-                  <td>{new Date(transaction.date).toLocaleDateString()}</td>
+                  <td>{new Date(transaction.date).toLocaleDateString('en-IN')}</td>
                   <td>{transaction.fromAccount?.name || "N/A"}</td>
                   <td>{transaction.toAccount?.name || "N/A"}</td>
                   <td>
@@ -126,7 +138,7 @@ export default function CashPage() {
                       {transaction.type}
                     </span>
                   </td>
-                  <td>${transaction.amount}</td>
+                  <td><strong>₹{parseFloat(transaction.amount || 0).toFixed(2)}</strong></td>
                   <td>{transaction.description}</td>
                 </tr>
               ))}
@@ -134,6 +146,7 @@ export default function CashPage() {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
