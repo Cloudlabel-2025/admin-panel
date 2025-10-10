@@ -57,7 +57,12 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
                 Attendance
               </button>
-              
+               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/skills")}>
+                Skills
+              </button>
+               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
+                Performance
+              </button>
             </>
           ) : (
             <>
