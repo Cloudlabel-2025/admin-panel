@@ -161,7 +161,7 @@ export default function ProfilePage() {
           <h5>⚠️ Profile Incomplete</h5>
           <p>Your detailed employee profile has not been created yet. Please contact your administrator to:</p>
           <ul>
-            <li>Add your complete employee record through "Add Employee" feature</li>
+            <li>Add your complete employee record through &quot;Add Employee&quot; feature</li>
             <li>Assign you to a department</li>
             <li>Fill in your personal and professional details</li>
           </ul>
