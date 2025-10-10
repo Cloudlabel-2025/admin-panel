@@ -382,7 +382,7 @@ export default function TimecardPage() {
             <div className="card bg-dark text-white">
               <div className="card-body text-center">
                 <h5>{current ? calcTotalHours(current) : "-"}</h5>
-                <p>Today's Hours</p>
+                <p>Today&apos;s Hours</p>
               </div>
             </div>
           </div>
@@ -391,7 +391,7 @@ export default function TimecardPage() {
         {/* Today's Timecard */}
         <div className="card mb-4">
           <div className="card-body">
-            <h5>Today's Timecard</h5>
+            <h5>Today&apos;s Timecard</h5>
             <div className="row">
               <div className="col-md-6">
                 <div className="row mb-3">
