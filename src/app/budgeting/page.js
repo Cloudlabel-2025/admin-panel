@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Layout from "../components/Layout";
 
 export default function BudgetingPage() {
   const [budgets, setBudgets] = useState([]);
@@ -36,6 +37,7 @@ export default function BudgetingPage() {
   if (loading) return <div>Loading...</div>;
 
   return (
+    <Layout>
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>📈 Budgets</h1>
@@ -80,5 +82,6 @@ export default function BudgetingPage() {
         </table>
       </div>
     </div>
+    </Layout>
   );
 }
