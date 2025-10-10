@@ -1,41 +1,41 @@
 import mongoose from "mongoose";
+import Attendance from "./Attendance";
 
-const PayrollSchema = new mongoose.Schema(
-  {
-    employeeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
-      required: true,
-    },
-    month: { type: Number, required: true },
-    year: { type: Number, required: true },
-    baseSalary: { type: Number, required: true },
-    totalDays: { type: Number, default: 30 },
-    presentDays: { type: Number, default: 0 },
-    halfDays: { type: Number, default: 0 },
-    absentDays: { type: Number, default: 0 },
-    bonus: { type: Number, default: 0 },
-    deductions: { type: Number, default: 0 },
-    netSalary: { type: Number, default: 0 },
-  },
-  { timestamps: true }
-);
+const payrollSchema = new mongoose.Schema({
+  employeeId: { type: String, required: true },
+  employeeName: { type: String, default: "" },
+  department: { type: String, default: "" },
+  designation: { type: String, default: "" },
+  
+  // Salary Components
+  grossSalary: { type: Number, default: 0 },
+  basicSalary: { type: Number, default: 0 },
+  hra: { type: Number, default: 0 },
+  da: { type: Number, default: 0 },
+  conveyance: { type: Number, default: 0 },
+  medical: { type: Number, default: 0 },
+  bonus: { type: Number, default: 0 },
+  weekendWork: { type: Number, default: 0 },
+  totalEarnings: { type: Number, default: 0 },
+  
+  // Deductions
+  pf: { type: Number, default: 0 },
+  esi: { type: Number, default: 0 },
+  lopAmount: { type: Number, default: 0 },
+  lopDays: { type: Number, default: 0 },
+  loanDeduction: { type: Number, default: 0 },
+  totalDeductions: { type: Number, default: 0 },
+  
+  // Final Amount
+  netPay: { type: Number, default: 0 },
+  
+  // Attendance Info
+  presentDays: { type: Number, default: 0 },
+  expectedWorkingDays: { type: Number, default: 26 },
+  
+  createdAt: { type: Date, default: Date.now },
+});
 
-// ✅ Helper function for salary calculation
-PayrollSchema.statics.calculatePayroll = function (attendanceRecords, baseSalary) {
-  let presentDays = 0, halfDays = 0, absentDays = 0;
 
-  attendanceRecords.forEach((rec) => {
-    if (rec.status === "Present") presentDays++;
-    else if (rec.status === "Half Day") halfDays++;
-    else if (rec.status === "Absent") absentDays++;
-  });
 
-  const perDaySalary = baseSalary / 30;
-  const netSalary =
-    presentDays * perDaySalary + halfDays * (perDaySalary / 2);
-
-  return { presentDays, halfDays, absentDays, netSalary };
-};
-
-export default mongoose.models.Payroll || mongoose.model("Payroll", PayrollSchema);
+export default mongoose.models.Payroll || mongoose.model("Payroll", payrollSchema);

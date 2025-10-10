@@ -112,12 +112,14 @@ export async function GET(req) {
   }
 }
 
-// POST: generate attendance for given date range or all records
+// POST: generate attendance or manual entry
 export async function POST(req) {
   try {
     await connectMongoose();
     const body = await req.json();
     const { startDate, endDate, employeeId } = body;
+
+
 
     let query = {};
     if (employeeId) query.employeeId = employeeId;
@@ -137,7 +139,6 @@ export async function POST(req) {
     }
 
     const timecards = await Timecard.find(query).sort({ date: -1 });
-
     const attendanceData = [];
     
     for (const tc of timecards) {
@@ -146,15 +147,28 @@ export async function POST(req) {
       const status = calculateAttendance(totalHours, permissionHours);
       const employeeData = await getEmployeeData(tc.employeeId);
       
-      // Store in attendance database
+      // Calculate lunch duration and overtime
+      const lunchDuration = tc.lunchOut && tc.lunchIn ? 
+        Math.abs(new Date(`1970-01-01T${tc.lunchIn}:00`) - new Date(`1970-01-01T${tc.lunchOut}:00`)) / (1000 * 60) : 0;
+      const overtimeHours = Math.max(0, totalHours - 8);
+      
       await Attendance.findOneAndUpdate(
         { employeeId: tc.employeeId, date: tc.date },
         {
           employeeId: tc.employeeId,
+          employeeName: employeeData.name,
+          department: employeeData.department || "-",
           date: tc.date,
           status,
           totalHours,
-          permissionHours
+          permissionHours,
+          loginTime: tc.logIn || "",
+          logoutTime: tc.logOut || "",
+          lunchDuration,
+          overtimeHours,
+          remarks: tc.reason || "",
+
+          updatedAt: new Date()
         },
         { upsert: true, new: true }
       );
@@ -163,16 +177,43 @@ export async function POST(req) {
         date: tc.date,
         employeeId: tc.employeeId,
         employeeName: employeeData.name,
-        employeeEmail: employeeData.email,
+        department: employeeData.department || "-",
         totalHours,
         permissionHours,
+        loginTime: tc.logIn || "",
+        logoutTime: tc.logOut || "",
+        lunchDuration,
+        overtimeHours,
         status,
+
+        remarks: tc.reason || ""
       });
     }
 
     return NextResponse.json(attendanceData, { status: 200 });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: err.message || "Failed to generate attendance" }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Failed to process attendance" }, { status: 500 });
+  }
+}
+
+// PUT: Update attendance record
+export async function PUT(req) {
+  try {
+    await connectMongoose();
+    const body = await req.json();
+    const { _id, ...updates } = body;
+    
+    updates.updatedAt = new Date();
+    
+    const attendance = await Attendance.findByIdAndUpdate(_id, updates, { new: true });
+    
+    if (!attendance) {
+      return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
+    }
+    
+    return NextResponse.json({ success: true, attendance });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
