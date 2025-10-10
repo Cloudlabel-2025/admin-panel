@@ -12,18 +12,43 @@ export default function AbsencePage() {
     absenceType: "",
     startDate: "",
     endDate: "",
-    reason: "",
-    isLOP: false
+    reason: ""
   });
+  const [currentEmployee, setCurrentEmployee] = useState(null);
   const [filter, setFilter] = useState({ status: "", employeeId: "" });
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
-    setUserRole(localStorage.getItem("userRole") || "");
-    fetchEmployees();
+    const role = localStorage.getItem("userRole") || "";
+    const empId = localStorage.getItem("employeeId") || "";
+    setUserRole(role);
+    
+    if (role === "employee" && empId) {
+      fetchCurrentEmployee(empId);
+    } else {
+      fetchEmployees();
+    }
     fetchAbsences();
   }, []);
+
+  const fetchCurrentEmployee = async (empId) => {
+    try {
+      const res = await fetch(`/api/Employee/${empId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentEmployee(data);
+        setForm(prev => ({
+          ...prev,
+          employeeId: data.employeeId,
+          employeeName: `${data.firstName} ${data.lastName}`,
+          department: data.department
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -91,8 +116,7 @@ export default function AbsencePage() {
           absenceType: "",
           startDate: "",
           endDate: "",
-          reason: "",
-          isLOP: false
+          reason: ""
         });
         fetchAbsences();
       } else {
@@ -129,6 +153,10 @@ export default function AbsencePage() {
     }
   };
 
+  const viewAbsenceDetails = (absence) => {
+    alert(`Employee: ${absence.employeeName}\nType: ${absence.absenceType}\nDates: ${new Date(absence.startDate).toLocaleDateString()} - ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.reason}`);
+  };
+
   const getStatusBadge = (status) => {
     const colors = {
       Pending: "warning",
@@ -149,22 +177,34 @@ export default function AbsencePage() {
             <h5>Submit Absence Request</h5>
             <form onSubmit={handleSubmit}>
               <div className="row">
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Employee</label>
-                  <select
-                    className="form-select"
-                    value={form.employeeId}
-                    onChange={(e) => handleEmployeeSelect(e.target.value)}
-                    required
-                  >
-                    <option value="">Select Employee</option>
-                    {employees.map(emp => (
-                      <option key={emp.employeeId} value={emp.employeeId}>
-                        {emp.firstName} {emp.lastName} ({emp.employeeId})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {userRole === "admin" ? (
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label">Employee</label>
+                    <select
+                      className="form-select"
+                      value={form.employeeId}
+                      onChange={(e) => handleEmployeeSelect(e.target.value)}
+                      required
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map(emp => (
+                        <option key={emp.employeeId} value={emp.employeeId}>
+                          {emp.firstName} {emp.lastName} ({emp.employeeId})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="col-md-4 mb-3">
+                    <label className="form-label">Employee</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={`${form.employeeName} (${form.employeeId})`}
+                      readOnly
+                    />
+                  </div>
+                )}
                 <div className="col-md-4 mb-3">
                   <label className="form-label">Absence Type</label>
                   <select
@@ -215,15 +255,6 @@ export default function AbsencePage() {
                   />
                 </div>
                 <div className="col-md-4 mb-3 d-flex align-items-end">
-                  <div className="form-check me-3">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={form.isLOP}
-                      onChange={(e) => setForm({...form, isLOP: e.target.checked})}
-                    />
-                    <label className="form-check-label">Loss of Pay (LOP)</label>
-                  </div>
                   <button type="submit" className="btn btn-primary" disabled={loading}>
                     {loading ? "Submitting..." : "Submit Request"}
                   </button>
@@ -287,7 +318,7 @@ export default function AbsencePage() {
                     <th>Days</th>
                     <th>Reason</th>
                     <th>Status</th>
-                    <th>LOP</th>
+
                     {userRole === "admin" && <th>Actions</th>}
                   </tr>
                 </thead>
@@ -301,10 +332,10 @@ export default function AbsencePage() {
                       <td>{absence.totalDays}</td>
                       <td>{absence.reason}</td>
                       <td><span className={getStatusBadge(absence.status)}>{absence.status}</span></td>
-                      <td>{absence.isLOP ? "Yes" : "No"}</td>
+
                       {userRole === "admin" && (
                         <td>
-                          {absence.status === "Pending" && (
+                          {absence.status === "Pending" ? (
                             <>
                               <button
                                 className="btn btn-success btn-sm me-1"
@@ -319,6 +350,13 @@ export default function AbsencePage() {
                                 Reject
                               </button>
                             </>
+                          ) : (
+                            <button
+                              className="btn btn-info btn-sm"
+                              onClick={() => viewAbsenceDetails(absence)}
+                            >
+                              View
+                            </button>
                           )}
                         </td>
                       )}
