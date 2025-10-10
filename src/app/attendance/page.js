@@ -1,19 +1,43 @@
 "use client";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
+import * as XLSX from "xlsx";
 
 export default function AttendancePage() {
   const [attendance, setAttendance] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
+
+  const [stats, setStats] = useState({
+    totalPresent: 0,
+    totalAbsent: 0,
+    totalHalfDay: 0,
+    avgHours: 0
+  });
 
   useEffect(() => {
     setIsAdmin(localStorage.getItem("userRole") === "super-admin");
     setEmployeeId(localStorage.getItem("employeeId") || "");
+    fetchEmployees();
   }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch("/api/Employee/search");
+      if (res.ok) {
+        const data = await res.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchAttendance = async () => {
     try {
@@ -28,14 +52,71 @@ export default function AttendancePage() {
         params.append("admin", "true");
         if (startDate) params.append("startDate", startDate);
         if (endDate) params.append("endDate", endDate);
+        if (selectedEmployee) params.append("employeeId", selectedEmployee);
+        if (statusFilter) params.append("status", statusFilter);
       }
 
       const res = await fetch("/api/attendance?" + params.toString());
       const data = await res.json();
-      setAttendance(Array.isArray(data) ? data : []);
+      const attendanceData = Array.isArray(data) ? data : [];
+      setAttendance(attendanceData);
+      calculateStats(attendanceData);
     } catch (err) {
       console.error("Failed to fetch attendance:", err);
       setAttendance([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (data) => {
+    const totalPresent = data.filter(a => a.status === "Present").length;
+    const totalAbsent = data.filter(a => a.status === "Absent").length;
+    const totalHalfDay = data.filter(a => a.status === "Half Day").length;
+    const avgHours = data.length > 0 ? data.reduce((sum, a) => sum + (a.totalHours || 0), 0) / data.length : 0;
+    
+    setStats({ totalPresent, totalAbsent, totalHalfDay, avgHours });
+  };
+
+
+
+  const exportToExcel = () => {
+    const wsData = attendance.map(a => ({
+      Date: new Date(a.date).toLocaleDateString(),
+      EmployeeID: a.employeeId,
+      EmployeeName: a.employeeName,
+      Status: a.status,
+      TotalHours: a.totalHours?.toFixed(2) || 0,
+      PermissionHours: a.permissionHours?.toFixed(2) || 0,
+      LoginTime: a.loginTime || "-",
+      LogoutTime: a.logoutTime || "-",
+      Remarks: a.remarks || "-"
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+    XLSX.writeFile(wb, `Attendance_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const generateAttendance = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate, endDate, employeeId: selectedEmployee })
+      });
+      
+      if (res.ok) {
+        alert("Attendance generated from timecard data");
+        fetchAttendance();
+      } else {
+        alert("Failed to generate attendance");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error generating attendance");
     } finally {
       setLoading(false);
     }
@@ -49,87 +130,275 @@ export default function AttendancePage() {
     }
   }, [isAdmin, employeeId]);
 
+  // Employee-specific stats calculation
+  const getEmployeeStats = () => {
+    if (!isAdmin && employeeId) {
+      const employeeAttendance = attendance.filter(a => a.employeeId === employeeId);
+      const totalDays = employeeAttendance.length;
+      const presentDays = employeeAttendance.filter(a => a.status === "Present").length;
+      const absentDays = employeeAttendance.filter(a => a.status === "Absent").length;
+      const halfDays = employeeAttendance.filter(a => a.status === "Half Day").length;
+      const totalHours = employeeAttendance.reduce((sum, a) => sum + (a.totalHours || 0), 0);
+      const avgHours = totalDays > 0 ? totalHours / totalDays : 0;
+      const attendancePercentage = totalDays > 0 ? (presentDays + halfDays * 0.5) / totalDays * 100 : 0;
+      
+      return {
+        totalDays,
+        presentDays,
+        absentDays,
+        halfDays,
+        totalHours: totalHours.toFixed(2),
+        avgHours: avgHours.toFixed(2),
+        attendancePercentage: attendancePercentage.toFixed(1)
+      };
+    }
+    return null;
+  };
+
+  const employeeStats = getEmployeeStats();
+
   return (
     <Layout>
-      <div className="container-fluid mt-4">
-        <h2>Attendance Records</h2>
-
-        {isAdmin && (
-          <div className="row mb-3">
-            <div className="col-md-3">
-              <label>Start Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="col-md-3">
-              <label>End Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            <div className="col-md-3 d-flex align-items-end">
-              <button className="btn btn-primary" onClick={fetchAttendance}>
-                Filter
+      <div className="container-fluid p-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h2>{isAdmin ? "Attendance Management" : "My Attendance"}</h2>
+          {isAdmin ? (
+            <div>
+              <button className="btn btn-success me-2" onClick={exportToExcel}>
+                Export Excel
+              </button>
+              <button className="btn btn-info" onClick={generateAttendance}>
+                Generate from Timecard
               </button>
             </div>
+          ) : (
+            <button className="btn btn-primary" onClick={exportToExcel}>
+              Export My Attendance
+            </button>
+          )}
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="row mb-4">
+          {isAdmin ? (
+            // Admin view - overall stats
+            <>
+              <div className="col-md-3">
+                <div className="card bg-success text-white">
+                  <div className="card-body text-center">
+                    <h5>{stats.totalPresent}</h5>
+                    <p>Present</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card bg-danger text-white">
+                  <div className="card-body text-center">
+                    <h5>{stats.totalAbsent}</h5>
+                    <p>Absent</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card bg-warning text-white">
+                  <div className="card-body text-center">
+                    <h5>{stats.totalHalfDay}</h5>
+                    <p>Half Day</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card bg-info text-white">
+                  <div className="card-body text-center">
+                    <h5>{stats.avgHours.toFixed(1)}</h5>
+                    <p>Avg Hours</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : employeeStats ? (
+            // Employee view - personal stats
+            <>
+              <div className="col-md-2">
+                <div className="card bg-primary text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.totalDays}</h5>
+                    <p>Total Days</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-2">
+                <div className="card bg-success text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.presentDays}</h5>
+                    <p>Present</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-2">
+                <div className="card bg-danger text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.absentDays}</h5>
+                    <p>Absent</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-2">
+                <div className="card bg-warning text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.halfDays}</h5>
+                    <p>Half Day</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-2">
+                <div className="card bg-info text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.totalHours}</h5>
+                    <p>Total Hours</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-2">
+                <div className="card bg-secondary text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.attendancePercentage}%</h5>
+                    <p>Attendance</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {/* Filters */}
+        {isAdmin && (
+          <div className="card mb-4">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-md-2">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="col-md-2">
+                  <label className="form-label">End Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Employee</label>
+                  <select
+                    className="form-select"
+                    value={selectedEmployee}
+                    onChange={(e) => setSelectedEmployee(e.target.value)}
+                  >
+                    <option value="">All Employees</option>
+                    {employees.map(emp => (
+                      <option key={emp.employeeId} value={emp.employeeId}>
+                        {emp.firstName} {emp.lastName} ({emp.employeeId})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-md-2">
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">All Status</option>
+                    <option value="Present">Present</option>
+                    <option value="Half Day">Half Day</option>
+                    <option value="Absent">Absent</option>
+                  </select>
+                </div>
+                <div className="col-md-3 d-flex align-items-end">
+                  <button className="btn btn-primary w-100" onClick={fetchAttendance}>
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {loading ? (
-          <div className="text-center mt-5">
-            <div className="spinner-border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+
+
+        {/* Attendance Table */}
+        <div className="card">
+          <div className="card-body">
+            {loading ? (
+              <div className="text-center mt-5">
+                <div className="spinner-border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead className="table-dark">
+                    <tr>
+                      <th>Date</th>
+                      <th>Employee ID</th>
+                      <th>Employee Name</th>
+                      <th>Department</th>
+                      <th>Status</th>
+                      <th>Login</th>
+                      <th>Logout</th>
+                      <th>Total Hours</th>
+                      <th>Permission</th>
+                      <th>Overtime</th>
+
+                      <th>Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendance.length === 0 && (
+                      <tr>
+                        <td colSpan={11} className="text-center text-muted">
+                          No attendance records found.
+                        </td>
+                      </tr>
+                    )}
+                    {attendance.map((a, idx) => (
+                      <tr key={idx}>
+                        <td>{new Date(a.date).toLocaleDateString()}</td>
+                        <td>{a.employeeId}</td>
+                        <td>{a.employeeName}</td>
+                        <td>{a.department || "-"}</td>
+                        <td>
+                          <span className={`badge ${
+                            a.status === 'Present' ? 'bg-success' : 
+                            a.status === 'Half Day' ? 'bg-warning' : 'bg-danger'
+                          }`}>
+                            {a.status}
+                          </span>
+                        </td>
+                        <td>{a.loginTime || "-"}</td>
+                        <td>{a.logoutTime || "-"}</td>
+                        <td>{(a.totalHours || 0).toFixed(2)}</td>
+                        <td>{(a.permissionHours || 0).toFixed(2)}</td>
+                        <td>{(a.overtimeHours || 0).toFixed(2)}</td>
+
+                        <td>{a.remarks || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="table-responsive">
-            <table className="table table-bordered table-hover align-middle">
-              <thead className="table-dark text-center">
-                <tr>
-                  <th>Date</th>
-                  <th>Employee ID</th>
-                  <th>Employee Name</th>
-                  <th>Status</th>
-                  <th>Total Hours</th>
-                  <th>Permission Hours</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendance.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="text-center">
-                      No records found.
-                    </td>
-                  </tr>
-                )}
-                {attendance.map((a, idx) => (
-                  <tr key={idx} className="text-center">
-                    <td>{new Date(a.date).toLocaleDateString()}</td>
-                    <td>{a.employeeId}</td>
-                    <td>{a.employeeName}</td>
-                    <td>
-                      <span className={`badge ${
-                        a.status === 'Present' ? 'bg-success' : 
-                        a.status === 'Half Day' ? 'bg-warning' : 'bg-danger'
-                      }`}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td>{(a.totalHours || 0).toFixed(2)}</td>
-                    <td>{(a.permissionHours || 0).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </div>
       </div>
     </Layout>
   );

@@ -50,7 +50,26 @@ export async function PUT(req){
   try {
     await connectMongoose();
     const body = await req.json();
-    const { _id, ...updates } = body;
+    const { _id, action, ...updates } = body;
+
+    // Fix all records action
+    if (action === 'fix_all') {
+      const timecards = await Timecard.find({});
+      let fixed = 0;
+      
+      for (const timecard of timecards) {
+        const oldTotal = timecard.totalHours;
+        await timecard.recalculateTotalHours();
+        if (oldTotal !== timecard.totalHours) {
+          fixed++;
+        }
+      }
+      
+      return NextResponse.json({ 
+        message: `Fixed ${fixed} timecard records`,
+        total: timecards.length 
+      });
+    }
 
     const timecard = await Timecard.findByIdAndUpdate(_id, updates, { new: true });
 
