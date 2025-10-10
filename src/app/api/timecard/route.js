@@ -77,7 +77,7 @@ export async function PUT(req){
       return NextResponse.json({ error: "Timecard not found" }, { status: 404 });
     }
 
-    // If logout time is being set, complete daily tasks
+    // If logout time is being set, complete daily tasks and update attendance
     if (updates.logOut && timecard.employeeId) {
       try {
         await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
@@ -87,6 +87,15 @@ export async function PUT(req){
             action: 'complete_on_logout',
             employeeId: timecard.employeeId,
             logoutTime: updates.logOut
+          })
+        });
+        
+        // Update attendance status after logout
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/attendance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId: timecard.employeeId
           })
         });
       } catch (err) {

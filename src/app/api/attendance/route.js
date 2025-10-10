@@ -15,7 +15,10 @@ function timeToHours(timeStr) {
 }
 
 // Calculate attendance status
-function calculateAttendance(totalHours, permissionHours) {
+function calculateAttendance(totalHours, permissionHours, hasLogout = true) {
+  // If no logout time, employee is still in office
+  if (!hasLogout) return "In Office";
+  
   const effectiveHours = totalHours + Math.min(permissionHours, 2);
   if (effectiveHours >= 8) return "Present";
   if (effectiveHours >= 4) return "Half Day";
@@ -78,7 +81,8 @@ export async function GET(req) {
     for (const tc of timecards) {
       const totalHours = timeToHours(tc.totalHours || "00:00");
       const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-      const status = calculateAttendance(totalHours, permissionHours);
+      const hasLogout = tc.logOut && tc.logOut.trim() !== "";
+      const status = calculateAttendance(totalHours, permissionHours, hasLogout);
       const employeeData = await getEmployeeData(tc.employeeId);
       
       // Store/update in attendance database
@@ -89,7 +93,9 @@ export async function GET(req) {
           date: tc.date,
           status,
           totalHours,
-          permissionHours
+          permissionHours,
+          loginTime: tc.logIn || "",
+          logoutTime: tc.logOut || ""
         },
         { upsert: true, new: true }
       );
@@ -101,6 +107,8 @@ export async function GET(req) {
         employeeEmail: employeeData.email,
         totalHours,
         permissionHours,
+        loginTime: tc.logIn || "",
+        logoutTime: tc.logOut || "",
         status,
       });
     }
@@ -144,7 +152,8 @@ export async function POST(req) {
     for (const tc of timecards) {
       const totalHours = timeToHours(tc.totalHours || "00:00");
       const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-      const status = calculateAttendance(totalHours, permissionHours);
+      const hasLogout = tc.logOut && tc.logOut.trim() !== "";
+      const status = calculateAttendance(totalHours, permissionHours, hasLogout);
       const employeeData = await getEmployeeData(tc.employeeId);
       
       // Calculate lunch duration and overtime

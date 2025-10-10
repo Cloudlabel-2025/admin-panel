@@ -12,16 +12,6 @@ export default function HomePage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Check if super admin
-      if (email === "admin@gmail.com" && password === "Admin") {
-        localStorage.setItem("userRole", "super-admin");
-        localStorage.setItem("userEmail", email);
-        alert("Super Admin login successful");
-        router.push("/admin-dashboard");
-        return;
-      }
-
-      // Regular employee login
       const res = await fetch("/api/User/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,11 +20,20 @@ export default function HomePage() {
       const data = await res.json();
       if (!res.ok) return alert(data.error);
 
+      localStorage.setItem("token", data.token);
       localStorage.setItem("employeeId", data.user.employeeId);
-      localStorage.setItem("userRole", "employee");
       localStorage.setItem("userEmail", email);
-      alert("Employee login successful");
-      router.push("/timecard-entry");
+      
+      // Check if super admin
+      if (email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || email === "admin@gmail.com") {
+        localStorage.setItem("userRole", "super-admin");
+        alert("Super Admin login successful");
+        router.push("/admin-dashboard");
+      } else {
+        localStorage.setItem("userRole", "employee");
+        alert("Employee login successful");
+        router.push("/timecard-entry");
+      }
     } catch (err) {
       console.error(err);
       alert("Login failed");
@@ -76,6 +75,7 @@ export default function HomePage() {
                 <div className="mb-3">
                   <label className="form-label">Email</label>
                   <input
+                  
                     type="email"
                     className="form-control"
                     value={email}
@@ -115,7 +115,7 @@ export default function HomePage() {
               {isLogin && (
                 <div className="text-center mt-2">
                   <small className="text-muted">
-                    Super Admin: admin@gmail.com / Admin
+                    Super Admin: admin@gmail.com / admin
                   </small>
                 </div>
               )}

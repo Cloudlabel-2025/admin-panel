@@ -69,19 +69,37 @@ export default function DailyTaskComponent() {
     // Fetch employee data
     fetch(`/api/Employee/${employeeId}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            // Employee not found in department collections, use basic info
+            setUser({
+              employeeId: employeeId,
+              name: "Employee",
+              designation: "Employee"
+            });
+            return;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
         return res.json();
       })
       .then((data) => {
-        setUser({
-          employeeId: data.employeeId,
-          name: `${data.firstName} ${data.lastName}`,
-          designation: data.role || "Employee"
-        });
+        if (data) {
+          setUser({
+            employeeId: data.employeeId,
+            name: `${data.firstName} ${data.lastName}`,
+            designation: data.role || "Employee"
+          });
+        }
       })
       .catch((err) => {
         console.error("Failed to fetch employee data:", err);
-        router.push("/");
+        // Fallback to basic user info instead of redirecting
+        setUser({
+          employeeId: employeeId,
+          name: "Employee",
+          designation: "Employee"
+        });
       });
   }, [router]);
 

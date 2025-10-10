@@ -12,22 +12,31 @@ const ProjectSchema = new mongoose.Schema({
     default: "Planned",
   },
   assignedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required:true,
+    type: String,
+    required: true,
   },
   assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required:true,
+    type: String,
+    required: true,
   },
+  assignmentStatus: {
+    type: String,
+    enum: ["Pending", "Accepted", "Declined"],
+    default: "Pending"
+  },
+  responseReason: { type: String, default: "" },
+  respondedAt: { type: Date },
   createdAt:{type:Date, default: Date.now},
   updateAt:{type:Date, default: Date.now}
 }, 
 { timestamps: true }
 );
 
-export default mongoose.models.Project ||
-  mongoose.model("Project", ProjectSchema);
+// Delete existing model to force recreation with new schema
+if (mongoose.models.Project) {
+  delete mongoose.models.Project;
+}
+
+export default mongoose.model("Project", ProjectSchema);
 
   

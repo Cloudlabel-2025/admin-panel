@@ -17,7 +17,9 @@ export default function TimecardPage() {
     totalDays: 0,
     totalHours: 0,
     avgHours: 0,
-    shortDays: 0,
+    presentDays: 0,
+    absentDays: 0,
+    permissionDays: 0,
     overtimeHours: 0
   });
   const [isLunchActive, setIsLunchActive] = useState(false);
@@ -94,18 +96,38 @@ export default function TimecardPage() {
   const calculateStats = (data) => {
     const totalDays = data.length;
     let totalMinutes = 0;
-    let shortDays = 0;
+    let presentDays = 0;
+    let absentDays = 0;
+    let permissionDays = 0;
     let overtimeMinutes = 0;
 
     data.forEach(t => {
       const hours = calcTotalHours(t);
+      
+      // Count permission days
+      if (t.permission && Number(t.permission) > 0) {
+        permissionDays++;
+      }
+      
       if (hours !== "-") {
         const [h, m] = hours.split(":").map(Number);
         const minutes = h * 60 + m;
         totalMinutes += minutes;
         
-        if (h < 8) shortDays++;
+        // Calculate attendance status
+        const effectiveHours = h + Math.min(Number(t.permission) || 0, 2);
+        if (effectiveHours >= 8) {
+          presentDays++;
+        } else if (effectiveHours >= 4) {
+          presentDays++; // Half day counts as present
+        } else {
+          absentDays++;
+        }
+        
+        // Calculate overtime
         if (h > 8) overtimeMinutes += minutes - 480; // 480 = 8 hours
+      } else {
+        absentDays++;
       }
     });
 
@@ -113,7 +135,9 @@ export default function TimecardPage() {
       totalDays,
       totalHours: (totalMinutes / 60).toFixed(1),
       avgHours: totalDays > 0 ? (totalMinutes / 60 / totalDays).toFixed(1) : 0,
-      shortDays,
+      presentDays,
+      absentDays,
+      permissionDays,
       overtimeHours: (overtimeMinutes / 60).toFixed(1)
     });
   };
@@ -336,57 +360,7 @@ export default function TimecardPage() {
           </div>
         )}
 
-        {/* Statistics Cards */}
-        <div className="row mb-4">
-          <div className="col-md-2">
-            <div className="card bg-primary text-white">
-              <div className="card-body text-center">
-                <h5>{stats.totalDays}</h5>
-                <p>Total Days</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card bg-info text-white">
-              <div className="card-body text-center">
-                <h5>{stats.totalHours}h</h5>
-                <p>Total Hours</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card bg-success text-white">
-              <div className="card-body text-center">
-                <h5>{stats.avgHours}h</h5>
-                <p>Avg Hours</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card bg-warning text-white">
-              <div className="card-body text-center">
-                <h5>{stats.shortDays}</h5>
-                <p>Short Days</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card bg-secondary text-white">
-              <div className="card-body text-center">
-                <h5>{stats.overtimeHours}h</h5>
-                <p>Overtime</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card bg-dark text-white">
-              <div className="card-body text-center">
-                <h5>{current ? calcTotalHours(current) : "-"}</h5>
-                <p>Today&apos;s Hours</p>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         {/* Today's Timecard */}
         <div className="card mb-4">

@@ -18,6 +18,7 @@ export default function AttendancePage() {
     totalPresent: 0,
     totalAbsent: 0,
     totalHalfDay: 0,
+    totalInOffice: 0,
     avgHours: 0
   });
 
@@ -73,9 +74,10 @@ export default function AttendancePage() {
     const totalPresent = data.filter(a => a.status === "Present").length;
     const totalAbsent = data.filter(a => a.status === "Absent").length;
     const totalHalfDay = data.filter(a => a.status === "Half Day").length;
+    const totalInOffice = data.filter(a => a.status === "In Office").length;
     const avgHours = data.length > 0 ? data.reduce((sum, a) => sum + (a.totalHours || 0), 0) / data.length : 0;
     
-    setStats({ totalPresent, totalAbsent, totalHalfDay, avgHours });
+    setStats({ totalPresent, totalAbsent, totalHalfDay, totalInOffice, avgHours });
   };
 
 
@@ -183,7 +185,7 @@ export default function AttendancePage() {
           {isAdmin ? (
             // Admin view - overall stats
             <>
-              <div className="col-md-3">
+              <div className="col-md-2">
                 <div className="card bg-success text-white">
                   <div className="card-body text-center">
                     <h5>{stats.totalPresent}</h5>
@@ -191,15 +193,15 @@ export default function AttendancePage() {
                   </div>
                 </div>
               </div>
-              <div className="col-md-3">
-                <div className="card bg-danger text-white">
+              <div className="col-md-2">
+                <div className="card bg-primary text-white">
                   <div className="card-body text-center">
-                    <h5>{stats.totalAbsent}</h5>
-                    <p>Absent</p>
+                    <h5>{stats.totalInOffice}</h5>
+                    <p>In Office</p>
                   </div>
                 </div>
               </div>
-              <div className="col-md-3">
+              <div className="col-md-2">
                 <div className="card bg-warning text-white">
                   <div className="card-body text-center">
                     <h5>{stats.totalHalfDay}</h5>
@@ -207,11 +209,19 @@ export default function AttendancePage() {
                   </div>
                 </div>
               </div>
-              <div className="col-md-3">
+              <div className="col-md-2">
+                <div className="card bg-danger text-white">
+                  <div className="card-body text-center">
+                    <h5>{stats.totalAbsent}</h5>
+                    <p>Absent</p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4">
                 <div className="card bg-info text-white">
                   <div className="card-body text-center">
                     <h5>{stats.avgHours.toFixed(1)}</h5>
-                    <p>Avg Hours</p>
+                    <p>Average Hours</p>
                   </div>
                 </div>
               </div>

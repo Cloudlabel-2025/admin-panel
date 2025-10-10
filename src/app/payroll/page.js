@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Layout from "../components/Layout";
 
 export default function PayrollPage() {
   const [employeeId, setEmployeeId] = useState("");
@@ -151,6 +152,7 @@ export default function PayrollPage() {
   }
 
   return (
+    <Layout>
     <div className="container-fluid" style={{ padding: "30px 20px", minHeight: "85vh" }}>
       <h2 className="mb-4 text-center">Payroll Auto Generation</h2>
 
@@ -273,5 +275,6 @@ export default function PayrollPage() {
 
       {message && <div className="alert alert-info mt-3">{message}</div>}
     </div>
+    </Layout>
   );
 }

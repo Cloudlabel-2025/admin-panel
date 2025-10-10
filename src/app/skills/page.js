@@ -12,7 +12,12 @@ export default function SkillList() {
     fetch("/api/skills")
       .then((res) => res.json())
       .then((data) => {
-        setSkills(data);
+        setSkills(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching skills:", err);
+        setSkills([]);
         setLoading(false);
       });
   }, []);

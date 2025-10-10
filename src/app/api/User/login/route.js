@@ -2,6 +2,7 @@ import connectMongoose from "../../../utilis/connectMongoose";
 import User from "../../../../models/User";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 export async function POST(req) {
   try {
@@ -25,9 +26,15 @@ export async function POST(req) {
       return NextResponse.json({ error: "Incorrect password" }, { status: 400 });
     }
 
-    // Return only necessary fields for frontend
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
     return NextResponse.json({
       message: "Login successful",
+      token,
       user: {
         employeeId: user.employeeId,
         name: user.name,

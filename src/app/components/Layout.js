@@ -63,6 +63,9 @@ export default function Layout({ children }) {
                <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
                 Performance
               </button>
+               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/payroll")}>
+                Payroll
+              </button>
             </>
           ) : (
             <>
@@ -71,6 +74,18 @@ export default function Layout({ children }) {
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
                 Daily Task
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
+                My Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
+                My Performance
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                My Attendance
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
+                Absencse
               </button>
             </>
           )}

@@ -76,8 +76,8 @@ export default function ProjectPage() {
         startDate: project.startDate?.slice(0, 10) || "",
         endDate: project.endDate?.slice(0, 10) || "",
         status: project.status,
-        assignedBy: project.assignedBy?._id || "",
-        assignedTo: project.assignedTo?._id || "",
+        assignedBy: project.assignedBy?.employeeId || project.assignedBy || "",
+        assignedTo: project.assignedTo?.employeeId || project.assignedTo || "",
       });
     } else {
       setFormData({
@@ -159,6 +159,7 @@ export default function ProjectPage() {
                 <th>Code</th>
                 <th>Name</th>
                 <th>Status</th>
+                <th>Assignment</th>
                 <th>Start</th>
                 <th>End</th>
                 <th>Assigned By</th>
@@ -167,35 +168,48 @@ export default function ProjectPage() {
               </tr>
             </thead>
             <tbody>
-              {projects.map((p) => (
-                <tr key={p._id}>
-                  <td>{p.projectCode}</td>
-                  <td>{p.projectName}</td>
-                  <td>{p.status}</td>
-                  <td>{p.startDate?.slice(0, 10)}</td>
-                  <td>{p.endDate?.slice(0, 10)}</td>
-                  <td>
-                    {p.assignedBy?.name || "—"} <br />
-                  </td>
-                  <td>
-                    {p.assignedTo?.name || "—"} <br />
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-info me-1"
-                      onClick={() => openModal(p)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => deleteProject(p._id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {projects.map((p) => {
+                const getBadgeClass = () => {
+                  if (p.assignmentStatus === 'Pending') return 'bg-warning';
+                  if (p.assignmentStatus === 'Accepted') return 'bg-success';
+                  return 'bg-danger';
+                };
+                
+                return (
+                  <tr key={p._id}>
+                    <td>{p.projectCode}</td>
+                    <td>{p.projectName}</td>
+                    <td>{p.status}</td>
+                    <td>
+                      <span className={`badge ${getBadgeClass()}`}>
+                        {p.assignmentStatus || 'Pending'}
+                      </span>
+                    </td>
+                    <td>{p.startDate?.slice(0, 10)}</td>
+                    <td>{p.endDate?.slice(0, 10)}</td>
+                    <td>
+                      {p.assignedBy?.name || "—"} <br />
+                    </td>
+                    <td>
+                      {p.assignedTo?.name || "—"} <br />
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-info me-1"
+                        onClick={() => openModal(p)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => deleteProject(p._id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -290,8 +304,8 @@ export default function ProjectPage() {
                       >
                         <option value="">Assigned By</option>
                         {users.map((u) => (
-                          <option key={u._id} value={u._id}>
-                            {u.name}
+                          <option key={u._id} value={u.employeeId}>
+                            {u.name} ({u.employeeId})
                           </option>
                         ))}
                       </select>
@@ -307,8 +321,8 @@ export default function ProjectPage() {
                       >
                         <option value="">Assigned To</option>
                         {users.map((u) => (
-                          <option key={u._id} value={u._id}>
-                            {u.name}
+                          <option key={u._id} value={u.employeeId}>
+                            {u.name} ({u.employeeId})
                           </option>
                         ))}
                       </select>

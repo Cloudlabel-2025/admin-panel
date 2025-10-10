@@ -1,15 +1,18 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = "mongodb+srv://cloudlabel_db_user:cloudlabel%402025@admin-panel.ziw1mkn.mongodb.net/admin-panel"
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function connectMongoose() {
     try {
+        if (!MONGODB_URI) {
+            throw new Error("MONGODB_URI is not defined in environment variables");
+        }
         await mongoose.connect(MONGODB_URI);
         console.log("MongoDB is Connected");
     }
     catch (err){
-    console.error("MongoDB connection is error",err);  
-    throw err;
+        console.error("MongoDB connection error:", err);  
+        throw err;
     }
 }
 
