@@ -7,14 +7,19 @@ export default function PerformancePage() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/performance")
-      .then((res) => res.json())
-      .then((data) => {
-        setReviews(data);
-        setLoading(false);
-      });
-  }, []);
+useEffect(() => {
+  fetch("/api/performance")
+    .then((res) => res.json())
+    .then((data) => {
+      setReviews(Array.isArray(data) ? data : data.data || []);
+      setLoading(false);
+    })
+    .catch((err) => {
+      console.error(err);
+      setReviews([]);
+      setLoading(false);
+    });
+}, []);
 
   async function handleDelete(id) {
     if (!confirm("Delete this review?")) return;

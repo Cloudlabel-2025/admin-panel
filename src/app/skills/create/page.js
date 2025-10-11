@@ -31,7 +31,7 @@ export default function CreateSkill() {
       skillName: form.skillName,
       category: form.category,
       description: form.description,
-      proficiencyLevels: [form.proficiencyLevel], // save as array
+      proficiencyLevels: [form.proficiencyLevel], 
     };
 
     await fetch("/api/skills", {
@@ -50,7 +50,7 @@ export default function CreateSkill() {
           <div className="col-md-6">
             <h1 className="h4 mb-4">Add Skill</h1>
             <form onSubmit={handleSubmit}>
-              {/* Employee */}
+
               <div className="mb-3">
                 <label className="form-label">Employee</label>
                 <select

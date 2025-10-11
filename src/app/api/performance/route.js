@@ -2,11 +2,10 @@ import connectMongoose from "@/app/utilis/connectMongoose";
 import Performance from "@/models/Performance";
 import { NextResponse } from "next/server";
 
-await connectMongoose();
-
 export async function POST(req) {
     try{
-     const body = req.json();
+    await connectMongoose();
+     const body =await req.json();
      const performance = await Performance.create(body);
      return NextResponse.json(performance,{status:200});
     }
@@ -17,8 +16,9 @@ export async function POST(req) {
 
 export async function GET() {
     try{
+     await connectMongoose();
      const performance = await Performance.find()
-     .populate("employeeId name")
+     .populate("employeeId","name")
      .sort({createdAt:-1});
     return NextResponse.json(performance,{status:200});
     }

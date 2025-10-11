@@ -2,12 +2,12 @@ import connectMongoose from "@/app/utilis/connectMongoose";
 import Performance from "@/models/Performance";
 import { NextResponse } from "next/server";
 
-await connectMongoose();
-
-export async function GET(req, { params }) {
+export async function GET(req, context) {
   try {
-    const performance = await Performance.findById(params.id).populate(
-      "employeeId name"
+    const {id} = await context.params;
+    await connectMongoose();
+    const performance = await Performance.findById(id).populate(
+      "employeeId","name"
     );
     return NextResponse.json(performance, { status: 200 });
   } catch (err) {
@@ -15,11 +15,13 @@ export async function GET(req, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
+export async function PUT(req, context) {
   try {
+    const {id} = await context.params;
+    await connectMongoose();
     const body = req.json();
     const updatedPerformance = await Performance.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true }
     );
@@ -29,9 +31,11 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
+export async function DELETE(req, context) {
   try {
-    await Performance.findByIdAndDelete(params.id);
+    await connectMongoose();
+    const {id} = await context.params;
+    await Performance.findByIdAndDelete(id);
     return NextResponse.json(
       { message: "Deleted Successfully" },
       { status: 200 }

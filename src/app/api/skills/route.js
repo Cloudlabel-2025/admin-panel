@@ -2,11 +2,10 @@ import connectMongoose from "@/app/utilis/connectMongoose";
 import Skill from "@/models/Skill";
 import { NextResponse } from "next/server";
 
-await connectMongoose();
-
 export async function POST(req) {
     try{
-        const body = req.json();
+        await connectMongoose();
+        const body = await req.json();
         const skill = await Skill.create(body);
         return NextResponse.json(skill,{status:201});
     }
@@ -17,8 +16,9 @@ export async function POST(req) {
 
 export async function GET() {
     try{
+      await connectMongoose();
       const skills = await Skill.find()
-      .populate("employeeId name")
+      .populate("employeeId","name")
       .sort({createdAt:-1});
       return NextResponse.json(skills,{status:200});
     }
