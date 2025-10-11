@@ -65,39 +65,39 @@ export default function Layout({ children }) {
               </button>
               <hr className="text-white" />
               <h6 className="text-white-50 px-3 mb-2">ACCOUNTING</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounts")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/accounts")}>
                 Accounts
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/transactions")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/transactions")}>
                 Transactions
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/budgeting")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/budgeting")}>
                 Budgeting
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/cash")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/cash")}>
                 Cash Management
               </button>
               <hr className="text-white" />
               <h6 className="text-white-50 px-3 mb-2">SALES & PURCHASING</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/sales/customers")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/sales/customers")}>
                 Customers
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/sales/orders")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/sales/orders")}>
                 Sales Orders
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/sales/invoices")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/sales/invoices")}>
                 Sales Invoices
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/purchasing/vendors")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/purchasing/vendors")}>
                 Vendors
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/purchasing/purchase-orders")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/purchasing/purchase-orders")}>
                 Purchase Orders
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/purchasing/purchase-invoices")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/purchasing/purchase-invoices")}>
                 Purchase Invoices
               </button>
-               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/payroll")}>
+               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("accounting/payroll")}>
                 Payroll
               </button>
             </>
