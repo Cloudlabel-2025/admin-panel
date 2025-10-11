@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Layout from "@/app/components/Layout";
 
 export default function SalesOrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -25,6 +26,7 @@ export default function SalesOrdersPage() {
   if (loading) return <div>Loading...</div>;
 
   return (
+    <Layout>
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>📋 Sales Orders</h1>
@@ -66,5 +68,6 @@ export default function SalesOrdersPage() {
         </table>
       </div>
     </div>
+    </Layout>
   );
 }
