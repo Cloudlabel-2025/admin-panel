@@ -12,27 +12,29 @@ export default function SkillList() {
     fetch("/api/skills")
       .then((res) => res.json())
       .then((data) => {
-        setSkills(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching skills:", err);
-        setSkills([]);
+        setSkills(data);
         setLoading(false);
       });
   }, []);
 
   async function handleDelete(id) {
     if (!confirm("Delete this skill?")) return;
-    await fetch(`/api/skills/${id}`, { method: "DELETE" });
-    setSkills(skills.filter((s) => s._id !== id));
+
+    try {
+      const res = await fetch(`/api/skills/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete skill");
+      setSkills((prevSkills) => prevSkills.filter((s) => s._id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting skill. See console for details.");
+    }
   }
 
   return (
     <Layout>
       <div className="container my-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h1>Skills</h1>
+          <h1 className="text-center">Skills</h1>
           <Link href="/skills/create" className="btn btn-primary">
             Add Skill
           </Link>
@@ -40,6 +42,8 @@ export default function SkillList() {
 
         {loading ? (
           <p>Loading...</p>
+        ) : skills.length === 0 ? (
+          <p>No skills found.</p>
         ) : (
           <div className="table-responsive">
             <table className="table table-bordered table-hover">

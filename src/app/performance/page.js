@@ -11,12 +11,7 @@ export default function PerformancePage() {
     fetch("/api/performance")
       .then((res) => res.json())
       .then((data) => {
-        setReviews(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching reviews:", err);
-        setReviews([]);
+        setReviews(data);
         setLoading(false);
       });
   }, []);
