@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Layout from "../components/Layout";
+import Layout from "../../components/Layout";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState([]);
