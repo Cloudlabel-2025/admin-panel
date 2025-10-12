@@ -53,10 +53,25 @@ export async function GET(req) {
     const isAdmin = searchParams.get("admin") === "true";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const department = searchParams.get("department");
 
     let query = {};
     if (employeeId && !isAdmin) {
       query.employeeId = employeeId;
+    }
+    
+    // Filter by department for team roles
+    let departmentEmployeeIds = [];
+    if (isAdmin && department) {
+      try {
+        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${department}`);
+        if (employeeRes.ok) {
+          const employeeData = await employeeRes.json();
+          departmentEmployeeIds = employeeData.employees.map(emp => emp.employeeId);
+        }
+      } catch (err) {
+        console.error('Error filtering by department:', err);
+      }
     }
 
     // Handle date filtering
@@ -74,6 +89,11 @@ export async function GET(req) {
       }
     }
 
+    // Apply department filtering if needed
+    if (departmentEmployeeIds.length > 0) {
+      query.employeeId = { $in: departmentEmployeeIds };
+    }
+    
     // Generate attendance from timecard data
     const timecards = await Timecard.find(query).sort({ date: -1 });
     const attendanceData = [];

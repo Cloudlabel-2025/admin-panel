@@ -30,9 +30,32 @@ export default function HomePage() {
         alert("Super Admin login successful");
         router.push("/admin-dashboard");
       } else {
-        localStorage.setItem("userRole", "employee");
-        alert("Employee login successful");
-        router.push("/timecard-entry");
+        // Fetch actual employee role
+        try {
+          const roleRes = await fetch(`/api/Employee/${data.user.employeeId}`);
+          const employeeData = await roleRes.json();
+          const actualRole = employeeData.role || "Employee";
+          localStorage.setItem("userRole", actualRole);
+          
+          alert(`${actualRole} login successful`);
+          
+          // Route based on role
+          if (actualRole === "super-admin" || actualRole === "Super-admin" || actualRole === "admin") {
+            router.push("/admin-dashboard");
+          } else if (actualRole === "Team-Lead" || actualRole === "Team-admin") {
+            router.push("/admin-dashboard");
+          } else if (actualRole === "Employee" || actualRole === "Intern") {
+            router.push("/timecard-entry");
+          } else {
+            // Fallback for any other roles
+            router.push("/timecard-entry");
+          }
+        } catch (err) {
+          console.error("Error fetching role:", err);
+          localStorage.setItem("userRole", "Employee");
+          alert("Employee login successful");
+          router.push("/timecard-entry");
+        }
       }
     } catch (err) {
       console.error(err);

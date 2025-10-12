@@ -61,7 +61,8 @@ export default function DailyTaskComponent() {
     const userRole = localStorage.getItem("userRole");
     const employeeId = localStorage.getItem("employeeId");
     
-    if (!userRole || userRole !== "employee" || !employeeId) {
+    // Allow all employee roles to access daily tasks, except super-admin
+    if (!userRole || !employeeId || userRole === "super-admin" || userRole === "Super-admin") {
       router.push("/");
       return;
     }

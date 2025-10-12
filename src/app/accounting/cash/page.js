@@ -44,10 +44,10 @@ export default function CashPage() {
       
       <div className="row mb-4">
         <div className="col-md-6">
-          <Link href="/cash/credits" className="btn btn-success me-2">
+          <Link href="/accounting/cash/credits" className="btn btn-success me-2">
             ➕ Add Credit
           </Link>
-          <Link href="/cash/debits" className="btn btn-danger">
+          <Link href="/accounting/cash/debits" className="btn btn-danger">
             ➖ Add Debit
           </Link>
         </div>

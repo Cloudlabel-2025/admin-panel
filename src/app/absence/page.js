@@ -24,10 +24,11 @@ export default function AbsencePage() {
     const empId = localStorage.getItem("employeeId") || "";
     setUserRole(role);
     
-    if (role === "employee" && empId) {
-      fetchCurrentEmployee(empId);
-    } else {
+    // Admin roles can manage all employees, others manage themselves
+    if (role === "super-admin" || role === "Super-admin" || role === "admin" || role === "Team-Lead" || role === "Team-admin") {
       fetchEmployees();
+    } else if (empId) {
+      fetchCurrentEmployee(empId);
     }
     fetchAbsences();
   }, []);
@@ -52,7 +53,22 @@ export default function AbsencePage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch("/api/Employee/search");
+      const userRole = localStorage.getItem("userRole");
+      const empId = localStorage.getItem("employeeId");
+      
+      let url = "/api/Employee/search";
+      
+      // For team roles, filter by department
+      if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+        // Get current user's department first
+        const userRes = await fetch(`/api/Employee/${empId}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          url += `?department=${userData.department}`;
+        }
+      }
+      
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setEmployees(data.employees || []);
@@ -177,7 +193,7 @@ export default function AbsencePage() {
             <h5>Submit Absence Request</h5>
             <form onSubmit={handleSubmit}>
               <div className="row">
-                {userRole === "admin" ? (
+                {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") ? (
                   <div className="col-md-4 mb-3">
                     <label className="form-label">Employee</label>
                     <select
@@ -319,7 +335,7 @@ export default function AbsencePage() {
                     <th>Reason</th>
                     <th>Status</th>
 
-                    {userRole === "admin" && <th>Actions</th>}
+                    {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -333,7 +349,7 @@ export default function AbsencePage() {
                       <td>{absence.reason}</td>
                       <td><span className={getStatusBadge(absence.status)}>{absence.status}</span></td>
 
-                      {userRole === "admin" && (
+                      {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") && (
                         <td>
                           {absence.status === "Pending" ? (
                             <>

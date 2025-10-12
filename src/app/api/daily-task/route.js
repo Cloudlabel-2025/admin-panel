@@ -19,10 +19,22 @@ export async function GET(req) {
       const today = dateParam || new Date().toISOString().split("T")[0];
       const start = new Date(today + 'T00:00:00.000Z');
       const end = new Date(today + 'T23:59:59.999Z');
+      const department = searchParams.get("department");
       
-      const tasks = await DailyTask.find({
-        date: { $gte: start, $lte: end }
-      }).sort({ employeeId: 1, date: -1 }).lean();
+      let query = { date: { $gte: start, $lte: end } };
+      
+      // If department filter is provided, filter by department
+      if (department) {
+        // Get all employees from that department first
+        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${department}`);
+        if (employeeRes.ok) {
+          const employeeData = await employeeRes.json();
+          const employeeIds = employeeData.employees.map(emp => emp.employeeId);
+          query.employeeId = { $in: employeeIds };
+        }
+      }
+      
+      const tasks = await DailyTask.find(query).sort({ employeeId: 1, date: -1 }).lean();
       
       return NextResponse.json(tasks, { status: 200 });
     }

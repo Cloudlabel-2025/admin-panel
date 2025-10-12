@@ -41,7 +41,7 @@ export default function BudgetingPage() {
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>📈 Budgets</h1>
-        <Link href="/budgeting/create" className="btn btn-primary">
+        <Link href="/accounting/budgeting/create" className="btn btn-primary">
           ➕ Create Budget
         </Link>
       </div>
@@ -62,14 +62,14 @@ export default function BudgetingPage() {
             {budgets.map((budget) => (
               <tr key={budget._id}>
                 <td>{budget.category}</td>
-                <td>${budget.allocatedAmout}</td>
-                <td>${budget.spentAmount}</td>
+                <td>₹{budget.allocatedAmout}</td>
+                <td>₹{budget.spentAmount}</td>
                 <td className={budget.variance >= 0 ? "text-success" : "text-danger"}>
-                  ${budget.variance}
+                  ₹{budget.variance}
                 </td>
                 <td>{budget.period}</td>
                 <td>
-                  <Link href={`/budgeting/${budget._id}/edit`} className="btn btn-sm btn-warning me-2">
+                  <Link href={`/accounting/budgeting/${budget._id}/edit`} className="btn btn-sm btn-warning me-2">
                     ✏️ Edit
                   </Link>
                   <button onClick={() => deleteBudget(budget._id)} className="btn btn-sm btn-danger">

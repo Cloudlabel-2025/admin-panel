@@ -30,7 +30,7 @@ export default function PurchaseInvoicesPage() {
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>🧾 Purchase Invoices</h1>
-        <Link href="/purchasing/purchase-invoices/create" className="btn btn-primary">
+        <Link href="/accounting/purchasing/purchase-invoices/create" className="btn btn-primary">
           ➕ Create Purchase Invoice
         </Link>
       </div>
@@ -55,14 +55,14 @@ export default function PurchaseInvoicesPage() {
                 <td>{invoice.vendor?.name}</td>
                 <td>{new Date(invoice.invoiceDate).toLocaleDateString()}</td>
                 <td>{new Date(invoice.dueDate).toLocaleDateString()}</td>
-                <td>${invoice.totalAmount}</td>
+                <td>₹{invoice.totalAmount}</td>
                 <td>
                   <span className={`badge ${invoice.status === 'Paid' ? 'bg-success' : invoice.status === 'Approved' ? 'bg-warning' : 'bg-secondary'}`}>
                     {invoice.status}
                   </span>
                 </td>
                 <td>
-                  <Link href={`/purchasing/purchase-invoices/${invoice._id}/edit`} className="btn btn-sm btn-warning">
+                  <Link href={`/accounting/purchasing/purchase-invoices/${invoice._id}/edit`} className="btn btn-sm btn-warning">
                     ✏️ Edit
                   </Link>
                 </td>

@@ -1,16 +1,16 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
-import Account from "@/models/accounts/Account";
+import Asset from "@/models/accounts/Asset";
 import { NextResponse } from "next/server";
 
 export async function GET(req, { params }) {
   try {
     await connectMongoose();
     const resolvedParams = await params;
-    const account = await Account.findById(resolvedParams.id);
-    if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    const asset = await Asset.findById(resolvedParams.id);
+    if (!asset) {
+      return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
-    return NextResponse.json(account, { status: 200 });
+    return NextResponse.json(asset, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -19,15 +19,14 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   try {
     await connectMongoose();
-    const body = await req.json();
     const resolvedParams = await params;
-    const UpdatedAccount = await Account.findByIdAndUpdate(resolvedParams.id, body, {
-      new: true,
-    });
-    if (!UpdatedAccount) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    const body = await req.json();
+    
+    const updatedAsset = await Asset.findByIdAndUpdate(resolvedParams.id, body, { new: true });
+    if (!updatedAsset) {
+      return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
-    return NextResponse.json(UpdatedAccount, { status: 200 });
+    return NextResponse.json(updatedAsset, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -37,8 +36,8 @@ export async function DELETE(req, { params }) {
   try {
     await connectMongoose();
     const resolvedParams = await params;
-    await Account.findByIdAndDelete(resolvedParams.id);
-    return NextResponse.json({ message: "Deleted Successfully" });
+    await Asset.findByIdAndDelete(resolvedParams.id);
+    return NextResponse.json({ message: "Asset deleted successfully" });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

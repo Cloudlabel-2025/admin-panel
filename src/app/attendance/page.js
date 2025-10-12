@@ -23,14 +23,40 @@ export default function AttendancePage() {
   });
 
   useEffect(() => {
-    setIsAdmin(localStorage.getItem("userRole") === "super-admin");
-    setEmployeeId(localStorage.getItem("employeeId") || "");
+    const role = localStorage.getItem("userRole");
+    const empId = localStorage.getItem("employeeId") || "";
+    
+    // Only super-admin and admin get full admin access
+    // Team roles get personal view by default
+    setIsAdmin(role === "super-admin" || role === "Super-admin" || role === "admin");
+    setEmployeeId(empId);
+    
+    // For team roles, show their personal attendance by default
+    if (role === "Team-Lead" || role === "Team-admin") {
+      setSelectedEmployee(empId);
+    }
+    
     fetchEmployees();
   }, []);
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch("/api/Employee/search");
+      const userRole = localStorage.getItem("userRole");
+      const empId = localStorage.getItem("employeeId");
+      
+      let url = "/api/Employee/search";
+      
+      // For team roles, filter by department
+      if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+        // Get current user's department first
+        const userRes = await fetch(`/api/Employee/${empId}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          url += `?department=${userData.department}`;
+        }
+      }
+      
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setEmployees(data.employees || []);
@@ -55,6 +81,21 @@ export default function AttendancePage() {
         if (endDate) params.append("endDate", endDate);
         if (selectedEmployee) params.append("employeeId", selectedEmployee);
         if (statusFilter) params.append("status", statusFilter);
+        
+        // Add department filter for team roles
+        const userRole = localStorage.getItem("userRole");
+        const empId = localStorage.getItem("employeeId");
+        if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+          try {
+            const userRes = await fetch(`/api/Employee/${empId}`);
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              params.append("department", userData.department);
+            }
+          } catch (err) {
+            console.error('Error getting user department:', err);
+          }
+        }
       }
 
       const res = await fetch("/api/attendance?" + params.toString());
@@ -163,7 +204,11 @@ export default function AttendancePage() {
     <Layout>
       <div className="container-fluid p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>{isAdmin ? "Attendance Management" : "My Attendance"}</h2>
+          <h2>
+            {isAdmin ? "Attendance Management" : 
+             (localStorage.getItem("userRole") === "Team-Lead" || localStorage.getItem("userRole") === "Team-admin") ? 
+             "My Attendance" : "My Attendance"}
+          </h2>
           {isAdmin ? (
             <div>
               <button className="btn btn-success me-2" onClick={exportToExcel}>

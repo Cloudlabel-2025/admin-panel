@@ -30,7 +30,7 @@ export default function SalesOrdersPage() {
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>📋 Sales Orders</h1>
-        <Link href="/sales/orders/create" className="btn btn-primary">
+        <Link href="/accounting/sales/orders/create" className="btn btn-primary">
           ➕ Create Order
         </Link>
       </div>
@@ -51,14 +51,14 @@ export default function SalesOrdersPage() {
               <tr key={order._id}>
                 <td>{order.customer?.name}</td>
                 <td>{new Date(order.orderDate).toLocaleDateString()}</td>
-                <td>${order.totalAmount}</td>
+                <td>₹{order.totalAmount}</td>
                 <td>
                   <span className={`badge ${order.status === 'Delivered' ? 'bg-success' : order.status === 'Confirmed' ? 'bg-warning' : 'bg-secondary'}`}>
                     {order.status}
                   </span>
                 </td>
                 <td>
-                  <Link href={`/sales/orders/${order._id}/edit`} className="btn btn-sm btn-warning">
+                  <Link href={`/accounting/sales/orders/${order._id}/edit`} className="btn btn-sm btn-warning">
                     ✏️ Edit
                   </Link>
                 </td>

@@ -24,6 +24,7 @@ export  async function GET(req,res) {
     const employeeId = searchParams.get("employeeId");
     const isAdmin = searchParams.get("admin");
     const dateParam = searchParams.get("date");
+    const department = searchParams.get("department");
     
     let query = {};
     if (employeeId && !isAdmin) {
@@ -38,8 +39,22 @@ export  async function GET(req,res) {
       query.date = { $gte: start, $lte: end };
     }
     
+    // Filter by department for team roles
+    if (isAdmin && department) {
+      try {
+        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${department}`);
+        if (employeeRes.ok) {
+          const employeeData = await employeeRes.json();
+          const employeeIds = employeeData.employees.map(emp => emp.employeeId);
+          query.employeeId = { $in: employeeIds };
+        }
+      } catch (err) {
+        console.error('Error filtering by department:', err);
+      }
+    }
+    
     const timecards = await Timecard.find(query).sort({date:-1});
-    return NextResponse.json(isAdmin ? timecards : timecards, {status:200});
+    return NextResponse.json(timecards, {status:200});
     }
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

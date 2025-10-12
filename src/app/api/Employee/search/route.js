@@ -2,10 +2,13 @@ import connectMongoose from "@/app/utilis/connectMongoose";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
-// 🔹 Get all employees from all departments
-export async function GET() {
+// 🔹 Get employees from all departments or specific department
+export async function GET(req) {
   try {
     await connectMongoose();
+    
+    const { searchParams } = new URL(req.url);
+    const department = searchParams.get('department');
     
     const departmentCollections = Object.keys(mongoose.models).filter(name =>
       name.endsWith("_department")
@@ -14,6 +17,14 @@ export async function GET() {
     let allEmployees = [];
     
     for (const collName of departmentCollections) {
+      // If department filter is specified, only get from that department
+      if (department) {
+        const expectedCollectionName = `${department.toLowerCase()}_department`;
+        if (collName.toLowerCase() !== expectedCollectionName) {
+          continue;
+        }
+      }
+      
       const Model = mongoose.models[collName];
       const employees = await Model.find();
       allEmployees = allEmployees.concat(employees);

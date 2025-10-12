@@ -39,7 +39,8 @@ export default function TimecardPage() {
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const empId = localStorage.getItem("employeeId");
-    if (role !== "employee" || !empId) {
+    // Allow all employee roles to access timecard
+    if (!role || !empId || role === "super-admin" || role === "Super-admin") {
       router.push("/");
       return;
     }

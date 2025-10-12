@@ -10,21 +10,34 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (role !== "super-admin") {
+
+
+
+
+    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "Team-Lead" || role === "Team-admin")) {
+
       router.push("/");
       return;
     }
+
+
     setUserRole(role);
   }, [router]);
 
-  if (userRole !== "super-admin") {
+  if (!(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin")) {
     return <div>Loading...</div>;
   }
 
   return (
     <Layout>
-      <h2>Super Admin Dashboard</h2>
-      <p className="mt-4">Welcome to the admin panel. Use the sidebar to navigate.</p>
+      <h2>
+        {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Admin Dashboard" : "Team Management Dashboard"}
+      </h2>
+      <p className="mt-4">
+        {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ?
+          "Welcome to the admin panel. Use the sidebar to navigate." :
+          "Welcome to the team management panel. Use the sidebar to navigate."}
+      </p>
     </Layout>
   );
 }

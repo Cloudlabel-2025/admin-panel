@@ -41,7 +41,7 @@ export default function VendorsPage() {
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>🏢 Vendors</h1>
-        <Link href="/purchasing/vendors/create" className="btn btn-primary">
+        <Link href="/accounting/purchasing/vendors/create" className="btn btn-primary">
           ➕ Create Vendor
         </Link>
       </div>
@@ -65,7 +65,7 @@ export default function VendorsPage() {
                 <td>{vendor.phone}</td>
                 <td>{vendor.address}</td>
                 <td>
-                  <Link href={`/purchasing/vendors/${vendor._id}/edit`} className="btn btn-sm btn-warning me-2">
+                  <Link href={`/accounting/purchasing/vendors/${vendor._id}/edit`} className="btn btn-sm btn-warning me-2">
                     ✏️ Edit
                   </Link>
                   <button onClick={() => deleteVendor(vendor._id)} className="btn btn-sm btn-danger">

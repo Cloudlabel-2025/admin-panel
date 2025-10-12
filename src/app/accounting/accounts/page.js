@@ -64,11 +64,14 @@ export default function AccountsPage() {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>📊 Chart of Accounts</h2>
           <div>
-            <Link href="/accounts/create" className="btn btn-primary me-2">
-              ➕ Create Account
+            <Link href="/accounting/accounts/create" className="btn btn-primary me-2">
+              ➕ Add Account
             </Link>
-            <Link href="/accounts/transfer" className="btn btn-success">
-              🔄 Transfer Money
+            <Link href="/accounting/transactions" className="btn btn-info me-2">
+              📊 View Transactions
+            </Link>
+            <Link href="/accounting/accounts/transfer" className="btn btn-success">
+              🔄 Transfer
             </Link>
           </div>
         </div>
@@ -118,7 +121,7 @@ export default function AccountsPage() {
             {accounts.length === 0 ? (
               <div className="text-center py-4">
                 <p className="text-muted">No accounts found. Create your first account to get started.</p>
-                <Link href="/accounts/create" className="btn btn-primary">
+                <Link href="/accounting/accounts/create" className="btn btn-primary">
                   ➕ Create First Account
                 </Link>
               </div>
@@ -128,10 +131,9 @@ export default function AccountsPage() {
                   <thead className="table-dark">
                     <tr>
                       <th>Account Name</th>
-                      <th>Account Type</th>
+                      <th>Type</th>
                       <th>Balance</th>
-                      <th>Description</th>
-                      <th>Status</th>
+                      <th>Last Updated</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -141,7 +143,7 @@ export default function AccountsPage() {
                       const balanceClass = balance > 0 ? 'text-success' : balance < 0 ? 'text-danger' : 'text-muted';
                       
                       return (
-                        <tr key={account._id}>
+                        <tr key={account._id} style={{cursor: 'pointer'}} onClick={() => router.push(`/accounting/transactions?account=${account._id}`)}>
                           <td><strong>{account.name}</strong></td>
                           <td>
                             <span className="badge bg-secondary">{account.type}</span>
@@ -149,14 +151,9 @@ export default function AccountsPage() {
                           <td className={balanceClass}>
                             <strong>₹{balance.toFixed(2)}</strong>
                           </td>
-                          <td>{account.description || 'No description'}</td>
-                          <td>
-                            <span className={`badge ${balance > 0 ? 'bg-success' : balance < 0 ? 'bg-danger' : 'bg-warning'}`}>
-                              {balance > 0 ? 'Active' : balance < 0 ? 'Overdrawn' : 'Zero Balance'}
-                            </span>
-                          </td>
-                          <td>
-                            <Link href={`/accounts/${account._id}/edit`} className="btn btn-sm btn-outline-primary me-1">
+                          <td>{new Date(account.updatedAt).toLocaleDateString()}</td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <Link href={`/accounting/accounts/${account._id}/edit`} className="btn btn-sm btn-outline-primary me-1">
                               ✏️ Edit
                             </Link>
                             <button onClick={() => deleteAccount(account._id)} className="btn btn-sm btn-outline-danger">

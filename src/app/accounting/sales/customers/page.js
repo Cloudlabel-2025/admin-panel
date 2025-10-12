@@ -57,7 +57,7 @@ export default function CustomersPage() {
       <div className="container-fluid">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>👥 Customer Management</h2>
-          <Link href="/sales/customers/create" className="btn btn-primary">
+          <Link href="/accounting/sales/customers/create" className="btn btn-primary">
             ➕ Add Customer
           </Link>
         </div>
@@ -88,7 +88,7 @@ export default function CustomersPage() {
                         <td>{customer.phone}</td>
                         <td>{customer.address}</td>
                         <td>
-                          <Link href={`/sales/customers/${customer._id}/edit`} className="btn btn-sm btn-outline-primary me-1">
+                          <Link href={`/accounting/sales/customers/${customer._id}/edit`} className="btn btn-sm btn-outline-primary me-1">
                             ✏️ Edit
                           </Link>
                           <button onClick={() => deleteCustomer(customer._id)} className="btn btn-sm btn-outline-danger">

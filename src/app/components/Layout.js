@@ -34,10 +34,16 @@ export default function Layout({ children }) {
       {/* Sidebar */}
       <div className="bg-dark text-white" style={{ width: "250px", minHeight: "100vh" }}>
         <div className="p-3">
-          <h5>{userRole === "super-admin" ? "Admin Panel" : "Employee Panel"}</h5>
+          <h5>
+            {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Admin Panel" : 
+             (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
+             "Employee Panel"}
+          </h5>
+          <small className="text-white-50">Role: {userRole}</small>
         </div>
         <nav className="nav flex-column">
-          {userRole === "super-admin" ? (
+          {/* Super Admin & Admin - Full Access */}
+          {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") && (
             <>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
                 Dashboard
@@ -48,19 +54,19 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
                 Monitor Employees
               </button>
-                <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/documents")}>
-               Document Upload
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/documents")}>
+                Document Upload
               </button>
-               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
-              Project
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
+                Project
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
                 Attendance
               </button>
-               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/skills")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/skills")}>
                 Skills
               </button>
-               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
                 Performance
               </button>
               <hr className="text-white" />
@@ -97,11 +103,52 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/purchasing/purchase-invoices")}>
                 Purchase Invoices
               </button>
-               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
                 Payroll
               </button>
             </>
-          ) : (
+          )}
+
+          {/* Team Lead & Team Admin - Management Access */}
+          {(userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin") && (
+            <>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
+                Dashboard
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
+                Monitor Team
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
+                Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                Team Attendance
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
+                Team Performance
+              </button>
+              <hr className="text-white" />
+              <h6 className="text-white-50 px-3 mb-2">MY WORK</h6>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
+                Timecard Entry
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
+                Daily Task
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
+                My Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
+                My Performance
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                My Attendance
+              </button>
+            </>
+          )}
+
+          {/* Employee & Intern - Basic Access */}
+          {(userRole === "Employee" || userRole === "Intern") && (
             <>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
                 Timecard Entry
@@ -119,7 +166,25 @@ export default function Layout({ children }) {
                 My Attendance
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
-                Absencse
+                Absence
+              </button>
+            </>
+          )}
+
+          {/* Fallback for any other roles */}
+          {!(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin" || userRole === "Employee" || userRole === "Intern") && (
+            <>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
+                Timecard Entry
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
+                Daily Task
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
+                My Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                My Attendance
               </button>
             </>
           )}

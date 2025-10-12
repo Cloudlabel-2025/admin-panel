@@ -10,13 +10,15 @@ export default function MonitorEmployees() {
   const [timecards, setTimecards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState('');
+  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (role !== "super-admin") {
+    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "Team-Lead" || role === "Team-admin")) {
       router.push("/");
       return;
     }
+    setUserRole(role);
     fetchAllData();
     
     // Auto-refresh every 5 minutes for real-time monitoring
@@ -32,7 +34,21 @@ export default function MonitorEmployees() {
   const fetchAllDailyTasks = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const res = await fetch(`/api/daily-task?admin=true&date=${today}`);
+      const userRole = localStorage.getItem("userRole");
+      const empId = localStorage.getItem("employeeId");
+      
+      let url = `/api/daily-task?admin=true&date=${today}`;
+      
+      // For team roles, add department filter
+      if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+        const userRes = await fetch(`/api/Employee/${empId}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          url += `&department=${userData.department}`;
+        }
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
         setDailyTasks(data || []);
@@ -46,7 +62,21 @@ export default function MonitorEmployees() {
     setLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
-      const res = await fetch(`/api/timecard?admin=true&date=${today}`);
+      const userRole = localStorage.getItem("userRole");
+      const empId = localStorage.getItem("employeeId");
+      
+      let url = `/api/timecard?admin=true&date=${today}`;
+      
+      // For team roles, add department filter
+      if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+        const userRes = await fetch(`/api/Employee/${empId}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          url += `&department=${userData.department}`;
+        }
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
         setTimecards(data || []);
@@ -67,7 +97,7 @@ export default function MonitorEmployees() {
   return (
     <Layout>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Real-time Employee Monitor</h2>
+        <h2>Real-time {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Employee" : "Team"} Monitor</h2>
         <div>
           <span className="badge bg-success me-2">Auto-refresh: 5 Min</span>
           <button className="btn btn-primary" onClick={fetchAllData} disabled={loading}>

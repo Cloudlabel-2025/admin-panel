@@ -30,7 +30,7 @@ export default function SalesInvoicesPage() {
     <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>🧾 Sales Invoices</h1>
-        <Link href="/sales/invoices/create" className="btn btn-primary">
+        <Link href="/accounting/sales/invoices/create" className="btn btn-primary">
           ➕ Create Invoice
         </Link>
       </div>
@@ -66,7 +66,7 @@ export default function SalesInvoicesPage() {
                   </span>
                 </td>
                 <td>
-                  <Link href={`/sales/invoices/${invoice._id}/edit`} className="btn btn-sm btn-warning">
+                  <Link href={`/accounting/sales/invoices/${invoice._id}/edit`} className="btn btn-sm btn-warning">
                     ✏️ Edit
                   </Link>
                 </td>

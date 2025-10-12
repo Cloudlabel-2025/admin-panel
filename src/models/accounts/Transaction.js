@@ -8,6 +8,7 @@ const TransactionSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     date: { type: Date, default: Date.now },
     description: { type: String },
+    source: { type: String, default: "manual" },
   },
   { timestamps: true }
 );

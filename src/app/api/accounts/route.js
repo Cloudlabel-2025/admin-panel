@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export async function POST(req){
     try{
         await connectMongoose();
-        const body = await req.json;
+        const body = await req.json();
         const account = await Account.create(body);
         return NextResponse.json(account,{status:201});
     }

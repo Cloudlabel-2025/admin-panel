@@ -34,11 +34,11 @@ export default function TransferPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          type: "Transfer"
+          type: "Debit"
         })
       });
       if (response.ok) {
-        router.push("/accounts");
+        router.push("/accounting/accounts");
       }
     } catch (error) {
       console.error("Error creating transfer:", error);
@@ -87,7 +87,7 @@ export default function TransferPage() {
             type="number"
             className="form-control"
             value={formData.amount}
-            onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value)})}
+            onChange={(e) => setFormData({...formData, amount: e.target.value === '' ? '' : parseFloat(e.target.value)})}
             required
           />
         </div>

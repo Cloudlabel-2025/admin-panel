@@ -8,7 +8,7 @@ export default function CreateAccountPage() {
     name: "",
     type: "Asset",
     description: "",
-    balance: 0
+    balance: ""
   });
 
   const handleSubmit = async (e) => {
@@ -17,10 +17,13 @@ export default function CreateAccountPage() {
       const response = await fetch("/api/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          balance: parseFloat(formData.balance) || 0
+        })
       });
       if (response.ok) {
-        router.push("/accounts");
+        router.push("/accounting/accounts");
       }
     } catch (error) {
       console.error("Error creating account:", error);
@@ -56,12 +59,14 @@ export default function CreateAccountPage() {
           </select>
         </div>
         <div className="mb-3">
-          <label className="form-label">Balance</label>
+          <label className="form-label">Opening Balance</label>
           <input
             type="number"
+            step="0.01"
             className="form-control"
             value={formData.balance}
-            onChange={(e) => setFormData({...formData, balance: parseFloat(e.target.value)})}
+            onChange={(e) => setFormData({...formData, balance: e.target.value})}
+            placeholder="0.00"
           />
         </div>
         <div className="mb-3">
