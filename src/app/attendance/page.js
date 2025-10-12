@@ -13,6 +13,7 @@ export default function AttendancePage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
+  const [userRole, setUserRole] = useState("");
 
   const [stats, setStats] = useState({
     totalPresent: 0,
@@ -26,6 +27,7 @@ export default function AttendancePage() {
     const role = localStorage.getItem("userRole");
     const empId = localStorage.getItem("employeeId") || "";
     
+    setUserRole(role);
     // Only super-admin and admin get full admin access
     // Team roles get personal view by default
     setIsAdmin(role === "super-admin" || role === "Super-admin" || role === "admin");
@@ -205,9 +207,7 @@ export default function AttendancePage() {
       <div className="container-fluid p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>
-            {isAdmin ? "Attendance Management" : 
-             (localStorage.getItem("userRole") === "Team-Lead" || localStorage.getItem("userRole") === "Team-admin") ? 
-             "My Attendance" : "My Attendance"}
+            {isAdmin ? "Attendance Management" : "My Attendance"}
           </h2>
           {isAdmin ? (
             <div>
