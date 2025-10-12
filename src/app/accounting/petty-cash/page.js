@@ -118,7 +118,7 @@ export default function PettyCashPage() {
             <div className="card bg-info text-white">
               <div className="card-body text-center">
                 <h4>{entries.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).length}</h4>
-                <p>Today's Entries</p>
+                <p>Today&apos;s Entries</p>
               </div>
             </div>
           </div>
