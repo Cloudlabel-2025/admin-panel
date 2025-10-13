@@ -5,7 +5,8 @@ import { NextResponse } from "next/server";
 export async function GET(req,{params}) {
     try{
         await connectMongoose();
-        const customer = await Customer.findById(params.id);
+        const { id } = await params;
+        const customer = await Customer.findById(id);
         return NextResponse.json(customer,{status:200})
     }
     catch(err){
@@ -16,8 +17,9 @@ export async function GET(req,{params}) {
 export async function PUT(req,{params}) {
     try{
         await connectMongoose();
+        const { id } = await params;
         const body = await req.json();
-        const customer = await Customer.findByIdAndUpdate(params.id,body,{new:true});
+        const customer = await Customer.findByIdAndUpdate(id,body,{new:true});
         return NextResponse.json(customer,{status:200})
     }
     catch(err){
@@ -28,7 +30,8 @@ export async function PUT(req,{params}) {
 export async function DELETE(req, {params}) {
     try{
         await connectMongoose();
-        await Customer.findByIdAndUpdate(params.id);
+        const { id } = await params;
+        await Customer.findByIdAndDelete(id);
         return NextResponse.json({message:"Deleted Successfully"},{status:200});
     }
     catch(err){

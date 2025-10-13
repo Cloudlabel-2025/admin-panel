@@ -18,6 +18,11 @@ export default function PettyCashPage() {
     totalCashOut: 0,
     currentBalance: 0
   });
+  const [transactions, setTransactions] = useState([]);
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
 
   useEffect(() => {
     fetchEntries();
@@ -70,6 +75,16 @@ export default function PettyCashPage() {
     }
   };
 
+  const fetchTransactions = async (type) => {
+    try {
+      const response = await fetch(`/api/cash?type=${type}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      const data = await response.json();
+      setTransactions(data);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  };
+
   const filteredEntries = entries.filter(entry => {
     return (!filters.date || entry.date.includes(filters.date)) &&
            (!filters.category || entry.category.toLowerCase().includes(filters.category.toLowerCase())) &&
@@ -83,9 +98,17 @@ export default function PettyCashPage() {
       <div className="container-fluid">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>💵 Petty Cash Management</h2>
-          <Link href="/accounting/petty-cash/create" className="btn btn-primary">
-            ➕ Add Entry
-          </Link>
+          <div>
+            <Link href="/accounting/petty-cash/create" className="btn btn-primary me-2">
+              ➕ Add Entry
+            </Link>
+            <button className="btn btn-success me-2" onClick={() => fetchTransactions('Credit')}>
+              📊 View Credits
+            </button>
+            <button className="btn btn-danger" onClick={() => fetchTransactions('Debit')}>
+              📊 View Debits
+            </button>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -117,8 +140,8 @@ export default function PettyCashPage() {
           <div className="col-md-3">
             <div className="card bg-info text-white">
               <div className="card-body text-center">
-                <h4>{entries.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).length}</h4>
-                <p>Today&apos;s Entries</p>
+                <h4>₹{(summary.totalCashIn - summary.totalCashOut).toFixed(2)}</h4>
+                <p>Net Cash Flow</p>
               </div>
             </div>
           </div>

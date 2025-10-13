@@ -35,7 +35,7 @@ export default function EditVendorPage() {
         body: JSON.stringify(formData)
       });
       if (response.ok) {
-        router.push("/purchasing/vendors");
+        router.push("/accounting/purchasing/vendors");
       }
     } catch (error) {
       console.error("Error updating vendor:", error);

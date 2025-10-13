@@ -54,7 +54,30 @@ export  async function GET(req,res) {
     }
     
     const timecards = await Timecard.find(query).sort({date:-1});
-    return NextResponse.json(timecards, {status:200});
+    
+    // Add employee names to timecards
+    const timecardsWithNames = await Promise.all(
+      timecards.map(async (timecard) => {
+        try {
+          const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/${timecard.employeeId}`);
+          if (employeeRes.ok) {
+            const employeeData = await employeeRes.json();
+            return {
+              ...timecard.toObject(),
+              employeeName: `${employeeData.firstName || ''} ${employeeData.lastName || ''}`.trim() || 'Unknown'
+            };
+          }
+        } catch (err) {
+          console.error(`Error fetching employee ${timecard.employeeId}:`, err);
+        }
+        return {
+          ...timecard.toObject(),
+          employeeName: 'Unknown'
+        };
+      })
+    );
+    
+    return NextResponse.json(timecardsWithNames, {status:200});
     }
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

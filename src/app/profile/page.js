@@ -41,23 +41,11 @@ export default function ProfilePage() {
     }
 
     console.log(`Fetching employee data for ID: ${employeeId}`);
+    console.log(`Full API URL: /api/Employee/${employeeId}`);
     fetch(`/api/Employee/${employeeId}`)
       .then((res) => {
-        console.log(`API Response status: ${res.status}`);
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Employee data received:", data);
-        setUser(data);
-      })
-      .catch((err) => {
-        console.error("Profile fetch error:", err);
-        if (err.message.includes('404')) {
-          // Employee record not found in department collections
-          // Show basic info from User collection
+        if (res.status === 404) {
+          // Employee record not found - show basic info
           setUser({
             employeeId: employeeId,
             firstName: "Not Set",
@@ -67,9 +55,22 @@ export default function ProfilePage() {
             role: "Employee",
             profileIncomplete: true
           });
-        } else {
-          alert(`Unable to load employee profile. Error: ${err.message}`);
+          return null;
         }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data) {
+          console.log("Employee data received:", data);
+          setUser(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Profile fetch error:", err);
+        alert(`Unable to load employee profile. Error: ${err.message}`);
       });
   }, [router]);
 
@@ -132,14 +133,20 @@ export default function ProfilePage() {
     if (employeeId) {
       fetch(`/api/Employee/${employeeId}`)
         .then((res) => {
+          if (res.status === 404) {
+            alert("Employee profile not found. Contact admin to create your profile.");
+            return null;
+          }
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
           }
           return res.json();
         })
         .then((data) => {
-          console.log("Refreshed employee data:", data);
-          setUser(data);
+          if (data) {
+            console.log("Refreshed employee data:", data);
+            setUser(data);
+          }
         })
         .catch((err) => {
           console.error("Refresh error:", err);

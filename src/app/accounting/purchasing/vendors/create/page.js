@@ -20,7 +20,7 @@ export default function CreateVendorPage() {
         body: JSON.stringify(formData)
       });
       if (response.ok) {
-        router.push("/purchasing/vendors");
+        router.push("/accounting/purchasing/vendors");
       }
     } catch (error) {
       console.error("Error creating vendor:", error);

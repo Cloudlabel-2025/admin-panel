@@ -70,7 +70,7 @@ export default function CreateSalesInvoicePage() {
         body: JSON.stringify(formData)
       });
       if (response.ok) {
-        router.push("/sales/invoices");
+        router.push("/accounting/sales/invoices");
       }
     } catch (error) {
       console.error("Error creating invoice:", error);

@@ -234,6 +234,7 @@ export default function CreateEmployeePage() {
             <option value="Functional">Functional</option>
             <option value="Production">Production</option>
             <option value="OIC">OIC</option>
+            <option value="Management">Management</option>
           </select>
         </div>
         <div className="col-md-6">

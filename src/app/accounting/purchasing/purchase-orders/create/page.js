@@ -56,7 +56,7 @@ export default function CreatePurchaseOrderPage() {
         body: JSON.stringify({ ...formData, totalAmount })
       });
       if (response.ok) {
-        router.push("/purchasing/purchase-orders");
+        router.push("/accounting/purchasing/purchase-orders");
       }
     } catch (error) {
       console.error("Error creating purchase order:", error);
@@ -119,8 +119,8 @@ export default function CreatePurchaseOrderPage() {
                   type="number"
                   className="form-control"
                   placeholder="Qty"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
+                  value={item.quantity || ''}
+                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
                   required
                 />
               </div>
@@ -129,13 +129,13 @@ export default function CreatePurchaseOrderPage() {
                   type="number"
                   className="form-control"
                   placeholder="Price"
-                  value={item.price}
-                  onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value))}
+                  value={item.price || ''}
+                  onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
                   required
                 />
               </div>
               <div className="col-md-2">
-                <span className="form-control-plaintext">${item.quantity * item.price}</span>
+                <span className="form-control-plaintext">₹{(item.quantity || 0) * (item.price || 0)}</span>
               </div>
               <div className="col-md-1">
                 <button type="button" onClick={() => {
@@ -163,7 +163,7 @@ export default function CreatePurchaseOrderPage() {
         </div>
 
         <div className="mb-3">
-          <strong>Total Amount: ${totalAmount}</strong>
+          <strong>Total Amount: ₹{totalAmount}</strong>
         </div>
 
         <button type="submit" className="btn btn-primary">Create</button>

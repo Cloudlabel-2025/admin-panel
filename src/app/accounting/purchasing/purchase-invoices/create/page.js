@@ -70,7 +70,7 @@ export default function CreatePurchaseInvoicePage() {
         body: JSON.stringify({ ...formData, totalAmount })
       });
       if (response.ok) {
-        router.push("/purchasing/purchase-invoices");
+        router.push("/accounting/purchasing/purchase-invoices");
       }
     } catch (error) {
       console.error("Error creating purchase invoice:", error);
@@ -126,7 +126,7 @@ export default function CreatePurchaseInvoicePage() {
                 <option value="">Select Order</option>
                 {orders.map(order => (
                   <option key={order._id} value={order._id}>
-                    {order.orderNumber} - ${order.totalAmount}
+                    {order.orderNumber} - ₹{order.totalAmount}
                   </option>
                 ))}
               </select>
@@ -165,8 +165,8 @@ export default function CreatePurchaseInvoicePage() {
                   type="number"
                   className="form-control"
                   placeholder="Qty"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
+                  value={item.quantity || ''}
+                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
                   required
                 />
               </div>
@@ -175,13 +175,13 @@ export default function CreatePurchaseInvoicePage() {
                   type="number"
                   className="form-control"
                   placeholder="Price"
-                  value={item.price}
-                  onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value))}
+                  value={item.price || ''}
+                  onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
                   required
                 />
               </div>
               <div className="col-md-2">
-                <span className="form-control-plaintext">${item.quantity * item.price}</span>
+                <span className="form-control-plaintext">₹{(item.quantity || 0) * (item.price || 0)}</span>
               </div>
               <div className="col-md-1">
                 <button type="button" onClick={() => {
@@ -209,7 +209,7 @@ export default function CreatePurchaseInvoicePage() {
         </div>
 
         <div className="mb-3">
-          <strong>Total Amount: ${totalAmount}</strong>
+          <strong>Total Amount: ₹{totalAmount}</strong>
         </div>
 
         <button type="submit" className="btn btn-primary">Create</button>

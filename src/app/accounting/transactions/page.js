@@ -25,7 +25,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin") {
+    if (userRole !== "super-admin" && userRole !== "admin") {
       router.push("/");
       return;
     }

@@ -42,8 +42,8 @@ export default function Layout({ children }) {
           <small className="text-white-50">Role: {userRole}</small>
         </div>
         <nav className="nav flex-column">
-          {/* Super Admin & Admin - Full Access */}
-          {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") && (
+          {/* Super Admin - Full System Access */}
+          {(userRole === "super-admin" || userRole === "Super-admin") && (
             <>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
                 Dashboard
@@ -69,6 +69,9 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
                 Performance
               </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/fund-transfer")}>
+                💰 Fund Transfer
+              </button>
               <hr className="text-white" />
               <h6 className="text-white-50 px-3 mb-2">ACCOUNTING</h6>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/accounts")}>
@@ -80,8 +83,8 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/budgeting")}>
                 Budgeting
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/cash")}>
-                Cash Management
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/petty-cash")}>
+                Petty-Cash
               </button>
               <hr className="text-white" />
               <h6 className="text-white-50 px-3 mb-2">SALES & PURCHASING</h6>
@@ -109,8 +112,46 @@ export default function Layout({ children }) {
             </>
           )}
 
-          {/* Team Lead & Team Admin - Management Access */}
-          {(userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin") && (
+          {/* Admin - Limited System Access */}
+          {userRole === "admin" && (
+            <>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
+                Dashboard
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
+                Monitor Employees
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
+                Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                Attendance
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
+                Performance
+              </button>
+              <hr className="text-white" />
+              <h6 className="text-white-50 px-3 mb-2">ACCOUNTING</h6>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/accounts")}>
+                Accounts
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/transactions")}>
+                Transactions
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/budgeting")}>
+                Budgeting
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/petty-cash")}>
+                Petty-Cash
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
+                Payroll
+              </button>
+            </>
+          )}
+
+          {/* Team Lead - Department Management */}
+          {userRole === "Team-Lead" && (
             <>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
                 Dashboard
@@ -147,8 +188,37 @@ export default function Layout({ children }) {
             </>
           )}
 
-          {/* Employee & Intern - Basic Access */}
-          {(userRole === "Employee" || userRole === "Intern") && (
+          {/* Team Admin - Department Administration */}
+          {userRole === "Team-admin" && (
+            <>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
+                Admin Dashboard
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
+                Monitor Department
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
+                Department Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                Department Attendance
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
+                Manage Absence
+              </button>
+              <hr className="text-white" />
+              <h6 className="text-white-50 px-3 mb-2">PERSONAL</h6>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
+                My Timecard
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
+                My Tasks
+              </button>
+            </>
+          )}
+
+          {/* Employee - Standard Access */}
+          {userRole === "Employee" && (
             <>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
                 Timecard Entry
@@ -167,6 +237,24 @@ export default function Layout({ children }) {
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
                 Absence
+              </button>
+            </>
+          )}
+
+          {/* Intern - Limited Access */}
+          {userRole === "Intern" && (
+            <>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
+                Timecard Entry
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
+                Daily Tasks
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
+                Assigned Projects
+              </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+                My Attendance
               </button>
             </>
           )}

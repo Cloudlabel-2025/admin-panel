@@ -5,15 +5,21 @@ import mongoose from "mongoose";
 
 // Helper to find employee across all department collections
 async function findEmployeeInDepartments(employeeId) {
-  const departmentCollections = Object.keys(mongoose.models).filter(name =>
-    name.endsWith("_department")
-  );
+  const db = mongoose.connection.db;
+  const collections = await db.listCollections().toArray();
+  const departmentCollections = collections
+    .map(col => col.name)
+    .filter(name => name.endsWith('_department'));
   
   for (const collName of departmentCollections) {
-    const Model = mongoose.models[collName];
-    const employee = await Model.findOne({ employeeId });
-    if (employee) {
-      return { employee, department: collName.replace("_department", "") };
+    try {
+      const employee = await db.collection(collName).findOne({ employeeId });
+      if (employee) {
+        const department = collName.replace('_department', '');
+        return { employee, department };
+      }
+    } catch (err) {
+      continue;
     }
   }
   return null;

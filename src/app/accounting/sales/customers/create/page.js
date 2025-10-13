@@ -20,7 +20,7 @@ export default function CreateCustomerPage() {
         body: JSON.stringify(formData)
       });
       if (response.ok) {
-        router.push("/sales/customers");
+        router.push("/accounting/sales/customers");
       }
     } catch (error) {
       console.error("Error creating customer:", error);

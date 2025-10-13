@@ -34,7 +34,7 @@ export default function EditPurchaseOrderPage() {
       const data = await response.json();
       setFormData({
         orderNumber: data.orderNumber,
-        vendor: data.vendor._id,
+        vendor: data.vendor,
         items: data.items,
         status: data.status
       });
@@ -60,7 +60,7 @@ export default function EditPurchaseOrderPage() {
         body: JSON.stringify({ ...formData, totalAmount })
       });
       if (response.ok) {
-        router.push("/purchasing/purchase-orders");
+        router.push("/accounting/purchasing/purchase-orders");
       }
     } catch (error) {
       console.error("Error updating purchase order:", error);

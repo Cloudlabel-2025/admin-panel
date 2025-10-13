@@ -13,7 +13,7 @@ export default function AccountsPage() {
   useEffect(() => {
     // Check if user is admin
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin") {
+    if (userRole !== "super-admin" && userRole !== "admin") {
       router.push("/");
       return;
     }

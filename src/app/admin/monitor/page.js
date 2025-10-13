@@ -118,6 +118,7 @@ export default function MonitorEmployees() {
                 <thead>
                   <tr>
                     <th>Employee ID</th>
+                    <th>Employee Name</th>
                     <th>Log In</th>
                     <th>Log Out</th>
                     <th>Lunch Out</th>
@@ -131,6 +132,7 @@ export default function MonitorEmployees() {
                   {timecards.map((tc, idx) => (
                     <tr key={idx}>
                       <td>{tc.employeeId}</td>
+                      <td>{tc.employeeName || 'Unknown'}</td>
                       <td>{tc.logIn || '-'}</td>
                       <td>{tc.logOut || '-'}</td>
                       <td>{tc.lunchOut || '-'}</td>

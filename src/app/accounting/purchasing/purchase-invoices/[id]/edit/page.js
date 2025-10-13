@@ -34,11 +34,11 @@ export default function EditPurchaseInvoicePage() {
       const response = await fetch(`/api/purchasing/purchase-invoices/${params.id}`);
       const data = await response.json();
       setFormData({
-        invoiceNumber: data.invoiceNumber,
-        vendor: data.vendor._id,
+        invoiceNumber: data.invoiceNumber || "",
+        vendor: data.vendor || "",
         dueDate: data.dueDate?.split('T')[0] || "",
-        status: data.status,
-        items: data.items
+        status: data.status || "Pending",
+        items: data.items || [{ description: "", quantity: 1, price: 0 }]
       });
     } catch (error) {
       console.error("Error fetching purchase invoice:", error);
@@ -51,7 +51,7 @@ export default function EditPurchaseInvoicePage() {
     setFormData({ ...formData, items });
   };
 
-  const totalAmount = formData.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  const totalAmount = (formData.items || []).reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,7 +62,7 @@ export default function EditPurchaseInvoicePage() {
         body: JSON.stringify({ ...formData, totalAmount })
       });
       if (response.ok) {
-        router.push("/purchasing/purchase-invoices");
+        router.push("/accounting/purchasing/purchase-invoices");
       }
     } catch (error) {
       console.error("Error updating purchase invoice:", error);
@@ -80,7 +80,7 @@ export default function EditPurchaseInvoicePage() {
               <input
                 type="text"
                 className="form-control"
-                value={formData.invoiceNumber}
+                value={formData.invoiceNumber || ""}
                 onChange={(e) => setFormData({...formData, invoiceNumber: e.target.value})}
                 required
               />
@@ -91,7 +91,7 @@ export default function EditPurchaseInvoicePage() {
               <label className="form-label">Vendor</label>
               <select
                 className="form-control"
-                value={formData.vendor}
+                value={formData.vendor || ""}
                 onChange={(e) => setFormData({...formData, vendor: e.target.value})}
                 required
               >
@@ -111,7 +111,7 @@ export default function EditPurchaseInvoicePage() {
           <input
             type="date"
             className="form-control"
-            value={formData.dueDate}
+            value={formData.dueDate || ""}
             onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
             required
           />
@@ -126,7 +126,7 @@ export default function EditPurchaseInvoicePage() {
                   type="text"
                   className="form-control"
                   placeholder="Description"
-                  value={item.description}
+                  value={item.description || ""}
                   onChange={(e) => updateItem(index, 'description', e.target.value)}
                   required
                 />
@@ -136,8 +136,8 @@ export default function EditPurchaseInvoicePage() {
                   type="number"
                   className="form-control"
                   placeholder="Qty"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
+                  value={item.quantity || ''}
+                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
                   required
                 />
               </div>
@@ -146,13 +146,13 @@ export default function EditPurchaseInvoicePage() {
                   type="number"
                   className="form-control"
                   placeholder="Price"
-                  value={item.price}
-                  onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value))}
+                  value={item.price || ''}
+                  onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
                   required
                 />
               </div>
               <div className="col-md-2">
-                <span className="form-control-plaintext">${item.quantity * item.price}</span>
+                <span className="form-control-plaintext">₹{(item.quantity || 0) * (item.price || 0)}</span>
               </div>
             </div>
           ))}
@@ -162,7 +162,7 @@ export default function EditPurchaseInvoicePage() {
           <label className="form-label">Status</label>
           <select
             className="form-control"
-            value={formData.status}
+            value={formData.status || "Pending"}
             onChange={(e) => setFormData({...formData, status: e.target.value})}
           >
             <option value="Pending">Pending</option>
@@ -173,7 +173,7 @@ export default function EditPurchaseInvoicePage() {
         </div>
 
         <div className="mb-3">
-          <strong>Total Amount: ${totalAmount}</strong>
+          <strong>Total Amount: ₹{totalAmount}</strong>
         </div>
 
         <button type="submit" className="btn btn-primary">Update</button>

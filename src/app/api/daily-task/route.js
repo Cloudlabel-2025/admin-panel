@@ -36,7 +36,33 @@ export async function GET(req) {
       
       const tasks = await DailyTask.find(query).sort({ employeeId: 1, date: -1 }).lean();
       
-      return NextResponse.json(tasks, { status: 200 });
+      // Add employee names to tasks if missing
+      const tasksWithNames = await Promise.all(
+        tasks.map(async (task) => {
+          if (!task.employeeName && task.employeeId) {
+            try {
+              const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/${task.employeeId}`);
+              if (employeeRes.ok) {
+                const employeeData = await employeeRes.json();
+                return {
+                  ...task,
+                  employeeName: `${employeeData.firstName || ''} ${employeeData.lastName || ''}`.trim() || 'Unknown',
+                  designation: employeeData.designation || task.designation || 'N/A'
+                };
+              }
+            } catch (err) {
+              console.error(`Error fetching employee ${task.employeeId}:`, err);
+            }
+          }
+          return {
+            ...task,
+            employeeName: task.employeeName || 'Unknown',
+            designation: task.designation || 'N/A'
+          };
+        })
+      );
+      
+      return NextResponse.json(tasksWithNames, { status: 200 });
     }
 
     // Monthly report

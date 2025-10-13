@@ -15,9 +15,10 @@ export default function SalesInvoicesPage() {
     try {
       const response = await fetch("/api/sales/invoices");
       const data = await response.json();
-      setInvoices(data);
+      setInvoices(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching invoices:", error);
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
