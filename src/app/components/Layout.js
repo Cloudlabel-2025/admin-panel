@@ -109,6 +109,9 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
                 Payroll
               </button>
+               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/inventory")}>
+               Inventory
+              </button>
             </>
           )}
 
