@@ -14,9 +14,10 @@ export default function TeamAbsence() {
       const employeeId = localStorage.getItem('employeeId');
       const response = await fetch(`/api/team-absence?employeeId=${employeeId}`);
       const data = await response.json();
-      setAbsences(data || []);
+      setAbsences(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching absences:', error);
+      setAbsences([]);
     } finally {
       setLoading(false);
     }
@@ -59,7 +60,7 @@ export default function TeamAbsence() {
               </tr>
             </thead>
             <tbody>
-              {absences.map((absence) => (
+              {Array.isArray(absences) && absences.map((absence) => (
                 <tr key={absence._id}>
                   <td>{absence.employeeName}</td>
                   <td>{absence.leaveType}</td>
