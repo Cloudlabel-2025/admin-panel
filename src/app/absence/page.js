@@ -308,20 +308,6 @@ export default function AbsencePage() {
                   <option value="Rejected">Rejected</option>
                 </select>
               </div>
-              <div className="col-md-3">
-                <select
-                  className="form-select"
-                  value={filter.employeeId}
-                  onChange={(e) => setFilter({...filter, employeeId: e.target.value})}
-                >
-                  <option value="">All Employees</option>
-                  {employees.map(emp => (
-                    <option key={emp.employeeId} value={emp.employeeId}>
-                      {emp.firstName} {emp.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
               <div className="col-md-2">
                 <button className="btn btn-outline-primary" onClick={fetchAbsences}>
                   Apply Filters

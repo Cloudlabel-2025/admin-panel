@@ -36,10 +36,12 @@ async function getEmployeeData(employeeId) {
       const Model = mongoose.models[modelName];
       const employee = await Model.findOne({ employeeId });
       if (employee) {
+        // Extract department name properly by removing '_department' suffix
+        const departmentName = modelName.replace("_department", "").replace(/([A-Z])/g, ' $1').trim();
         return {
           name: `${employee.firstName} ${employee.lastName}`,
           email: employee.email || 'N/A',
-          department: modelName.replace("_department", "")
+          department: departmentName.charAt(0).toUpperCase() + departmentName.slice(1)
         };
       }
     }

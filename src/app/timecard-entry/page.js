@@ -25,6 +25,9 @@ export default function TimecardPage() {
   const [permission, setPermission] = useState(0);
   const [reason, setReason] = useState("");
   const [permissionLocked, setPermissionLocked] = useState(false);
+  const [breaks, setBreaks] = useState([]);
+  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [breakReason, setBreakReason] = useState("");
 
   // Helpers
   const getTimeString = () =>
@@ -93,6 +96,9 @@ export default function TimecardPage() {
       if (today.permission && today.reason) {
         setPermissionLocked(true);
       }
+      setBreaks(today.breaks || []);
+      const ongoingBreak = (today.breaks || []).find(b => b.breakOut && !b.breakIn);
+      setIsOnBreak(!!ongoingBreak);
       updateLunchDuration(today);
     } else {
       // Check for previous day's incomplete timecard and auto-logout
@@ -256,20 +262,7 @@ export default function TimecardPage() {
   
 
 
-  // Rule 6: Break Calculation - handle multiple breaks
-  const handleBreakTime = () => {
-    if (current?.logOut) {
-      alert("Cannot add breaks after logout");
-      return;
-    }
-    
-    const breakTime = prompt("Enter break duration in minutes (e.g., 15 for 15 minutes):");
-    if (breakTime && !isNaN(breakTime) && Number(breakTime) > 0) {
-      const currentBreaks = current?.breakTime || 0;
-      const totalBreaks = currentBreaks + Number(breakTime);
-      updateTimecard({ breakTime: totalBreaks });
-    }
-  };
+
 
   const handleSavePermission = () => {
     if (current?.logOut) {
@@ -286,6 +279,55 @@ export default function TimecardPage() {
     }
     updateTimecard({ permission, reason });
     setPermissionLocked(true);
+  };
+
+  const handleBreakOut = () => {
+    if (current?.logOut) {
+      alert("Cannot take break after logout");
+      return;
+    }
+    if (isOnBreak) {
+      alert("Already on break");
+      return;
+    }
+    if (breaks.length >= 3) {
+      alert("Maximum 3 breaks allowed per day");
+      return;
+    }
+    if (!breakReason.trim()) {
+      alert("Please provide a reason for break");
+      return;
+    }
+    
+    const newBreak = {
+      breakOut: getTimeString(),
+      reason: breakReason
+    };
+    const updatedBreaks = [...breaks, newBreak];
+    setBreaks(updatedBreaks);
+    setIsOnBreak(true);
+    setBreakReason("");
+    updateTimecard({ breaks: updatedBreaks });
+  };
+
+  const handleBreakIn = () => {
+    if (current?.logOut) {
+      alert("Cannot return from break after logout");
+      return;
+    }
+    if (!isOnBreak) {
+      alert("Not currently on break");
+      return;
+    }
+    
+    const updatedBreaks = breaks.map((b, index) => 
+      index === breaks.length - 1 && !b.breakIn 
+        ? { ...b, breakIn: getTimeString() }
+        : b
+    );
+    setBreaks(updatedBreaks);
+    setIsOnBreak(false);
+    updateTimecard({ breaks: updatedBreaks });
   };
 
   // Enhanced hours calculation with system date-wise calculation
@@ -332,10 +374,7 @@ export default function TimecardPage() {
         }
       }
       
-      // Rule 6: Break Calculation - subtract all breaks
-      if (t.breakTime && !isNaN(t.breakTime)) {
-        totalWorked -= Number(t.breakTime);
-      }
+
       
       // Permission deduction (max 2 hours)
       if (t.permission && !isNaN(t.permission)) {
@@ -395,7 +434,6 @@ export default function TimecardPage() {
       LunchIn: t.lunchIn || "-",
       Permission: t.permission ? `${t.permission} hr` : "-",
       Reason: t.reason || "-",
-      Breaks: t.breakTime ? `${t.breakTime} min` : "-",
       TotalHours: calcTotalHours(t),
     }));
     const ws = XLSX.utils.json_to_sheet(wsData);
@@ -443,98 +481,191 @@ export default function TimecardPage() {
 
 
         {/* Today's Timecard */}
-        <div className="card mb-4">
-          <div className="card-body">
-            <h5>Today&apos;s Timecard</h5>
-            <div className="row">
+        <div className="card mb-3">
+          <div className="card-body p-4">
+            <h5 className="fw-bold mb-4">Today&apos;s Timecard</h5>
+            {/* First Row */}
+            <div className="row g-4">
+              {/* 1st Column - Login/Logout */}
               <div className="col-md-6">
-                <div className="row mb-3">
-                  <div className="col-6">
-                    <label className="form-label">Login Time</label>
-                    <input type="text" className="form-control" value={current?.logIn || "-"} readOnly />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">Logout Time</label>
-                    <div className="d-flex gap-2">
-                      <input type="text" className="form-control" value={current?.logOut || "-"} readOnly />
-                      <button onClick={handleLogOut} disabled={!!current?.logOut} className="btn btn-danger">
-                        Logout
-                      </button>
+                <div className="card h-100 border-primary">
+                  <div className="card-body p-3">
+                    <div className="text-center mb-3">
+                      <i className="fas fa-clock text-primary fs-4"></i>
+                      <h6 className="fw-bold text-primary mt-2">Login / Logout</h6>
+                    </div>
+                    <div className="row g-3">
+                      <div className="col-6">
+                        <label className="form-label fw-bold mb-2 text-success">Login Time</label>
+                        <input type="text" className="form-control fw-bold text-center" value={current?.logIn || "-"} readOnly />
+                      </div>
+                      <div className="col-6">
+                        <label className="form-label fw-bold mb-2 text-danger">Logout Time</label>
+                        <input type="text" className="form-control fw-bold text-center mb-2" value={current?.logOut || "-"} readOnly />
+                        <button onClick={handleLogOut} disabled={!!current?.logOut} className="btn btn-danger btn-sm w-100">
+                          <i className="fas fa-power-off me-1"></i>Logout
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                <div className="row mb-3">
-                  <div className="col-6">
-                    <label className="form-label">Lunch Out</label>
-                    <div className="d-flex gap-2">
-                      <input type="text" className="form-control" value={current?.lunchOut || "-"} readOnly />
-                      <button className="btn btn-warning" onClick={handleLunchOut} disabled={!!current?.lunchOut || !!current?.logOut}>
-                        Lunch Out
-                      </button>
-                    </div>
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">Lunch In</label>
-                    <div className="d-flex gap-2">
-                      <input type="text" className="form-control" value={current?.lunchIn || "-"} readOnly />
-                      <button className="btn btn-success" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn || !!current?.logOut}>
-                        Lunch In
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {isLunchActive && (
-                  <div className="alert alert-warning">
-                    <strong>Lunch Break Active:</strong> {formatDuration(lunchDuration)}
-                  </div>
-                )}
               </div>
               
+              {/* 2nd Column - Lunch */}
               <div className="col-md-6">
-                <div className="mb-3">
-                  <label className="form-label">Permission Hours</label>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    max="2" 
-                    step="0.5" 
-                    className="form-control" 
-                    value={permission} 
-                    onChange={(e) => setPermission(Math.min(2, Math.max(0, Number(e.target.value))))}
-                    disabled={permissionLocked || !!current?.logOut} 
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Reason</label>
-                  <textarea 
-                    className="form-control" 
-                    value={reason} 
-                    onChange={(e) => setReason(e.target.value)} 
-                    disabled={permissionLocked || !!current?.logOut}
-                    rows="2"
-                  />
-                </div>
-                <div className="d-flex gap-2 mb-3">
-                  <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked || !reason.trim() || !!current?.logOut}>
-                    Save Permission
-                  </button>
-                  <button onClick={handleBreakTime} className="btn btn-outline-secondary" disabled={!!current?.logOut}>
-                    Add Break
-                  </button>
-                </div>
-                {current?.breakTime > 0 && (
-                  <div className="mb-3">
-                    <span className="badge bg-info">
-                      Total Breaks: {current.breakTime} min
-                    </span>
+                <div className="card h-100 border-warning">
+                  <div className="card-body p-3">
+                    <div className="text-center mb-3">
+                      <i className="fas fa-utensils text-warning fs-4"></i>
+                      <h6 className="fw-bold text-warning mt-2">Lunch Break</h6>
+                    </div>
+                    <div className="row g-3">
+                      <div className="col-6">
+                        <label className="form-label fw-bold mb-2">Lunch Out</label>
+                        <input type="text" className="form-control fw-bold text-center mb-2" value={current?.lunchOut || "-"} readOnly />
+                        <button className="btn btn-warning btn-sm w-100" onClick={handleLunchOut} disabled={!!current?.lunchOut || !!current?.logOut}>
+                          <i className="fas fa-utensils me-1"></i>Go Out
+                        </button>
+                      </div>
+                      <div className="col-6">
+                        <label className="form-label fw-bold mb-2">Lunch In</label>
+                        <input type="text" className="form-control fw-bold text-center mb-2" value={current?.lunchIn || "-"} readOnly />
+                        <button className="btn btn-success btn-sm w-100" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn || !!current?.logOut}>
+                          <i className="fas fa-arrow-left me-1"></i>Come In
+                        </button>
+                      </div>
+                    </div>
+                    {isLunchActive && (
+                      <div className="text-center mt-2">
+                        <div className="badge bg-warning text-dark">
+                          <i className="fas fa-clock me-1"></i>On Lunch: {formatDuration(lunchDuration)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                
-
+                </div>
               </div>
             </div>
+            
+            {/* Second Row */}
+            <div className="row g-4 mt-3">
+              {/* 1st Column - Break */}
+              <div className="col-md-6">
+                <div className="card h-100 border-info">
+                  <div className="card-body p-3">
+                    <div className="text-center mb-3">
+                      <i className="fas fa-coffee text-info fs-4"></i>
+                      <h6 className="fw-bold text-info mt-2">Break ({breaks.length}/3)</h6>
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label fw-bold mb-2">Break Reason</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={breakReason} 
+                        onChange={(e) => setBreakReason(e.target.value)}
+                        disabled={isOnBreak || breaks.length >= 3 || !!current?.logOut}
+                        placeholder="Enter reason"
+                      />
+                    </div>
+                    <div className="row g-2">
+                      <div className="col-6">
+                        <button 
+                          onClick={handleBreakOut} 
+                          className="btn btn-warning btn-sm w-100" 
+                          disabled={isOnBreak || breaks.length >= 3 || !breakReason.trim() || !!current?.logOut}
+                        >
+                          <i className="fas fa-pause me-1"></i>Break Out
+                        </button>
+                      </div>
+                      <div className="col-6">
+                        <button 
+                          onClick={handleBreakIn} 
+                          className="btn btn-success btn-sm w-100" 
+                          disabled={!isOnBreak || !!current?.logOut}
+                        >
+                          <i className="fas fa-play me-1"></i>Break In
+                        </button>
+                      </div>
+                    </div>
+                    {isOnBreak && (
+                      <div className="text-center mt-2">
+                        <div className="badge bg-info">
+                          <i className="fas fa-clock me-1"></i>On Break
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* 2nd Column - Permission */}
+              <div className="col-md-6">
+                <div className="card h-100 border-secondary">
+                  <div className="card-body p-3">
+                    <div className="text-center mb-3">
+                      <i className="fas fa-user-clock text-secondary fs-4"></i>
+                      <h6 className="fw-bold text-secondary mt-2">Permission Request</h6>
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label fw-bold mb-2">Hours (Max 2)</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="2" 
+                        step="0.5" 
+                        className="form-control" 
+                        value={permission} 
+                        onChange={(e) => setPermission(Math.min(2, Math.max(0, Number(e.target.value))))}
+                        disabled={permissionLocked || !!current?.logOut} 
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label fw-bold mb-2">Reason</label>
+                      <textarea 
+                        className="form-control" 
+                        value={reason} 
+                        onChange={(e) => setReason(e.target.value)} 
+                        disabled={permissionLocked || !!current?.logOut}
+                        rows="2"
+                        placeholder="Enter reason"
+                      />
+                    </div>
+                    <button onClick={handleSavePermission} className="btn btn-primary btn-sm w-100" disabled={permissionLocked || !reason.trim() || !!current?.logOut}>
+                      <i className="fas fa-save me-1"></i>Save Permission
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            
+            {/* Break Records */}
+            {breaks.length > 0 && (
+              <div className="mt-4">
+                <h6 className="fw-bold mb-3">Today's Breaks</h6>
+                <div className="table-responsive">
+                  <table className="table table-bordered mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="fw-bold py-3">Break Out</th>
+                        <th className="fw-bold py-3">Break In</th>
+                        <th className="fw-bold py-3">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {breaks.map((breakItem, index) => (
+                        <tr key={index}>
+                          <td className="fw-bold py-2">{breakItem.breakOut}</td>
+                          <td className="fw-bold py-2">{breakItem.breakIn || "On Break"}</td>
+                          <td className="py-2">{breakItem.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -553,7 +684,6 @@ export default function TimecardPage() {
                     <th>Lunch In</th>
                     <th>Permission</th>
                     <th>Reason</th>
-                    <th>Breaks (min)</th>
                     <th>Total Hours</th>
                     <th>Status</th>
                   </tr>
@@ -561,7 +691,7 @@ export default function TimecardPage() {
                 <tbody>
                   {timecards.length === 0 && (
                     <tr>
-                      <td colSpan={10} className="text-center text-muted">
+                      <td colSpan={9} className="text-center text-muted">
                         No timecard records found.
                       </td>
                     </tr>
@@ -577,7 +707,6 @@ export default function TimecardPage() {
                         <td>{t.lunchIn || "-"}</td>
                         <td>{t.permission ? `${t.permission}h` : "-"}</td>
                         <td>{t.reason || "-"}</td>
-                        <td>{t.breakTime || "-"}</td>
                         <td className="fw-bold">{calcTotalHours(t)}</td>
                         <td>
                           <span className={`badge bg-${workStatus.color}`}>
