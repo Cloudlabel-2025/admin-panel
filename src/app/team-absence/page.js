@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
 
 export default function TeamAbsence() {
   const [absences, setAbsences] = useState([]);
@@ -40,6 +41,7 @@ export default function TeamAbsence() {
   if (loading) return <div className="p-6">Loading...</div>;
 
   return (
+    <Layout>
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Team Leave Requests</h1>
       
@@ -100,5 +102,6 @@ export default function TeamAbsence() {
         </div>
       )}
     </div>
+    </Layout>
   );
 }

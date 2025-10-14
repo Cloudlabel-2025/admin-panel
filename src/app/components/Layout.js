@@ -237,7 +237,7 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
                 My Performance
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
                 My Attendance
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
@@ -284,7 +284,7 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
                 My Performance
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
                 My Attendance
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
@@ -311,7 +311,7 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
                 My Performance
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
                 My Attendance
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
@@ -335,7 +335,7 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
                 Assigned Projects
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
                 My Attendance
               </button>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
@@ -359,7 +359,7 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
                 My Projects
               </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
                 My Attendance
               </button>
             </>
