@@ -25,22 +25,28 @@ function calculateAttendance(totalHours, permissionHours, hasLogout = true) {
   return "Absent";
 }
 
-// Get employee data from all department collections
+// Get employee data using the Employee API approach
 async function getEmployeeData(employeeId) {
-  const collections = Object.keys(mongoose.connection.collections);
-  const departmentCollections = collections.filter(name => name.endsWith('_department'));
-  
-  for (const collectionName of departmentCollections) {
-    const collection = mongoose.connection.collections[collectionName];
-    const employee = await collection.findOne({ employeeId });
-    if (employee) {
-      return {
-        name: `${employee.firstName} ${employee.lastName}`,
-        email: employee.email || 'N/A'
-      };
+  try {
+    const departmentModels = Object.keys(mongoose.models).filter(name =>
+      name.endsWith("_department")
+    );
+    
+    for (const modelName of departmentModels) {
+      const Model = mongoose.models[modelName];
+      const employee = await Model.findOne({ employeeId });
+      if (employee) {
+        return {
+          name: `${employee.firstName} ${employee.lastName}`,
+          email: employee.email || 'N/A',
+          department: modelName.replace("_department", "")
+        };
+      }
     }
+  } catch (error) {
+    console.error('Error fetching employee data:', error);
   }
-  return { name: "Unknown", email: "N/A" };
+  return { name: "Unknown", email: "N/A", department: "Unknown" };
 }
 
 // GET: fetch existing attendance (optional date range)
@@ -51,6 +57,8 @@ export async function GET(req) {
 
     const employeeId = searchParams.get("employeeId");
     const isAdmin = searchParams.get("admin") === "true";
+    const userRole = searchParams.get("userRole");
+    const userDepartment = searchParams.get("userDepartment");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const department = searchParams.get("department");
@@ -62,12 +70,21 @@ export async function GET(req) {
     
     // Filter by department for team roles
     let departmentEmployeeIds = [];
-    if (isAdmin && department) {
+    const filterDepartment = department || ((userRole === "Team-Lead" || userRole === "Team-admin") ? userDepartment : null);
+    
+    if ((isAdmin && department) || (userRole === "Team-Lead" || userRole === "Team-admin")) {
       try {
-        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${department}`);
+        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${filterDepartment}`);
         if (employeeRes.ok) {
           const employeeData = await employeeRes.json();
-          departmentEmployeeIds = employeeData.employees.map(emp => emp.employeeId);
+          // For team roles, exclude other team-leads from the results
+          if (userRole === "Team-Lead" || userRole === "Team-admin") {
+            departmentEmployeeIds = employeeData.employees
+              .filter(emp => emp.role !== "Team-Lead" || emp.employeeId === employeeId)
+              .map(emp => emp.employeeId);
+          } else {
+            departmentEmployeeIds = employeeData.employees.map(emp => emp.employeeId);
+          }
         }
       } catch (err) {
         console.error('Error filtering by department:', err);
@@ -125,11 +142,14 @@ export async function GET(req) {
         employeeId: tc.employeeId,
         employeeName: employeeData.name,
         employeeEmail: employeeData.email,
+        department: employeeData.department,
         totalHours,
         permissionHours,
+        overtimeHours: Math.max(0, totalHours - 8),
         loginTime: tc.logIn || "",
         logoutTime: tc.logOut || "",
         status,
+        remarks: tc.reason || ""
       });
     }
 

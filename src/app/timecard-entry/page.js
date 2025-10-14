@@ -10,9 +10,7 @@ export default function TimecardPage() {
   const [employeeData, setEmployeeData] = useState(null);
   const [timecards, setTimecards] = useState([]);
   const [current, setCurrent] = useState(null);
-  const [permission, setPermission] = useState(0);
-  const [reason, setReason] = useState("");
-  const [permissionLocked, setPermissionLocked] = useState(false);
+
   const [stats, setStats] = useState({
     totalDays: 0,
     totalHours: 0,
@@ -24,11 +22,28 @@ export default function TimecardPage() {
   });
   const [isLunchActive, setIsLunchActive] = useState(false);
   const [lunchDuration, setLunchDuration] = useState(0);
+  const [permission, setPermission] = useState(0);
+  const [reason, setReason] = useState("");
+  const [permissionLocked, setPermissionLocked] = useState(false);
 
   // Helpers
   const getTimeString = () =>
     new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const getDateString = () => new Date().toISOString().split("T")[0];
+  
+  // Convert time string to minutes for calculation
+  const timeToMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  };
+  
+  // Convert minutes to HH:MM format
+  const minutesToTime = (minutes) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const d = new Date(dateStr);
@@ -72,14 +87,37 @@ export default function TimecardPage() {
     const today = data.find((t) => t.date?.startsWith(getDateString()));
     if (today) {
       setCurrent(today);
+      setIsLunchActive(today.lunchOut && !today.lunchIn);
       setPermission(Number(today.permission) || 0);
       setReason(today.reason || "");
-      setIsLunchActive(today.lunchOut && !today.lunchIn);
       if (today.permission && today.reason) {
         setPermissionLocked(true);
       }
       updateLunchDuration(today);
     } else {
+      // Check for previous day's incomplete timecard and auto-logout
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      
+      const incompleteTimecard = data.find((t) => 
+        t.date?.startsWith(yesterdayStr) && t.logIn && !t.logOut
+      );
+      
+      if (incompleteTimecard) {
+        // Auto-logout previous day's timecard at end of that day (23:59)
+        await fetch("/api/timecard", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            _id: incompleteTimecard._id, 
+            logOut: "23:59",
+            logoutDate: yesterdayStr
+          }),
+        });
+      }
+      
+      // Auto-create entry with login time when employee accesses the page
       const newEntry = { employeeId, date: getDateString(), logIn: getTimeString() };
       const res2 = await fetch("/api/timecard", {
         method: "POST",
@@ -89,7 +127,8 @@ export default function TimecardPage() {
       const data2 = await res2.json();
       if (data2.timecard) {
         setCurrent(data2.timecard);
-        setTimecards([data2.timecard, ...data]);
+        // Refresh timecards to show updated data
+        fetchTimecards();
       }
     }
   };
@@ -105,21 +144,15 @@ export default function TimecardPage() {
     data.forEach(t => {
       const hours = calcTotalHours(t);
       
-      // Count permission days
-      if (t.permission && Number(t.permission) > 0) {
-        permissionDays++;
-      }
-      
       if (hours !== "-") {
         const [h, m] = hours.split(":").map(Number);
         const minutes = h * 60 + m;
         totalMinutes += minutes;
         
-        // Calculate attendance status
-        const effectiveHours = h + Math.min(Number(t.permission) || 0, 2);
-        if (effectiveHours >= 8) {
+        // Calculate attendance status based on actual hours worked
+        if (h >= 8) {
           presentDays++;
-        } else if (effectiveHours >= 4) {
+        } else if (h >= 4) {
           presentDays++; // Half day counts as present
         } else {
           absentDays++;
@@ -138,7 +171,6 @@ export default function TimecardPage() {
       avgHours: totalDays > 0 ? (totalMinutes / 60 / totalDays).toFixed(1) : 0,
       presentDays,
       absentDays,
-      permissionDays,
       overtimeHours: (overtimeMinutes / 60).toFixed(1)
     });
   };
@@ -187,10 +219,22 @@ export default function TimecardPage() {
 
   // Actions
   const handleLogOut = () => {
-    updateTimecard({ logOut: getTimeString() });
+    // Rule 5: Logout finalizes the record - no more changes after this
+    // Store logout date along with logout time for cross-date tracking
+    const logoutData = { 
+      logOut: getTimeString(),
+      logoutDate: getDateString() // Track logout date separately
+    };
+    updateTimecard(logoutData);
   };
   
   const handleLunchOut = () => {
+    // Rule 5: No lunch actions after logout
+    if (current?.logOut) {
+      alert("Cannot take lunch break after logout");
+      return;
+    }
+    
     if (!current?.lunchOut) {
       updateTimecard({ lunchOut: getTimeString() });
       setIsLunchActive(true);
@@ -198,95 +242,129 @@ export default function TimecardPage() {
   };
   
   const handleLunchIn = () => {
+    // Rule 5: No lunch actions after logout
+    if (current?.logOut) {
+      alert("Cannot return from lunch after logout");
+      return;
+    }
+    
     if (current?.lunchOut && !current?.lunchIn) {
       updateTimecard({ lunchIn: getTimeString() });
       setIsLunchActive(false);
     }
   };
   
+
+
+  // Rule 6: Break Calculation - handle multiple breaks
+  const handleBreakTime = () => {
+    if (current?.logOut) {
+      alert("Cannot add breaks after logout");
+      return;
+    }
+    
+    const breakTime = prompt("Enter break duration in minutes (e.g., 15 for 15 minutes):");
+    if (breakTime && !isNaN(breakTime) && Number(breakTime) > 0) {
+      const currentBreaks = current?.breakTime || 0;
+      const totalBreaks = currentBreaks + Number(breakTime);
+      updateTimecard({ breakTime: totalBreaks });
+    }
+  };
+
   const handleSavePermission = () => {
+    if (current?.logOut) {
+      alert("Cannot add permission after logout");
+      return;
+    }
     if (permission > 2) {
       alert("Permission cannot exceed 2 hours");
+      return;
+    }
+    if (!reason.trim()) {
+      alert("Please provide a reason for permission");
       return;
     }
     updateTimecard({ permission, reason });
     setPermissionLocked(true);
   };
 
-  const handleBreakTime = () => {
-    const breakTime = prompt("Enter break duration in minutes:");
-    if (breakTime && !isNaN(breakTime)) {
-      updateTimecard({ breakTime: Number(breakTime) });
-    }
-  };
-
-  // Enhanced hours calculation with better logic
+  // Enhanced hours calculation with system date-wise calculation
   const calcTotalHours = (t) => {
+    // Rule 1: Login Time = Entry Time (automatically recorded)
+    // Rule 5: Only count work between login and logout
     if (!t.logIn || !t.logOut) return "-";
     
     try {
-      const [liH, liM] = t.logIn.split(":").map(Number);
-      const [loH, loM] = t.logOut.split(":").map(Number);
+      let loginMinutes = timeToMinutes(t.logIn);
+      let logoutMinutes = timeToMinutes(t.logOut);
       
-      if (isNaN(liH) || isNaN(liM) || isNaN(loH) || isNaN(loM)) return "-";
+      // Check if logout happened on a different date
+      const loginDate = new Date(t.date);
+      const logoutDate = t.logoutDate ? new Date(t.logoutDate) : loginDate;
       
-      let start = liH * 60 + liM;
-      let end = loH * 60 + loM;
+      // Calculate date difference in days
+      const daysDiff = Math.floor((logoutDate - loginDate) / (1000 * 60 * 60 * 24));
       
-      // Handle overnight shifts
-      if (end < start) end += 24 * 60;
+      // If logout is on next day, add 24 hours per day difference
+      if (daysDiff > 0) {
+        logoutMinutes += daysDiff * 24 * 60;
+      }
+      // If logout time is less than login time on same date, add 24 hours
+      else if (daysDiff === 0 && logoutMinutes < loginMinutes) {
+        logoutMinutes += 24 * 60;
+      }
       
-      let worked = end - start;
+      let totalWorked = logoutMinutes - loginMinutes;
       
-      // Subtract lunch break (only if both times exist and are different)
-      if (t.lunchOut && t.lunchIn && t.lunchOut !== t.lunchIn) {
-        const [lo1, lo2] = t.lunchOut.split(":").map(Number);
-        const [li1, li2] = t.lunchIn.split(":").map(Number);
+      // Rule 2: Lunch Out/In Deduction - only if both values exist
+      if (t.lunchOut && t.lunchIn) {
+        let lunchOutMinutes = timeToMinutes(t.lunchOut);
+        let lunchInMinutes = timeToMinutes(t.lunchIn);
         
-        if (!isNaN(lo1) && !isNaN(lo2) && !isNaN(li1) && !isNaN(li2)) {
-          let lunchStart = lo1 * 60 + lo2;
-          let lunchEnd = li1 * 60 + li2;
-          
-          // Handle lunch break spanning midnight
-          if (lunchEnd < lunchStart) lunchEnd += 24 * 60;
-          
-          const lunchDuration = lunchEnd - lunchStart;
-          if (lunchDuration > 0 && lunchDuration <= 120) { // Max 2 hours lunch
-            worked -= lunchDuration;
-          }
+        // Handle lunch break spanning to next day
+        if (lunchInMinutes < lunchOutMinutes) {
+          lunchInMinutes += 24 * 60;
+        }
+        
+        const lunchDuration = lunchInMinutes - lunchOutMinutes;
+        if (lunchDuration > 0) {
+          totalWorked -= lunchDuration;
         }
       }
       
-      // Subtract permission time
-      if (t.permission && !isNaN(t.permission)) {
-        worked -= Number(t.permission) * 60;
-      }
-      
-      // Subtract break time if exists
+      // Rule 6: Break Calculation - subtract all breaks
       if (t.breakTime && !isNaN(t.breakTime)) {
-        worked -= Number(t.breakTime);
+        totalWorked -= Number(t.breakTime);
       }
       
-      // Ensure non-negative
-      worked = Math.max(0, worked);
+      // Permission deduction (max 2 hours)
+      if (t.permission && !isNaN(t.permission)) {
+        const permissionMinutes = Math.min(Number(t.permission) * 60, 120); // Max 2 hours
+        totalWorked -= permissionMinutes;
+      }
       
-      const hh = Math.floor(worked / 60);
-      const mm = worked % 60;
-      return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
+      // Ensure non-negative result
+      totalWorked = Math.max(0, totalWorked);
+      
+      return minutesToTime(totalWorked);
     } catch (error) {
       console.error('Error calculating hours:', error);
       return "-";
     }
   };
 
+  // Rule 4: Status Classification based on total working hours
   const getWorkStatus = (t) => {
     const hours = calcTotalHours(t);
     if (hours === "-") return { status: "Incomplete", color: "secondary" };
     
-    const [h] = hours.split(":").map(Number);
-    if (h >= 8) return { status: "Full Day", color: "success" };
-    if (h >= 4) return { status: "Half Day", color: "warning" };
-    return { status: "Short Day", color: "danger" };
+    const [h, m] = hours.split(":").map(Number);
+    const totalHours = h + (m / 60);
+    
+    // Rule 4: Status based on working hours
+    if (totalHours >= 8) return { status: "Full Day", color: "success" };
+    if (totalHours >= 4) return { status: "Half Day", color: "warning" };
+    return { status: "Absent", color: "danger" }; // < 4 hrs = Absent
   };
 
   const formatDuration = (minutes) => {
@@ -317,6 +395,7 @@ export default function TimecardPage() {
       LunchIn: t.lunchIn || "-",
       Permission: t.permission ? `${t.permission} hr` : "-",
       Reason: t.reason || "-",
+      Breaks: t.breakTime ? `${t.breakTime} min` : "-",
       TotalHours: calcTotalHours(t),
     }));
     const ws = XLSX.utils.json_to_sheet(wsData);
@@ -390,7 +469,7 @@ export default function TimecardPage() {
                     <label className="form-label">Lunch Out</label>
                     <div className="d-flex gap-2">
                       <input type="text" className="form-control" value={current?.lunchOut || "-"} readOnly />
-                      <button className="btn btn-warning" onClick={handleLunchOut} disabled={!!current?.lunchOut}>
+                      <button className="btn btn-warning" onClick={handleLunchOut} disabled={!!current?.lunchOut || !!current?.logOut}>
                         Lunch Out
                       </button>
                     </div>
@@ -399,7 +478,7 @@ export default function TimecardPage() {
                     <label className="form-label">Lunch In</label>
                     <div className="d-flex gap-2">
                       <input type="text" className="form-control" value={current?.lunchIn || "-"} readOnly />
-                      <button className="btn btn-success" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn}>
+                      <button className="btn btn-success" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn || !!current?.logOut}>
                         Lunch In
                       </button>
                     </div>
@@ -415,7 +494,7 @@ export default function TimecardPage() {
               
               <div className="col-md-6">
                 <div className="mb-3">
-                  <label className="form-label">Permission Hours (Max 2)</label>
+                  <label className="form-label">Permission Hours</label>
                   <input 
                     type="number" 
                     min="0" 
@@ -424,7 +503,7 @@ export default function TimecardPage() {
                     className="form-control" 
                     value={permission} 
                     onChange={(e) => setPermission(Math.min(2, Math.max(0, Number(e.target.value))))}
-                    disabled={permissionLocked} 
+                    disabled={permissionLocked || !!current?.logOut} 
                   />
                 </div>
                 <div className="mb-3">
@@ -433,18 +512,27 @@ export default function TimecardPage() {
                     className="form-control" 
                     value={reason} 
                     onChange={(e) => setReason(e.target.value)} 
-                    disabled={permissionLocked}
+                    disabled={permissionLocked || !!current?.logOut}
                     rows="2"
                   />
                 </div>
-                <div className="d-flex gap-2">
-                  <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked || !reason.trim()}>
+                <div className="d-flex gap-2 mb-3">
+                  <button onClick={handleSavePermission} className="btn btn-primary" disabled={permissionLocked || !reason.trim() || !!current?.logOut}>
                     Save Permission
                   </button>
-                  <button onClick={handleBreakTime} className="btn btn-outline-secondary">
+                  <button onClick={handleBreakTime} className="btn btn-outline-secondary" disabled={!!current?.logOut}>
                     Add Break
                   </button>
                 </div>
+                {current?.breakTime > 0 && (
+                  <div className="mb-3">
+                    <span className="badge bg-info">
+                      Total Breaks: {current.breakTime} min
+                    </span>
+                  </div>
+                )}
+                
+
               </div>
             </div>
           </div>
@@ -465,6 +553,7 @@ export default function TimecardPage() {
                     <th>Lunch In</th>
                     <th>Permission</th>
                     <th>Reason</th>
+                    <th>Breaks (min)</th>
                     <th>Total Hours</th>
                     <th>Status</th>
                   </tr>
@@ -472,7 +561,7 @@ export default function TimecardPage() {
                 <tbody>
                   {timecards.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="text-center text-muted">
+                      <td colSpan={10} className="text-center text-muted">
                         No timecard records found.
                       </td>
                     </tr>
@@ -488,6 +577,7 @@ export default function TimecardPage() {
                         <td>{t.lunchIn || "-"}</td>
                         <td>{t.permission ? `${t.permission}h` : "-"}</td>
                         <td>{t.reason || "-"}</td>
+                        <td>{t.breakTime || "-"}</td>
                         <td className="fw-bold">{calcTotalHours(t)}</td>
                         <td>
                           <span className={`badge bg-${workStatus.color}`}>

@@ -82,8 +82,14 @@ export default function AbsencePage() {
     try {
       let url = "/api/absence";
       const params = new URLSearchParams();
+      
+      // For personal absence page, always filter by current user's employeeId
+      const currentEmployeeId = localStorage.getItem("employeeId");
+      if (currentEmployeeId) {
+        params.append("employeeId", currentEmployeeId);
+      }
+      
       if (filter.status) params.append("status", filter.status);
-      if (filter.employeeId) params.append("employeeId", filter.employeeId);
       if (params.toString()) url += `?${params.toString()}`;
 
       const res = await fetch(url);
@@ -117,10 +123,16 @@ export default function AbsencePage() {
 
     setLoading(true);
     try {
+      // For personal requests, ensure we use current user's employeeId
+      const submitForm = { ...form };
+      if (userRole !== "super-admin" && userRole !== "Super-admin" && userRole !== "admin" && userRole !== "Team-Lead" && userRole !== "Team-admin") {
+        submitForm.employeeId = localStorage.getItem("employeeId");
+      }
+      
       const res = await fetch("/api/absence", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(submitForm)
       });
 
       if (res.ok) {

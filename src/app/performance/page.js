@@ -8,12 +8,40 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/performance")
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchPerformance = async () => {
+      try {
+        const userRole = localStorage.getItem("userRole");
+        const empId = localStorage.getItem("employeeId");
+        
+        let url = "/api/performance";
+        const params = new URLSearchParams();
+        
+        if (userRole) params.append("userRole", userRole);
+        
+        // For team roles, add department filter
+        if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+          const userRes = await fetch(`/api/Employee/${empId}`);
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            params.append("userDepartment", userData.department);
+          }
+        }
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+        
+        const res = await fetch(url);
+        const data = await res.json();
         setReviews(data);
+      } catch (err) {
+        console.error('Error fetching performance data:', err);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+    
+    fetchPerformance();
   }, []);
 
   async function handleDelete(id) {

@@ -72,12 +72,17 @@ export default function AttendancePage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      const currentUserRole = localStorage.getItem("userRole");
+      const empId = localStorage.getItem("employeeId");
+      
+      // Add user role for API filtering
+      if (currentUserRole) params.append("userRole", currentUserRole);
       
       if (!isAdmin && employeeId) {
         params.append("employeeId", employeeId);
       }
       
-      if (isAdmin) {
+      if (isAdmin || currentUserRole === "Team-Lead" || currentUserRole === "Team-admin") {
         params.append("admin", "true");
         if (startDate) params.append("startDate", startDate);
         if (endDate) params.append("endDate", endDate);
@@ -85,14 +90,12 @@ export default function AttendancePage() {
         if (statusFilter) params.append("status", statusFilter);
         
         // Add department filter for team roles
-        const userRole = localStorage.getItem("userRole");
-        const empId = localStorage.getItem("employeeId");
-        if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+        if ((currentUserRole === "Team-Lead" || currentUserRole === "Team-admin") && empId) {
           try {
             const userRes = await fetch(`/api/Employee/${empId}`);
             if (userRes.ok) {
               const userData = await userRes.json();
-              params.append("department", userData.department);
+              params.append("userDepartment", userData.department);
             }
           } catch (err) {
             console.error('Error getting user department:', err);
