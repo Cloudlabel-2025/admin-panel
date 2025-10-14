@@ -39,6 +39,7 @@ export default function Layout({ children }) {
         <nav className="nav flex-column">
           {userRole === "super-admin" ? (
             <>
+              <h6 className="text-white-50 px-3 mb-2">EMPLOYEE</h6>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
                 Dashboard
               </button>
@@ -77,6 +78,9 @@ export default function Layout({ children }) {
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/cash")}>
                 Cash Management
               </button>
+              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/inventory")}>
+               Inventory
+              </button>
               <hr className="text-white" />
               <h6 className="text-white-50 px-3 mb-2">SALES & PURCHASING</h6>
               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/sales/customers")}>
@@ -99,9 +103,6 @@ export default function Layout({ children }) {
               </button>
                <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
                 Payroll
-              </button>
-               <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/inventory")}>
-               Inventory
               </button>
             </>
           ) : (
