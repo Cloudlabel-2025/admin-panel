@@ -141,6 +141,27 @@ export async function POST(req) {
     await connectMongoose();
     const data = await req.json();
     
+    // Check for date conflicts
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    
+    const existingAbsences = await Absence.find({
+      employeeId: data.employeeId,
+      status: { $in: ["Pending", "Approved"] },
+      $or: [
+        {
+          startDate: { $lte: endDate },
+          endDate: { $gte: startDate }
+        }
+      ]
+    });
+    
+    if (existingAbsences.length > 0) {
+      return NextResponse.json({ 
+        error: "You already have a leave request for overlapping dates. Please check your existing requests." 
+      }, { status: 400 });
+    }
+    
     const absence = await Absence.create(data);
     console.log('Absence created:', absence._id);
     
