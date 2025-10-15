@@ -130,9 +130,6 @@ export default function EmployeeAttendancePage() {
                 <div className="col-md-3">
                   <p><strong>Department:</strong> {employeeData.department}</p>
                 </div>
-                <div className="col-md-3">
-                  <p><strong>Designation:</strong> {employeeData.designation}</p>
-                </div>
               </div>
             </div>
           </div>
@@ -180,14 +177,6 @@ export default function EmployeeAttendancePage() {
               </div>
             </div>
           </div>
-          <div className="col-md-2">
-            <div className="card bg-secondary text-white">
-              <div className="card-body text-center">
-                <h5>{stats.attendancePercentage}%</h5>
-                <p>Attendance</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Attendance Table */}
@@ -212,7 +201,6 @@ export default function EmployeeAttendancePage() {
                       <th>Total Hours</th>
                       <th>Permission Hours</th>
                       <th>Overtime Hours</th>
-                      <th>Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -239,7 +227,6 @@ export default function EmployeeAttendancePage() {
                         <td>{(a.totalHours || 0).toFixed(2)}</td>
                         <td>{(a.permissionHours || 0).toFixed(2)}</td>
                         <td>{(a.overtimeHours || 0).toFixed(2)}</td>
-                        <td>{a.remarks || "-"}</td>
                       </tr>
                     ))}
                   </tbody>

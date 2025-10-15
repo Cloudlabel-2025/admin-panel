@@ -29,45 +29,44 @@ async function getEmployeeData(employeeId) {
   return null;
 }
 
-// Helper to get attendance data from timecard
+// Helper to get attendance data from attendance records
 async function getAttendanceData(employeeId, payPeriod) {
   try {
-    const Timecard = mongoose.models.Timecard;
-    if (!Timecard) return { workingDays: 26, presentDays: 0, overtimeHours: 0 };
+    const Attendance = mongoose.models.Attendance;
+    if (!Attendance) return { workingDays: 26, presentDays: 0, overtimeHours: 0 };
     
     const [year, month] = payPeriod.split('-');
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     
-    const timecards = await Timecard.find({
+    const attendanceRecords = await Attendance.find({
       employeeId,
-      date: { $gte: startDate.toISOString().split('T')[0], $lte: endDate.toISOString().split('T')[0] }
+      date: { $gte: startDate, $lte: endDate }
     });
     
     let presentDays = 0;
     let halfDays = 0;
+    let absentDays = 0;
     let overtimeHours = 0;
     
-    timecards.forEach(tc => {
-      if (tc.logOut) {
-        const totalHours = calculateHours(tc);
-        if (totalHours >= 8) presentDays++;
-        else if (totalHours >= 4) halfDays++;
-        
-        if (totalHours > 8) overtimeHours += (totalHours - 8);
-      }
+    attendanceRecords.forEach(record => {
+      if (record.status === 'Present') presentDays++;
+      else if (record.status === 'Half Day') halfDays++;
+      else if (record.status === 'Absent') absentDays++;
+      
+      if (record.overtimeHours) overtimeHours += record.overtimeHours;
     });
     
     return {
       workingDays: endDate.getDate(),
       presentDays,
       halfDays,
-      absentDays: endDate.getDate() - presentDays - halfDays,
+      absentDays,
       overtimeHours: Math.round(overtimeHours * 100) / 100
     };
   } catch (error) {
     console.error('Error fetching attendance:', error);
-    return { workingDays: 26, presentDays: 0, overtimeHours: 0 };
+    return { workingDays: 26, presentDays: 0, halfDays: 0, absentDays: 0, overtimeHours: 0 };
   }
 }
 
@@ -166,11 +165,8 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     
-    // Check if payroll already exists
+    // Check if payroll already exists - if yes, update it
     const existing = await Payroll.findOne({ employeeId, payPeriod });
-    if (existing) {
-      return NextResponse.json({ error: "Payroll already exists for this period" }, { status: 409 });
-    }
     
     // Get employee and attendance data
     const employee = await getEmployeeData(employeeId);
@@ -196,17 +192,16 @@ export async function POST(req) {
     // Calculate deductions
     const pf = Math.round(basicSalary * 0.12);
     const esi = grossSalary <= 21000 ? Math.round(grossSalary * 0.0075) : 0;
-    const professionalTax = grossSalary > 10000 ? 200 : 0;
     
     // LOP calculation
     const lopDays = Math.max(0, attendance.workingDays - attendance.presentDays - (attendance.halfDays * 0.5));
     const lopDeduction = Math.round((grossSalary / attendance.workingDays) * lopDays);
     
     const totalEarnings = basicSalary + hra + da + conveyance + medical + bonus + incentive + overtimePay;
-    const totalDeductions = pf + esi + professionalTax + lopDeduction + (customData?.loanDeduction || 0) + (customData?.otherDeductions || 0);
+    const totalDeductions = pf + esi + lopDeduction + (customData?.loanDeduction || 0) + (customData?.otherDeductions || 0);
     const netPay = totalEarnings - totalDeductions;
     
-    const payroll = await Payroll.create({
+    const payrollData = {
       employeeId,
       employeeName: employee.name,
       department: employee.department,
@@ -231,7 +226,6 @@ export async function POST(req) {
       
       pf,
       esi,
-      professionalTax,
       lopDeduction,
       loanDeduction: customData?.loanDeduction || 0,
       otherDeductions: customData?.otherDeductions || 0,
@@ -241,8 +235,39 @@ export async function POST(req) {
       netPay,
       
       status: "Approved",
-      createdBy
-    });
+      createdBy,
+      updatedAt: new Date()
+    };
+    
+    let payroll;
+    if (existing) {
+      // Update existing payroll
+      payroll = await Payroll.findByIdAndUpdate(existing._id, payrollData, { new: true });
+    } else {
+      // Create new payroll
+      payroll = await Payroll.create(payrollData);
+    }
+    
+    // Create notification for employee
+    try {
+      const Notification = mongoose.models.Notification;
+      if (Notification) {
+        await Notification.create({
+          employeeId,
+          type: 'payroll',
+          title: 'New Payroll Available',
+          message: `Your payroll for ${payPeriod} has been generated. Net Pay: ₹${payroll.netPay.toLocaleString()}`,
+          payrollDetails: {
+            payPeriod: payroll.payPeriod,
+            netPay: payroll.netPay,
+            status: payroll.status
+          },
+          isRead: false
+        });
+      }
+    } catch (notifError) {
+      console.error('Failed to create payroll notification:', notifError);
+    }
     
     return NextResponse.json({ success: true, payroll });
   } catch (err) {

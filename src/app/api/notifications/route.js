@@ -1,18 +1,5 @@
 import connectMongoose from "../../utilis/connectMongoose";
-import mongoose from "mongoose";
-
-const NotificationSchema = new mongoose.Schema({
-  recipientId: String,
-  recipientEmail: String,
-  type: String,
-  title: String,
-  message: String,
-  relatedId: String,
-  status: { type: String, default: "unread" },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const Notification = mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);
+import Notification from "../../../models/Notification";
 
 export async function GET(request) {
   try {
@@ -24,8 +11,9 @@ export async function GET(request) {
     console.log('Fetching notifications for employeeId:', employeeId);
     
     let query = {};
-    if (employeeId) query.recipientId = employeeId;
-    if (status) query.status = status;
+    if (employeeId) query.employeeId = employeeId;
+    if (status === 'read') query.isRead = true;
+    if (status === 'unread') query.isRead = false;
     
     console.log('Notification query:', query);
     
@@ -67,6 +55,7 @@ export async function PUT(request) {
     
     return Response.json({ success: true, notification });
   } catch (error) {
+    console.error('Error updating notification:', error);
     return Response.json({ error: "Failed to update notification" }, { status: 500 });
   }
 }

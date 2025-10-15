@@ -77,10 +77,10 @@ export default function Layout({ children }) {
       await fetch('/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: id, status: 'read' })
+        body: JSON.stringify({ _id: id, isRead: true })
       });
       setNotifications(prev => 
-        prev.map(n => n._id === id ? { ...n, status: 'read' } : n)
+        prev.map(n => n._id === id ? { ...n, isRead: true } : n)
       );
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -485,7 +485,7 @@ export default function Layout({ children }) {
                       {!sidebarCollapsed && <span>Absence</span>}
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/accounting/payroll")}>
+                            onClick={() => navigate("/my-payroll")}>
                       <span className="me-2">💸</span>
                       {!sidebarCollapsed && <span>My Payroll</span>}
                     </button>
@@ -531,7 +531,7 @@ export default function Layout({ children }) {
                 )}
               </div>
               <div className="d-flex align-items-center gap-2">
-                {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin") && (
+                {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin" || userRole === "Employee" || userRole === "employee") && (
                   <div className="position-relative notification-container">
                     <button 
                       className="btn btn-outline-secondary position-relative"
@@ -544,9 +544,9 @@ export default function Layout({ children }) {
                       title="Notifications"
                     >
                       🔔
-                      {notifications.filter(n => n.status === 'unread').length > 0 && (
+                      {notifications.filter(n => !n.isRead).length > 0 && (
                         <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                          {notifications.filter(n => n.status === 'unread').length}
+                          {notifications.filter(n => !n.isRead).length}
                         </span>
                       )}
                     </button>
@@ -609,15 +609,19 @@ export default function Layout({ children }) {
                 notifications.map((notification) => (
                   <div 
                     key={notification._id} 
-                    className={`p-3 border-bottom cursor-pointer notification-item ${notification.status === 'unread' ? 'bg-light border-start border-primary border-3' : ''}`}
+                    className={`p-3 border-bottom cursor-pointer notification-item ${!notification.isRead ? 'bg-light border-start border-primary border-3' : ''}`}
                     onClick={() => {
-                      navigate('/team-absence');
+                      if (notification.type === 'payroll') {
+                        navigate('/my-payroll');
+                      } else {
+                        navigate('/team-absence');
+                      }
                       setShowNotifications(false);
                       markAsRead(notification._id);
                     }}
                     style={{ transition: 'background-color 0.2s ease' }}
                     onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = notification.status === 'unread' ? '#f8f9fa' : 'white'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = !notification.isRead ? '#f8f9fa' : 'white'}
                   >
                     <div className="d-flex justify-content-between align-items-start">
                       <div className="flex-grow-1">
@@ -625,7 +629,7 @@ export default function Layout({ children }) {
                         <div className="text-muted small mb-1">{notification.message}</div>
                         <div className="text-muted small">{new Date(notification.createdAt).toLocaleString()}</div>
                       </div>
-                      {notification.status === 'unread' && (
+                      {!notification.isRead && (
                         <span className="badge bg-primary rounded-pill">New</span>
                       )}
                     </div>
