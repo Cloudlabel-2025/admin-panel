@@ -18,10 +18,36 @@ export async function POST(req) {
   try {
     await connectMongoose();
     const body = await req.json();
+    
+    // Generate assetId if not provided
+    if (!body.assetId) {
+      const lastItem = await Inventory
+        .findOne({ assetId: { $regex: /^ASSET-\d{4}$/ } })
+        .sort({ assetId: -1 })
+        .select('assetId');
+      
+      let nextNumber = 1;
+      if (lastItem && lastItem.assetId) {
+        const lastNumber = parseInt(lastItem.assetId.split('-')[1]);
+        nextNumber = lastNumber + 1;
+      }
+      
+      body.assetId = `ASSET-${nextNumber.toString().padStart(4, "0")}`;
+    }
+    
     const item = await Inventory.create(body);
     return NextResponse.json(item, { status: 201 });
   } catch (err) {
+<<<<<<< HEAD
     console.error("Error creating inventory item:", err);
     return NextResponse.json({ error: "Failed to create item" }, { status: 500 });
+=======
+    console.error('Inventory creation error:', err);
+    return NextResponse.json({ 
+      error: "Failed to create item", 
+      details: err.message,
+      code: err.code 
+    }, { status: 500 });
+>>>>>>> 102709e (UI-1)
   }
 }
