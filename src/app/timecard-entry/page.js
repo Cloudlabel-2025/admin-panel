@@ -606,7 +606,7 @@ export default function TimecardPage() {
                       <h6 className="fw-bold text-secondary mt-2">Permission Request</h6>
                     </div>
                     <div className="mb-3">
-                      <label className="form-label fw-bold mb-2">Hours (Max 2)</label>
+                      <label className="form-label fw-bold mb-2">Hours</label>
                       <input 
                         type="number" 
                         min="0" 

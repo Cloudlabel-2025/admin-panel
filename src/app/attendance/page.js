@@ -182,16 +182,23 @@ export default function AttendancePage() {
   const getEmployeeStats = () => {
     if (!isAdmin && employeeId) {
       const employeeAttendance = attendance.filter(a => a.employeeId === employeeId);
-      const totalDays = employeeAttendance.length;
+      
+      // Calculate total days in current month
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
       const presentDays = employeeAttendance.filter(a => a.status === "Present").length;
       const absentDays = employeeAttendance.filter(a => a.status === "Absent").length;
       const halfDays = employeeAttendance.filter(a => a.status === "Half Day").length;
       const totalHours = employeeAttendance.reduce((sum, a) => sum + (a.totalHours || 0), 0);
-      const avgHours = totalDays > 0 ? totalHours / totalDays : 0;
-      const attendancePercentage = totalDays > 0 ? (presentDays + halfDays * 0.5) / totalDays * 100 : 0;
+      const avgHours = employeeAttendance.length > 0 ? totalHours / employeeAttendance.length : 0;
+      const attendancePercentage = totalDaysInMonth > 0 ? (presentDays + halfDays * 0.5) / totalDaysInMonth * 100 : 0;
       
       return {
-        totalDays,
+        actualDays: totalDaysInMonth,
+        totalDays: presentDays + halfDays + absentDays,
         presentDays,
         absentDays,
         halfDays,
@@ -265,18 +272,18 @@ export default function AttendancePage() {
                   </div>
                 </div>
               </div>
-              <div className="col-md-4">
-                <div className="card bg-info text-white">
-                  <div className="card-body text-center">
-                    <h5>{stats.avgHours.toFixed(1)}</h5>
-                    <p>Average Hours</p>
-                  </div>
-                </div>
-              </div>
             </>
           ) : employeeStats ? (
             // Employee view - personal stats
             <>
+              <div className="col-md-2">
+                <div className="card bg-secondary text-white">
+                  <div className="card-body text-center">
+                    <h5>{employeeStats.actualDays}</h5>
+                    <p>Actual Days</p>
+                  </div>
+                </div>
+              </div>
               <div className="col-md-2">
                 <div className="card bg-primary text-white">
                   <div className="card-body text-center">
@@ -309,22 +316,7 @@ export default function AttendancePage() {
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-info text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.totalHours}</h5>
-                    <p>Total Hours</p>
-                  </div>
-                </div>
-              </div>
-              <div className="col-md-2">
-                <div className="card bg-secondary text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.attendancePercentage}%</h5>
-                    <p>Attendance</p>
-                  </div>
-                </div>
-              </div>
+              
             </>
           ) : null}
         </div>
@@ -409,21 +401,18 @@ export default function AttendancePage() {
                       <th>Date</th>
                       <th>Employee ID</th>
                       <th>Employee Name</th>
-                      <th>Department</th>
                       <th>Status</th>
                       <th>Login</th>
                       <th>Logout</th>
                       <th>Total Hours</th>
                       <th>Permission</th>
                       <th>Overtime</th>
-
-                      <th>Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {attendance.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="text-center text-muted">
+                        <td colSpan={8} className="text-center text-muted">
                           No attendance records found.
                         </td>
                       </tr>
@@ -432,8 +421,7 @@ export default function AttendancePage() {
                       <tr key={idx}>
                         <td>{new Date(a.date).toLocaleDateString()}</td>
                         <td>{a.employeeId}</td>
-                        <td>{a.employeeName || "Unknown"}</td>
-                        <td>{a.department || "Unknown"}</td>
+                        <td>{a.employeeName || a.name || "Unknown"}</td>
                         <td>
                           <span className={`badge ${
                             a.status === 'Present' ? 'bg-success' : 
@@ -447,8 +435,6 @@ export default function AttendancePage() {
                         <td>{(a.totalHours || 0).toFixed(2)}</td>
                         <td>{(a.permissionHours || 0).toFixed(2)}</td>
                         <td>{(a.overtimeHours || 0).toFixed(2)}</td>
-
-                        <td>{a.remarks || "-"}</td>
                       </tr>
                     ))}
                   </tbody>

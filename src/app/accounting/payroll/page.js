@@ -113,9 +113,14 @@ export default function PayrollPage() {
 
       const data = await res.json();
       if (res.ok) {
-        alert("Payroll generated successfully!");
+        const employeeName = employees.find(emp => emp.employeeId === selectedEmployee)?.firstName + ' ' + employees.find(emp => emp.employeeId === selectedEmployee)?.lastName;
+        alert(`Payroll generated successfully and sent to ${employeeName}! Employee can now view it in their My Payroll section.`);
         setPreviewData(data.payroll);
         fetchPayrolls();
+        // Reset form
+        setSelectedEmployee("");
+        setPayPeriod("");
+        setCustomData({ bonus: 0, incentive: 0, loanDeduction: 0, otherDeductions: 0 });
       } else {
         alert(data.error || "Failed to generate payroll");
       }
@@ -297,12 +302,19 @@ export default function PayrollPage() {
                     </div>
                   </div>
 
+                  {selectedEmployee && (
+                    <div className="alert alert-info mb-3">
+                      <i className="bi bi-info-circle"></i> 
+                      <strong>Note:</strong> Generated payroll will be automatically sent to the employee's "My Payroll" section and they will receive a notification.
+                    </div>
+                  )}
+                  
                   <button 
                     className="btn btn-primary btn-lg w-100"
                     onClick={generatePayroll}
                     disabled={loading || !selectedEmployee || !payPeriod}
                   >
-                    {loading ? "⏳ Generating..." : "🚀 Generate Payroll"}
+                    {loading ? "⏳ Generating & Sending..." : "🚀 Generate & Send Payroll"}
                   </button>
                 </div>
               </div>
@@ -312,43 +324,117 @@ export default function PayrollPage() {
               {previewData && (
                 <div className="card shadow-sm">
                   <div className="card-header bg-success text-white">
-                    <h5 className="mb-0">💰 Payroll Preview</h5>
+                    <h5 className="mb-0">💰 Payroll Calculation</h5>
                   </div>
                   <div className="card-body">
-                    <h6>{previewData.employeeName}</h6>
-                    <p className="text-muted">{previewData.department} • {previewData.payPeriod}</p>
+                    <div className="text-center mb-3">
+                      <h6 className="fw-bold">{previewData.employeeName}</h6>
+                      <p className="text-muted mb-0">{previewData.department}</p>
+                      <p className="text-muted">{previewData.payPeriod}</p>
+                    </div>
                     
-                    <div className="mb-3">
-                      <strong>Earnings:</strong>
-                      <ul className="list-unstyled ms-3">
-                        <li>Basic: ₹{previewData.basicSalary}</li>
-                        <li>HRA: ₹{previewData.hra}</li>
-                        <li>Allowances: ₹{previewData.da + previewData.conveyance + previewData.medical}</li>
-                        <li>Bonus: ₹{previewData.bonus}</li>
-                      </ul>
-                      <strong>Total Earnings: ₹{previewData.totalEarnings}</strong>
+                    <div className="card mb-3 border-success">
+                      <div className="card-header bg-light">
+                        <h6 className="mb-0 text-success">Earnings</h6>
+                      </div>
+                      <div className="card-body p-2">
+                        <div className="d-flex justify-content-between">
+                          <span>Basic Salary:</span>
+                          <span>₹{previewData.basicSalary?.toLocaleString()}</span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span>HRA:</span>
+                          <span>₹{previewData.hra?.toLocaleString()}</span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span>DA:</span>
+                          <span>₹{previewData.da?.toLocaleString()}</span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span>Conveyance:</span>
+                          <span>₹{previewData.conveyance?.toLocaleString()}</span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span>Medical:</span>
+                          <span>₹{previewData.medical?.toLocaleString()}</span>
+                        </div>
+                        {previewData.bonus > 0 && (
+                          <div className="d-flex justify-content-between">
+                            <span>Bonus:</span>
+                            <span>₹{previewData.bonus?.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {previewData.incentive > 0 && (
+                          <div className="d-flex justify-content-between">
+                            <span>Incentive:</span>
+                            <span>₹{previewData.incentive?.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {previewData.overtimePay > 0 && (
+                          <div className="d-flex justify-content-between">
+                            <span>Overtime:</span>
+                            <span>₹{previewData.overtimePay?.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <hr className="my-2" />
+                        <div className="d-flex justify-content-between fw-bold text-success">
+                          <span>Total Earnings:</span>
+                          <span>₹{previewData.totalEarnings?.toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mb-3">
-                      <strong>Deductions (from Total Earnings):</strong>
-                      <ul className="list-unstyled ms-3">
-                        <li>PF: ₹{previewData.pf}</li>
-                        <li>ESI: ₹{previewData.esi}</li>
-                        <li>Professional Tax: ₹{previewData.professionalTax || 0}</li>
-                        <li>LOP: ₹{previewData.lopDeduction}</li>
-                        <li>Loan: ₹{previewData.loanDeduction || 0}</li>
-                        <li>Other: ₹{previewData.otherDeductions || 0}</li>
-                      </ul>
-                      <strong>Total Deductions: ₹{previewData.totalDeductions}</strong>
+                    <div className="card mb-3 border-danger">
+                      <div className="card-header bg-light">
+                        <h6 className="mb-0 text-danger">Deductions</h6>
+                      </div>
+                      <div className="card-body p-2">
+                        <div className="d-flex justify-content-between">
+                          <span>PF (12%):</span>
+                          <span>₹{previewData.pf?.toLocaleString()}</span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span>ESI (0.75%):</span>
+                          <span>₹{previewData.esi?.toLocaleString() || 0}</span>
+                        </div>
+                        {previewData.lopDeduction > 0 && (
+                          <div className="d-flex justify-content-between">
+                            <span>LOP Deduction:</span>
+                            <span>₹{previewData.lopDeduction?.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {previewData.loanDeduction > 0 && (
+                          <div className="d-flex justify-content-between">
+                            <span>Loan Deduction:</span>
+                            <span>₹{previewData.loanDeduction?.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {previewData.otherDeductions > 0 && (
+                          <div className="d-flex justify-content-between">
+                            <span>Other Deductions:</span>
+                            <span>₹{previewData.otherDeductions?.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <hr className="my-2" />
+                        <div className="d-flex justify-content-between fw-bold text-danger">
+                          <span>Total Deductions:</span>
+                          <span>₹{previewData.totalDeductions?.toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="alert alert-info mb-3">
-                      <strong>Calculation:</strong><br/>
-                      Total Earnings - Total Deductions = Net Salary
-                    </div>
-
-                    <div className="alert alert-success">
-                      <h4>Net Salary: ₹{previewData.netPay}</h4>
+                    <div className="card border-primary">
+                      <div className="card-body p-3 text-center">
+                        <div className="mb-2">
+                          <small className="text-muted">Calculation Formula:</small>
+                          <br />
+                          <code>Total Earnings - Total Deductions = Net Salary</code>
+                        </div>
+                        <div className="mb-2">
+                          <small>₹{previewData.totalEarnings?.toLocaleString()} - ₹{previewData.totalDeductions?.toLocaleString()}</small>
+                        </div>
+                        <h4 className="text-primary mb-0">Net Salary: ₹{previewData.netPay?.toLocaleString()}</h4>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -576,38 +662,110 @@ export default function PayrollPage() {
                   
                   <div className="row">
                     <div className="col-md-6">
-                      <h6>Earnings</h6>
-                      <ul className="list-unstyled">
-                        <li>Basic Salary: ₹{selectedPayroll.basicSalary}</li>
-                        <li>HRA: ₹{selectedPayroll.hra}</li>
-                        <li>DA: ₹{selectedPayroll.da}</li>
-                        <li>Conveyance: ₹{selectedPayroll.conveyance}</li>
-                        <li>Medical: ₹{selectedPayroll.medical}</li>
-                        <li>Bonus: ₹{selectedPayroll.bonus || 0}</li>
-                        <li>Incentive: ₹{selectedPayroll.incentive || 0}</li>
-                        <li>Overtime: ₹{selectedPayroll.overtimePay || 0}</li>
-                      </ul>
-                      <strong>Total Earnings: ₹{selectedPayroll.totalEarnings}</strong>
+                      <div className="card border-success h-100">
+                        <div className="card-header bg-success text-white">
+                          <h6 className="mb-0">💰 Earnings Breakdown</h6>
+                        </div>
+                        <div className="card-body">
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>Basic Salary:</span>
+                            <span>₹{selectedPayroll.basicSalary?.toLocaleString()}</span>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>HRA:</span>
+                            <span>₹{selectedPayroll.hra?.toLocaleString()}</span>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>DA:</span>
+                            <span>₹{selectedPayroll.da?.toLocaleString()}</span>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>Conveyance:</span>
+                            <span>₹{selectedPayroll.conveyance?.toLocaleString()}</span>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>Medical:</span>
+                            <span>₹{selectedPayroll.medical?.toLocaleString()}</span>
+                          </div>
+                          {selectedPayroll.bonus > 0 && (
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Bonus:</span>
+                              <span>₹{selectedPayroll.bonus?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedPayroll.incentive > 0 && (
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Incentive:</span>
+                              <span>₹{selectedPayroll.incentive?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedPayroll.overtimePay > 0 && (
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Overtime:</span>
+                              <span>₹{selectedPayroll.overtimePay?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <hr />
+                          <div className="d-flex justify-content-between fw-bold text-success">
+                            <span>Total Earnings:</span>
+                            <span>₹{selectedPayroll.totalEarnings?.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div className="col-md-6">
-                      <h6>Deductions</h6>
-                      <ul className="list-unstyled">
-                        <li>PF: ₹{selectedPayroll.pf}</li>
-                        <li>ESI: ₹{selectedPayroll.esi}</li>
-                        <li>Professional Tax: ₹{selectedPayroll.professionalTax || 0}</li>
-                        <li>LOP: ₹{selectedPayroll.lopDeduction || 0}</li>
-                        <li>Loan: ₹{selectedPayroll.loanDeduction || 0}</li>
-                        <li>Other: ₹{selectedPayroll.otherDeductions || 0}</li>
-                      </ul>
-                      <strong>Total Deductions: ₹{selectedPayroll.totalDeductions}</strong>
+                      <div className="card border-danger h-100">
+                        <div className="card-header bg-danger text-white">
+                          <h6 className="mb-0">Deductions Breakdown</h6>
+                        </div>
+                        <div className="card-body">
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>PF (12%):</span>
+                            <span>₹{selectedPayroll.pf?.toLocaleString()}</span>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>ESI (0.75%):</span>
+                            <span>₹{selectedPayroll.esi?.toLocaleString() || 0}</span>
+                          </div>
+                          {selectedPayroll.lopDeduction > 0 && (
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>LOP Deduction:</span>
+                              <span>₹{selectedPayroll.lopDeduction?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedPayroll.loanDeduction > 0 && (
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Loan Deduction:</span>
+                              <span>₹{selectedPayroll.loanDeduction?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedPayroll.otherDeductions > 0 && (
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Other Deductions:</span>
+                              <span>₹{selectedPayroll.otherDeductions?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <hr />
+                          <div className="d-flex justify-content-between fw-bold text-danger">
+                            <span>Total Deductions:</span>
+                            <span>₹{selectedPayroll.totalDeductions?.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
                   <hr/>
                   
-                  <div className="text-center">
-                    <h4 className="text-success">Net Salary: ₹{selectedPayroll.netPay}</h4>
-                    <p className="text-muted">Total Earnings - Total Deductions = Net Salary</p>
+                  <div className="card border-primary">
+                    <div className="card-body text-center">
+                      <h6 className="text-muted mb-2">Final Calculation</h6>
+                      <div className="mb-2">
+                        <code>₹{selectedPayroll.totalEarnings?.toLocaleString()} - ₹{selectedPayroll.totalDeductions?.toLocaleString()} = ₹{selectedPayroll.netPay?.toLocaleString()}</code>
+                      </div>
+                      <h4 className="text-primary mb-0">Net Salary: ₹{selectedPayroll.netPay?.toLocaleString()}</h4>
+                      <small className="text-muted">Total Earnings - Total Deductions = Net Salary</small>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer">
