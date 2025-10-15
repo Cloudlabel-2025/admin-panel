@@ -148,7 +148,8 @@ export default function AbsencePage() {
         });
         fetchAbsences();
       } else {
-        alert("Failed to submit absence request");
+        const errorData = await res.json();
+        alert(errorData.error || "Failed to submit absence request");
       }
     } catch (err) {
       console.error(err);
