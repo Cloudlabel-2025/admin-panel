@@ -38,16 +38,11 @@ export async function POST(req) {
     const item = await Inventory.create(body);
     return NextResponse.json(item, { status: 201 });
   } catch (err) {
-<<<<<<< HEAD
-    console.error("Error creating inventory item:", err);
-    return NextResponse.json({ error: "Failed to create item" }, { status: 500 });
-=======
     console.error('Inventory creation error:', err);
     return NextResponse.json({ 
       error: "Failed to create item", 
       details: err.message,
       code: err.code 
     }, { status: 500 });
->>>>>>> 102709e (UI-1)
   }
 }
