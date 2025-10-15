@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
 
 export default function Layout({ children }) {
   const [userRole, setUserRole] = useState("");
@@ -10,6 +11,7 @@ export default function Layout({ children }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -34,6 +36,22 @@ export default function Layout({ children }) {
     }
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container') && 
+          !event.target.closest('[data-dropdown="profile"]')) {
+        setShowProfileDropdown(false);
+      }
+      if (!event.target.closest('.notification-container') && 
+          !event.target.closest('[data-dropdown="notifications"]')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showProfileDropdown, showNotifications]);
+
   const handleLogout = () => {
     localStorage.clear();
     router.push("/");
@@ -46,10 +64,8 @@ export default function Layout({ children }) {
   const fetchNotifications = async () => {
     try {
       const employeeId = localStorage.getItem('employeeId');
-      console.log('Fetching notifications for employeeId:', employeeId);
       const response = await fetch(`/api/notifications?employeeId=${employeeId}`);
       const data = await response.json();
-      console.log('Notifications response:', data);
       setNotifications(data.notifications || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -76,385 +92,645 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div className="bg-dark text-white" style={{ width: "250px", minHeight: "100vh" }}>
-        <div className="p-3">
-          <h5>
-            {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Admin Panel" : 
-             (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
-             "Employee Panel"}
-          </h5>
-          <small className="text-white-50">Role: {userRole}</small>
-        </div>
-        <nav className="nav flex-column">
-          {/* Super Admin - Full System Access */}
-          {(userRole === "super-admin" || userRole === "Super-admin") && (
-            <>
-              <h6 className="text-white-50 px-3 mb-2">EMPLOYEE</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
-                Dashboard
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employees/create-emp")}>
-                Add Employee
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
-                Monitor Employees
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/documents")}>
-                Document Upload
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
-                Project
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
-                Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/skills")}>
-                Skills
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
-                Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/fund-transfer")}>
-                💰 Fund Transfer
-              </button>
-              <hr className="text-white" />
-              <h6 className="text-white-50 px-3 mb-2">ACCOUNTING</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/accounts")}>
-                Accounts
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/transactions")}>
-                Transactions
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/budgeting")}>
-                Budgeting
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/petty-cash")}>
-                Petty-Cash
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/inventory")}>
-               Inventory
-              </button>
-              <hr className="text-white" />
-              <h6 className="text-white-50 px-3 mb-2">SALES & PURCHASING</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/sales/customers")}>
-                Customers
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/sales/orders")}>
-                Sales Orders
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/sales/invoices")}>
-                Sales Invoices
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/purchasing/vendors")}>
-                Vendors
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/purchasing/purchase-orders")}>
-                Purchase Orders
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/purchasing/purchase-invoices")}>
-                Purchase Invoices
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
-                Payroll
-              </button>
-            </>
-          )}
-
-          {/* Admin - Limited System Access */}
-          {userRole === "admin" && (
-            <>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
-                Dashboard
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
-                Monitor Employees
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
-                Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
-                Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
-                Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/team-absence")}>
-                Team Absence
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
-                Absence
-              </button>
-              <hr className="text-white" />
-              <h6 className="text-white-50 px-3 mb-2">ACCOUNTING</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/accounts")}>
-                Accounts
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/transactions")}>
-                Transactions
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/budgeting")}>
-                Budgeting
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/petty-cash")}>
-                Petty-Cash
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
-                Payroll
-              </button>
-            </>
-          )}
-
-          {/* Team Lead - Department Management */}
-          {userRole === "Team-Lead" && (
-            <>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
-                Dashboard
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
-                Monitor Team
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
-                Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
-                Team Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
-                Team Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/team-absence")}>
-                Team Absence
-              </button>
-              <hr className="text-white" />
-              <h6 className="text-white-50 px-3 mb-2">MY WORK</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
-                Timecard Entry
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
-                Daily Task
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
-                My Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
-                My Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
-                My Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
-                Absence
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
-                My Payroll
-              </button>
-            </>
-          )}
-
-          {/* Team Admin - Department Administration */}
-          {userRole === "Team-admin" && (
-            <>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin-dashboard")}>
-                Dashboard
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/admin/monitor")}>
-                Monitor Team
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/project")}>
-                Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/attendance")}>
-                Team Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/performance")}>
-                Team Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/team-absence")}>
-                Team Absence
-              </button>
-              <hr className="text-white" />
-              <h6 className="text-white-50 px-3 mb-2">MY WORK</h6>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
-                Timecard Entry
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
-                Daily Task
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
-                My Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
-                My Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
-                My Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
-                Absence
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
-                My Payroll
-              </button>
-            </>
-          )}
-
-          {/* Employee - Standard Access */}
-          {userRole === "Employee" && (
-            <>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
-                Timecard Entry
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
-                Daily Task
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
-                My Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-performance")}>
-                My Performance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
-                My Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
-                Absence
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
-                My Payroll
-              </button>
-            </>
-          )}
-
-          {/* Intern - Limited Access */}
-          {userRole === "Intern" && (
-            <>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
-                Timecard Entry
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
-                Daily Tasks
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
-                Assigned Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
-                My Attendance
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/absence")}>
-                Absence
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/accounting/payroll")}>
-                My Payroll
-              </button>
-            </>
-          )}
-
-          {/* Fallback for any other roles */}
-          {!(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin" || userRole === "Employee" || userRole === "Intern") && (
-            <>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/timecard-entry")}>
-                Timecard Entry
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/daily-task")}>
-                Daily Task
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/my-projects")}>
-                My Projects
-              </button>
-              <button className="nav-link text-white btn btn-link text-start" onClick={() => navigate("/employee-attendance")}>
-                My Attendance
-              </button>
-            </>
-          )}
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow-1">
-        {/* Top Navigation */}
-        <nav className="navbar navbar-light bg-light px-3">
-          <div className="d-flex justify-content-between align-items-center w-100">
-            {pathname === "/admin-dashboard" ? (
-              <div className="welcome-message">
-                <h5 className="mb-0 text-primary">
-                  Welcome {(userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") 
-                    ? `${userRole} ${userName}` 
-                    : userName || userEmail}
-                </h5>
-              </div>
-            ) : (
-              <div></div>
-            )}
-            <div className="d-flex align-items-center gap-2">
-              {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin") && (
-                <div className="position-relative">
-                  <button 
-                    className="btn btn-outline-secondary"
-                    onClick={() => {
-                      setShowNotifications(!showNotifications);
-                      if (!showNotifications) fetchNotifications();
-                    }}
-                    title="Notifications"
-                  >
-                    🔔
-                  </button>
-                  {showNotifications && (
-                    <div className="position-absolute end-0 mt-2 bg-white border rounded shadow" style={{ zIndex: 1000, minWidth: "300px", maxHeight: "400px", overflowY: "auto" }}>
-                      <div className="p-2 border-bottom bg-light">
-                        <strong>Notifications</strong>
-                      </div>
-                      {notifications.length === 0 ? (
-                        <div className="p-3 text-muted">No notifications</div>
-                      ) : (
-                        notifications.map((notification) => (
-                          <div 
-                            key={notification._id} 
-                            className={`p-2 border-bottom cursor-pointer ${notification.status === 'unread' ? 'bg-light' : ''}`}
-                            onClick={() => {
-                              navigate('/team-absence');
-                              setShowNotifications(false);
-                              markAsRead(notification._id);
-                            }}
-                          >
-                            <div className="small fw-bold">{notification.title}</div>
-                            <div className="small text-muted">{notification.message}</div>
-                            <div className="small text-muted">{new Date(notification.createdAt).toLocaleString()}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
+    <>
+      <style jsx global>{`
+        .accordion-button {
+          box-shadow: none !important;
+          white-space: nowrap;
+        }
+        .accordion-button:not(.collapsed) {
+          background-color: rgba(255,255,255,0.1) !important;
+          color: white !important;
+        }
+        .nav-link {
+          transition: all 0.3s ease;
+          border-radius: 6px;
+          margin: 2px 8px;
+          white-space: nowrap;
+        }
+        .nav-link:hover {
+          background-color: rgba(255,255,255,0.1);
+          transform: translateX(5px);
+        }
+        .nav-link.active {
+          background-color: #0d6efd;
+          color: white !important;
+        }
+        .sidebar-toggle {
+          transition: all 0.3s ease;
+        }
+        .sidebar-collapsed {
+          width: 80px !important;
+        }
+        .sidebar-collapsed .nav-text {
+          display: none;
+        }
+        .dropdown-toggle::after {
+          transition: transform 0.3s ease;
+        }
+        .dropdown-toggle[aria-expanded="true"]::after {
+          transform: rotate(180deg);
+        }
+        body {
+          overflow-x: hidden;
+        }
+        ::-webkit-scrollbar {
+          display: none;
+        }
+        * {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        @media (max-width: 768px) {
+          .sidebar {
+            position: fixed;
+            z-index: 1050;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+          }
+          .sidebar.show {
+            transform: translateX(0);
+          }
+          .main-content {
+            margin-left: 0 !important;
+          }
+        }
+      `}</style>
+      
+      <div className="d-flex" style={{ overflowX: "hidden" }}>
+        {/* Mobile Overlay */}
+        {sidebarCollapsed && (
+          <div 
+            className="position-fixed w-100 h-100 bg-dark bg-opacity-50 d-md-none" 
+            style={{ zIndex: 1040 }}
+            onClick={() => setSidebarCollapsed(false)}
+          />
+        )}
+        
+        {/* Sidebar */}
+        <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'show' : ''}`} 
+             style={{ 
+               width: sidebarCollapsed ? "80px" : "280px", 
+               minHeight: "100vh",
+               transition: "width 0.3s ease",
+               boxShadow: "2px 0 10px rgba(0,0,0,0.1)"
+             }}>
+          
+          {/* Header */}
+          <div className="p-3 border-bottom border-secondary">
+            <div className="d-flex align-items-center justify-content-between">
+              {!sidebarCollapsed && (
+                <div>
+                  <h5 className="mb-1 text-primary">
+                    {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Admin Panel" : 
+                     (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
+                     "Employee Panel"}
+                  </h5>
+                  <small className="text-white-50">Role: {userRole}</small>
                 </div>
               )}
-              <div className="position-relative">
+              <button 
+                className="btn btn-outline-light btn-sm d-md-block d-none"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              >
+                {sidebarCollapsed ? '→' : '←'}
+              </button>
+            </div>
+          </div>
+          
+          <div className="accordion accordion-flush" id="sidebarAccordion" style={{ overflowY: "auto", maxHeight: "calc(100vh - 120px)" }}>
+            {/* Super Admin - Full System Access */}
+            {(userRole === "super-admin" || userRole === "Super-admin") && (
+              <>
+                {/* Employee Management */}
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#employeeCollapse">
+                      <span className="me-2">👥</span>
+                      {!sidebarCollapsed && "Employee Management"}
+                    </button>
+                  </h2>
+                  <div id="employeeCollapse" className="accordion-collapse collapse show">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin-dashboard")}>
+                        <span className="me-2">🏠</span>
+                        {!sidebarCollapsed && <span>Dashboard</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/employees/create-emp")}>
+                        <span className="me-2">👤</span>
+                        {!sidebarCollapsed && <span>Add Employee</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin/monitor")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>Monitor Employees</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/documents")}>
+                        <span className="me-2">📄</span>
+                        {!sidebarCollapsed && <span>Documents</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/project")}>
+                        <span className="me-2">📋</span>
+                        {!sidebarCollapsed && <span>Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/attendance")}>
+                        <span className="me-2">📅</span>
+                        {!sidebarCollapsed && <span>Attendance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/skills")}>
+                        <span className="me-2">🎯</span>
+                        {!sidebarCollapsed && <span>Skills</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/performance")}>
+                        <span className="me-2">📈</span>
+                        {!sidebarCollapsed && <span>Performance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/fund-transfer")}>
+                        <span className="me-2">💰</span>
+                        {!sidebarCollapsed && <span>Fund Transfer</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accounting */}
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accountingCollapse">
+                      <span className="me-2">💼</span>
+                      {!sidebarCollapsed && "Accounting"}
+                    </button>
+                  </h2>
+                  <div id="accountingCollapse" className="accordion-collapse collapse show">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/accounts")}>
+                        <span className="me-2">🏦</span>
+                        {!sidebarCollapsed && <span>Accounts</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/transactions")}>
+                        <span className="me-2">💳</span>
+                        {!sidebarCollapsed && <span>Transactions</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/budgeting")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>Budgeting</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/petty-cash")}>
+                        <span className="me-2">💵</span>
+                        {!sidebarCollapsed && <span>Petty Cash</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/inventory")}>
+                        <span className="me-2">📦</span>
+                        {!sidebarCollapsed && <span>Inventory</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/payroll")}>
+                        <span className="me-2">💸</span>
+                        {!sidebarCollapsed && <span>Payroll</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sales & Purchasing */}
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#salesCollapse">
+                      <span className="me-2">🛒</span>
+                      {!sidebarCollapsed && "Sales & Purchasing"}
+                    </button>
+                  </h2>
+                  <div id="salesCollapse" className="accordion-collapse collapse">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/sales/customers")}>
+                        <span className="me-2">👥</span>
+                        {!sidebarCollapsed && <span>Customers</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/sales/orders")}>
+                        <span className="me-2">📋</span>
+                        {!sidebarCollapsed && <span>Sales Orders</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/sales/invoices")}>
+                        <span className="me-2">🧾</span>
+                        {!sidebarCollapsed && <span>Sales Invoices</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/purchasing/vendors")}>
+                        <span className="me-2">🏢</span>
+                        {!sidebarCollapsed && <span>Vendors</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/purchasing/purchase-orders")}>
+                        <span className="me-2">📝</span>
+                        {!sidebarCollapsed && <span>Purchase Orders</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/purchasing/purchase-invoices")}>
+                        <span className="me-2">📄</span>
+                        {!sidebarCollapsed && <span>Purchase Invoices</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Admin - Limited System Access */}
+            {userRole === "admin" && (
+              <>
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminManagementCollapse">
+                      <span className="me-2">⚙️</span>
+                      {!sidebarCollapsed && "Management"}
+                    </button>
+                  </h2>
+                  <div id="adminManagementCollapse" className="accordion-collapse collapse show">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin-dashboard")}>
+                        <span className="me-2">🏠</span>
+                        {!sidebarCollapsed && <span>Dashboard</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin/monitor")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>Monitor Employees</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/project")}>
+                        <span className="me-2">📋</span>
+                        {!sidebarCollapsed && <span>Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/attendance")}>
+                        <span className="me-2">📅</span>
+                        {!sidebarCollapsed && <span>Attendance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/performance")}>
+                        <span className="me-2">📈</span>
+                        {!sidebarCollapsed && <span>Performance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/team-absence")}>
+                        <span className="me-2">🏖️</span>
+                        {!sidebarCollapsed && <span>Team Absence</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/absence")}>
+                        <span className="me-2">📋</span>
+                        {!sidebarCollapsed && <span>Absence</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminAccountingCollapse">
+                      <span className="me-2">💼</span>
+                      {!sidebarCollapsed && "Accounting"}
+                    </button>
+                  </h2>
+                  <div id="adminAccountingCollapse" className="accordion-collapse collapse">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/accounts")}>
+                        <span className="me-2">🏦</span>
+                        {!sidebarCollapsed && <span>Accounts</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/transactions")}>
+                        <span className="me-2">💳</span>
+                        {!sidebarCollapsed && <span>Transactions</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/budgeting")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>Budgeting</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/petty-cash")}>
+                        <span className="me-2">💵</span>
+                        {!sidebarCollapsed && <span>Petty Cash</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/accounting/payroll")}>
+                        <span className="me-2">💸</span>
+                        {!sidebarCollapsed && <span>Payroll</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Employee - Standard Access */}
+            {userRole === "Employee" && (
+              <div className="accordion-item bg-dark border-0">
+                <h2 className="accordion-header">
+                  <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#employeeWorkCollapse">
+                    <span className="me-2">💼</span>
+                    {!sidebarCollapsed && "My Work"}
+                  </button>
+                </h2>
+                <div id="employeeWorkCollapse" className="accordion-collapse collapse show">
+                  <div className="accordion-body bg-dark p-0">
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/timecard-entry")}>
+                      <span className="me-2">⏰</span>
+                      {!sidebarCollapsed && <span>Timecard Entry</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/daily-task")}>
+                      <span className="me-2">📝</span>
+                      {!sidebarCollapsed && <span>Daily Task</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/my-projects")}>
+                      <span className="me-2">📂</span>
+                      {!sidebarCollapsed && <span>My Projects</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/my-performance")}>
+                      <span className="me-2">📊</span>
+                      {!sidebarCollapsed && <span>My Performance</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/employee-attendance")}>
+                      <span className="me-2">📅</span>
+                      {!sidebarCollapsed && <span>My Attendance</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/absence")}>
+                      <span className="me-2">🏖️</span>
+                      {!sidebarCollapsed && <span>Absence</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/accounting/payroll")}>
+                      <span className="me-2">💸</span>
+                      {!sidebarCollapsed && <span>My Payroll</span>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-grow-1">
+          {/* Top Navigation */}
+          <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-3" style={{ overflowX: "hidden" }}>
+            <div className="d-flex justify-content-between align-items-center w-100">
+              <div className="d-flex align-items-center">
                 <button 
-                  className="btn btn-outline-primary"
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="btn btn-outline-primary d-md-none me-3"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  title="Toggle Menu"
                 >
-                  {userEmail} ▼
+                  ☰
                 </button>
-                {showProfileDropdown && (
-                  <div className="position-absolute end-0 mt-2 bg-white border rounded shadow" style={{ zIndex: 1000, minWidth: "150px" }}>
-                    <button className="dropdown-item btn" onClick={() => navigate("/profile")}>
-                      Profile
-                    </button>
-                    <button className="dropdown-item btn text-danger" onClick={handleLogout}>
-                      Logout
-                    </button>
+                {pathname === "/admin-dashboard" ? (
+                  <div className="welcome-message">
+                    <h5 className="mb-0 text-primary">
+                      Welcome {(userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") 
+                        ? `${userRole} ${userName}` 
+                        : userName || userEmail}
+                    </h5>
+                  </div>
+                ) : (
+                  <div className="breadcrumb-nav">
+                    <nav aria-label="breadcrumb">
+                      <ol className="breadcrumb mb-0">
+                        <li className="breadcrumb-item"><a href="/admin-dashboard" className="text-decoration-none">Home</a></li>
+                        <li className="breadcrumb-item active" aria-current="page">
+                          {pathname.split('/').pop().replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </li>
+                      </ol>
+                    </nav>
                   </div>
                 )}
               </div>
+              <div className="d-flex align-items-center gap-2">
+                {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin") && (
+                  <div className="position-relative notification-container">
+                    <button 
+                      className="btn btn-outline-secondary position-relative"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowNotifications(!showNotifications);
+                        setShowProfileDropdown(false);
+                        if (!showNotifications) fetchNotifications();
+                      }}
+                      title="Notifications"
+                    >
+                      🔔
+                      {notifications.filter(n => n.status === 'unread').length > 0 && (
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                          {notifications.filter(n => n.status === 'unread').length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+                <div className="position-relative dropdown-container" id="profile-dropdown-container">
+                  <button 
+                    className="btn btn-outline-primary dropdown-toggle d-flex align-items-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowProfileDropdown(prev => !prev);
+                      setShowNotifications(false);
+                    }}
+                    aria-expanded={showProfileDropdown}
+                  >
+                    <span className="me-2">👤</span>
+                    <span className="d-none d-sm-inline">{userName || userEmail}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </nav>
+          
+          {/* Notifications Portal */}
+          {showNotifications && typeof window !== 'undefined' && createPortal(
+            <div 
+              data-dropdown="notifications"
+              style={{ 
+                position: "fixed",
+                top: "60px",
+                right: "80px", 
+                minWidth: "320px", 
+                maxHeight: "400px",
+                backgroundColor: "white", 
+                border: "1px solid #dee2e6", 
+                borderRadius: "8px", 
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 99999,
+                overflowY: "auto"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-3 border-bottom bg-primary text-white rounded-top">
+                <div className="d-flex justify-content-between align-items-center">
+                  <strong>Notifications</strong>
+                  <button 
+                    className="btn btn-sm btn-outline-light"
+                    onClick={() => setShowNotifications(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-muted">
+                  <div className="mb-2">🔔</div>
+                  <div>No notifications</div>
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div 
+                    key={notification._id} 
+                    className={`p-3 border-bottom cursor-pointer notification-item ${notification.status === 'unread' ? 'bg-light border-start border-primary border-3' : ''}`}
+                    onClick={() => {
+                      navigate('/team-absence');
+                      setShowNotifications(false);
+                      markAsRead(notification._id);
+                    }}
+                    style={{ transition: 'background-color 0.2s ease' }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = notification.status === 'unread' ? '#f8f9fa' : 'white'}
+                  >
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="flex-grow-1">
+                        <div className="fw-bold text-dark mb-1">{notification.title}</div>
+                        <div className="text-muted small mb-1">{notification.message}</div>
+                        <div className="text-muted small">{new Date(notification.createdAt).toLocaleString()}</div>
+                      </div>
+                      {notification.status === 'unread' && (
+                        <span className="badge bg-primary rounded-pill">New</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>,
+            document.body
+          )}
+          
+          {/* Profile Dropdown Portal */}
+          {showProfileDropdown && typeof window !== 'undefined' && createPortal(
+            <div 
+              data-dropdown="profile"
+              style={{ 
+                position: "fixed",
+                top: "60px",
+                right: "20px", 
+                minWidth: "220px", 
+                backgroundColor: "white", 
+                border: "1px solid #dee2e6", 
+                borderRadius: "8px", 
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 99999,
+                display: "block"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+                      <div style={{ 
+                        padding: "16px", 
+                        borderBottom: "1px solid #e9ecef",
+                        backgroundColor: "#f8f9fa"
+                      }}>
+                        <div style={{ 
+                          fontWeight: "600", 
+                          color: "#212529", 
+                          fontSize: "14px",
+                          marginBottom: "4px"
+                        }}>{userName || 'User'}</div>
+                        <div style={{ 
+                          fontSize: "12px", 
+                          color: "#6c757d",
+                          marginBottom: "2px"
+                        }}>{userEmail}</div>
+                        <div style={{ 
+                          fontSize: "11px", 
+                          color: "#0d6efd",
+                          fontWeight: "500"
+                        }}>{userRole}</div>
+                      </div>
+                      <button 
+                        style={{ 
+                          width: "100%", 
+                          padding: "12px 16px", 
+                          border: "none", 
+                          backgroundColor: "transparent", 
+                          textAlign: "left", 
+                          cursor: "pointer",
+                          color: "#212529",
+                          fontSize: "14px",
+                          display: "flex",
+                          alignItems: "center",
+                          transition: "background-color 0.2s ease"
+                        }}
+                        onClick={() => {
+                          navigate("/profile");
+                          setShowProfileDropdown(false);
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                      >
+                        <span style={{ marginRight: "8px" }}>⚙️</span> Profile Settings
+                      </button>
+                      <button 
+                        style={{ 
+                          width: "100%", 
+                          padding: "12px 16px", 
+                          border: "none", 
+                          backgroundColor: "transparent", 
+                          textAlign: "left", 
+                          cursor: "pointer",
+                          color: "#dc3545",
+                          fontSize: "14px",
+                          display: "flex",
+                          alignItems: "center",
+                          transition: "background-color 0.2s ease"
+                        }}
+                        onClick={handleLogout}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                      >
+                        <span style={{ marginRight: "8px" }}>🚪</span> Logout
+                      </button>
+            </div>,
+            document.body
+          )}
+
+          {/* Page Content */}
+          <div className="p-4 bg-light" style={{ minHeight: "calc(100vh - 76px)" }}>
+            <div className="container-fluid">
+              {children}
             </div>
           </div>
-        </nav>
-
-        {/* Page Content */}
-        <div className="p-4">
-          {children}
         </div>
       </div>
-    </div>
+    </>
   );
 }
