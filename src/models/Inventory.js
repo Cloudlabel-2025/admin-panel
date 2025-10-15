@@ -21,7 +21,17 @@ const InventorySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-// AssetId is now generated in the API route
+// Pre-save hook to auto-generate assetId
+
+InventorySchema.pre("save", async function (next) {
+  if (!this.assetId) {
+    // Count total documents to generate incremental ID
+    const count = await mongoose.models.Inventory.countDocuments();
+    const nextNumber = (count + 1).toString().padStart(4, "0"); // e.g. 0001
+    this.assetId = `ASSET-${nextNumber}`;
+  }
+  next();
+});
 
 export default mongoose.models.Inventory ||
   mongoose.model("Inventory", InventorySchema);

@@ -24,7 +24,7 @@ export default function Layout({ children }) {
     setUserEmail(email);
     
     // Fetch user name
-    if (empId && (role === "Employee" || role === "Intern")) {
+    if (empId) {
       fetch(`/api/Employee/${empId}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -33,9 +33,6 @@ export default function Layout({ children }) {
           }
         })
         .catch(err => console.error('Error fetching user name:', err));
-    } else if (role === "admin" || role === "super-admin" || role === "Super-admin") {
-      // For admin users, set a default name or extract from email
-      setUserName(email ? email.split('@')[0].toUpperCase() : 'Admin');
     }
   }, []);
 
