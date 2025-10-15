@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
+import { makeAuthenticatedRequest } from "../utilis/tokenManager";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const employeesRes = await fetch('/api/Employee').catch(() => ({ json: () => [] }));
+      const employeesRes = await makeAuthenticatedRequest('/api/Employee').catch(() => ({ json: () => [] }));
       const employees = await employeesRes.json();
       
       // Calculate real metrics

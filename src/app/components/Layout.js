@@ -301,6 +301,11 @@ export default function Layout({ children }) {
                         {!sidebarCollapsed && <span>Inventory</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/invoices")}>
+                        <span className="me-2">🧾</span>
+                        {!sidebarCollapsed && <span>Invoice Management</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/payroll")}>
                         <span className="me-2">💸</span>
                         {!sidebarCollapsed && <span>Payroll</span>}

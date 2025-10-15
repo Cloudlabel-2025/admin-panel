@@ -2,6 +2,7 @@ import connectMongoose from "../../../utilis/connectMongoose";
 import { createEmployeeModel } from "../../../../models/Employee";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import { requireAuth, requireRole } from "../../../utilis/authMiddleware";
 
 // Helper to find employee across all department collections
 async function findEmployeeInDepartments(employeeId) {
@@ -26,7 +27,7 @@ async function findEmployeeInDepartments(employeeId) {
 }
 
 // ✅ GET: Single employee
-export async function GET(req, { params }) {
+export const GET = requireAuth(async function(req, { params }) {
   try {
     await connectMongoose();
     const { employeeId } = await params;
@@ -41,10 +42,10 @@ export async function GET(req, { params }) {
     console.error("Error fetching employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
 // ✅ PATCH: Update employee (handles department transfer)
-export async function PATCH(req, { params }) {
+export const PATCH = requireRole(["super-admin"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { employeeId } = await params;
@@ -88,10 +89,10 @@ export async function PATCH(req, { params }) {
     console.error("Error updating employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
 // ✅ DELETE: Remove employee from department collection
-export async function DELETE(req, { params }) {
+export const DELETE = requireRole(["super-admin"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { employeeId } = await params;
@@ -113,4 +114,4 @@ export async function DELETE(req, { params }) {
     console.error("Error deleting employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});

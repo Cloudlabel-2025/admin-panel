@@ -2,6 +2,7 @@ import connectMongoose from "../../utilis/connectMongoose";
 import { createEmployeeModel } from "../../../models/Employee";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import { requireRole } from "../../utilis/authMiddleware";
 
 // helper: find the latest employeeId across all departments
 async function getNextEmployeeId() {
@@ -27,7 +28,7 @@ async function getNextEmployeeId() {
   return "CHC" + nextId.toString().padStart(4, "0");
 }
 
-export async function GET() {
+export const GET = requireRole(["super-admin"])(async function() {
   try {
     await connectMongoose();
 
@@ -50,9 +51,9 @@ export async function GET() {
     console.error("Error fetching employees:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req) {
+export const POST = requireRole(["super-admin"])(async function(req) {
   try {
     await connectMongoose();
 
@@ -107,4 +108,4 @@ export async function POST(req) {
     console.error("Error creating employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});

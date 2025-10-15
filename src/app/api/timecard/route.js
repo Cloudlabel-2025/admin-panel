@@ -1,8 +1,9 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Timecard from "@/models/Timecard";
 import { NextResponse } from "next/server";
+import { requireAuth } from "../utilis/authMiddleware";
 
-export  async function POST(req,res){
+export const POST = requireAuth(async function(req,res){
     try{
     await connectMongoose();
     const data = await req.json();
@@ -15,9 +16,9 @@ export  async function POST(req,res){
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
     }
-}
+});
 
-export  async function GET(req,res) {
+export const GET = requireAuth(async function(req,res) {
     try{
     await connectMongoose();
     const { searchParams } = new URL(req.url);
@@ -82,9 +83,9 @@ export  async function GET(req,res) {
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
     }
-}
+});
 
-export async function PUT(req){
+export const PUT = requireAuth(async function(req){
   try {
     await connectMongoose();
     const body = await req.json();
@@ -146,4 +147,4 @@ export async function PUT(req){
     console.error("PUT error:", err);
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
-}
+});

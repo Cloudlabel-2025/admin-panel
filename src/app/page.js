@@ -21,41 +21,18 @@ export default function HomePage() {
       if (!res.ok) return alert(data.error);
 
       localStorage.setItem("token", data.token);
+      localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("employeeId", data.user.employeeId);
-      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("userRole", data.user.role);
 
-      // Check if super admin
-      if (email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || email === "admin@gmail.com") {
-        localStorage.setItem("userRole", "super-admin");
-        alert("Super Admin login successful");
+      alert(data.message);
+      
+      // Route based on role from server
+      if (data.user.role === "super-admin") {
         router.push("/admin-dashboard");
       } else {
-        // Fetch actual employee role
-        try {
-          const roleRes = await fetch(`/api/Employee/${data.user.employeeId}`);
-          const employeeData = await roleRes.json();
-          const actualRole = employeeData.role || "Employee";
-          localStorage.setItem("userRole", actualRole);
-          
-          alert(`${actualRole} login successful`);
-          
-          // Route based on role
-          if (actualRole === "super-admin" || actualRole === "Super-admin" || actualRole === "admin") {
-            router.push("/admin-dashboard");
-          } else if (actualRole === "Team-Lead" || actualRole === "Team-admin") {
-            router.push("/admin-dashboard");
-          } else if (actualRole === "Employee" || actualRole === "Intern") {
-            router.push("/timecard-entry");
-          } else {
-            // Fallback for any other roles
-            router.push("/timecard-entry");
-          }
-        } catch (err) {
-          console.error("Error fetching role:", err);
-          localStorage.setItem("userRole", "Employee");
-          alert("Employee login successful");
-          router.push("/timecard-entry");
-        }
+        router.push("/timecard-entry");
       }
     } catch (err) {
       console.error(err);
@@ -138,13 +115,7 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {isLogin && (
-                <div className="text-center mt-2">
-                  <small className="text-muted">
-                    Super Admin: admin@gmail.com / admin
-                  </small>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
