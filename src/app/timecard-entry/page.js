@@ -643,7 +643,7 @@ export default function TimecardPage() {
             {/* Break Records */}
             {breaks.length > 0 && (
               <div className="mt-4">
-                <h6 className="fw-bold mb-3">Today's Breaks</h6>
+                <h6 className="fw-bold mb-3">Today&apos;s Breaks</h6>
                 <div className="table-responsive">
                   <table className="table table-bordered mb-0">
                     <thead className="table-light">
