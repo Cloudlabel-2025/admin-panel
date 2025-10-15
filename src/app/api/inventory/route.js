@@ -9,7 +9,6 @@ export async function GET() {
       .populate("assignedTo", " employeeId name email"); 
       return NextResponse.json(items,{status:200});
   } catch (err) {
-    console.error("Error fetching inventory:", err);
     return NextResponse.json({ error: "Failed to fetch inventory" }, { status: 500 });
   }
 }
@@ -21,7 +20,6 @@ export async function POST(req) {
     const item = await Inventory.create(body);
     return NextResponse.json(item, { status: 201 });
   } catch (err) {
-    console.error("Error creating inventory item:", err);
     return NextResponse.json({ error: "Failed to create item" }, { status: 500 });
   }
 }

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const InventorySchema = new mongoose.Schema({
   assetId: { type: String, unique: true },
   itemName: { type: String, required: true },
-  sku: { type: String, required: true, unique: true },
+  sku: { type: String, required: true},
   category: {
     type: String,
     enum: ["hardware", "software", "cleaning equipments", "furniture"],
