@@ -209,23 +209,30 @@ export default function AttendancePage() {
     <Layout>
       <div className="container-fluid p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>
-            {isAdmin ? "Attendance Management" : "My Attendance"}
-          </h2>
-          {isAdmin ? (
-            <div>
-              <button className="btn btn-success me-2" onClick={exportToExcel}>
-                Export Excel
+          <div>
+            <h1 className="text-primary mb-1">
+              {isAdmin ? "📊 Attendance Management" : "📅 My Attendance"}
+            </h1>
+            <small className="text-muted">
+              {isAdmin ? "Monitor and manage employee attendance" : "Track your attendance records"}
+            </small>
+          </div>
+          <div className="d-flex gap-2">
+            {isAdmin ? (
+              <>
+                <button className="btn btn-success" onClick={exportToExcel}>
+                  📊 Export Excel
+                </button>
+                <button className="btn btn-info" onClick={generateAttendance}>
+                  🔄 Generate from Timecard
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-primary" onClick={exportToExcel}>
+                📊 Export My Attendance
               </button>
-              <button className="btn btn-info" onClick={generateAttendance}>
-                Generate from Timecard
-              </button>
-            </div>
-          ) : (
-            <button className="btn btn-primary" onClick={exportToExcel}>
-              Export My Attendance
-            </button>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -233,43 +240,48 @@ export default function AttendancePage() {
           {isAdmin ? (
             // Admin view - overall stats
             <>
-              <div className="col-md-2">
-                <div className="card bg-success text-white">
-                  <div className="card-body text-center">
-                    <h5>{stats.totalPresent}</h5>
-                    <p>Present</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-success text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>✅</div>
+                    <h4 className="mb-1">{stats.totalPresent}</h4>
+                    <small>Present</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-primary text-white">
-                  <div className="card-body text-center">
-                    <h5>{stats.totalInOffice}</h5>
-                    <p>In Office</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-primary text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>🏢</div>
+                    <h4 className="mb-1">{stats.totalInOffice}</h4>
+                    <small>In Office</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-warning text-white">
-                  <div className="card-body text-center">
-                    <h5>{stats.totalHalfDay}</h5>
-                    <p>Half Day</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-warning text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>⏰</div>
+                    <h4 className="mb-1">{stats.totalHalfDay}</h4>
+                    <small>Half Day</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-danger text-white">
-                  <div className="card-body text-center">
-                    <h5>{stats.totalAbsent}</h5>
-                    <p>Absent</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-danger text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>❌</div>
+                    <h4 className="mb-1">{stats.totalAbsent}</h4>
+                    <small>Absent</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-4">
-                <div className="card bg-info text-white">
-                  <div className="card-body text-center">
-                    <h5>{stats.avgHours.toFixed(1)}</h5>
-                    <p>Average Hours</p>
+              <div className="col-lg-4 col-md-8 col-sm-12 mb-3">
+                <div className="card bg-info text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>⏱️</div>
+                    <h4 className="mb-1">{stats.avgHours.toFixed(1)}h</h4>
+                    <small>Average Hours</small>
                   </div>
                 </div>
               </div>
@@ -277,51 +289,57 @@ export default function AttendancePage() {
           ) : employeeStats ? (
             // Employee view - personal stats
             <>
-              <div className="col-md-2">
-                <div className="card bg-primary text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.totalDays}</h5>
-                    <p>Total Days</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-primary text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>📅</div>
+                    <h4 className="mb-1">{employeeStats.totalDays}</h4>
+                    <small>Total Days</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-success text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.presentDays}</h5>
-                    <p>Present</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-success text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>✅</div>
+                    <h4 className="mb-1">{employeeStats.presentDays}</h4>
+                    <small>Present</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-danger text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.absentDays}</h5>
-                    <p>Absent</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-danger text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>❌</div>
+                    <h4 className="mb-1">{employeeStats.absentDays}</h4>
+                    <small>Absent</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-warning text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.halfDays}</h5>
-                    <p>Half Day</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-warning text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>⏰</div>
+                    <h4 className="mb-1">{employeeStats.halfDays}</h4>
+                    <small>Half Day</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-info text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.totalHours}</h5>
-                    <p>Total Hours</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-info text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>⏱️</div>
+                    <h4 className="mb-1">{employeeStats.totalHours}h</h4>
+                    <small>Total Hours</small>
                   </div>
                 </div>
               </div>
-              <div className="col-md-2">
-                <div className="card bg-secondary text-white">
-                  <div className="card-body text-center">
-                    <h5>{employeeStats.attendancePercentage}%</h5>
-                    <p>Attendance</p>
+              <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div className="card bg-secondary text-white shadow-sm h-100">
+                  <div className="card-body text-center p-3">
+                    <div className="mb-2" style={{fontSize: '2rem'}}>📊</div>
+                    <h4 className="mb-1">{employeeStats.attendancePercentage}%</h4>
+                    <small>Attendance</small>
                   </div>
                 </div>
               </div>
@@ -331,11 +349,14 @@ export default function AttendancePage() {
 
         {/* Filters */}
         {isAdmin && (
-          <div className="card mb-4">
+          <div className="card shadow-sm mb-4">
+            <div className="card-header bg-light">
+              <h5 className="mb-0">🔍 Filter Options</h5>
+            </div>
             <div className="card-body">
-              <div className="row">
-                <div className="col-md-2">
-                  <label className="form-label">Start Date</label>
+              <div className="row g-3">
+                <div className="col-lg-2 col-md-4">
+                  <label className="form-label fw-semibold">📅 Start Date</label>
                   <input
                     type="date"
                     className="form-control"
@@ -343,8 +364,8 @@ export default function AttendancePage() {
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </div>
-                <div className="col-md-2">
-                  <label className="form-label">End Date</label>
+                <div className="col-lg-2 col-md-4">
+                  <label className="form-label fw-semibold">📅 End Date</label>
                   <input
                     type="date"
                     className="form-control"
@@ -352,8 +373,8 @@ export default function AttendancePage() {
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                 </div>
-                <div className="col-md-3">
-                  <label className="form-label">Employee</label>
+                <div className="col-lg-3 col-md-4">
+                  <label className="form-label fw-semibold">👥 Employee</label>
                   <select
                     className="form-select"
                     value={selectedEmployee}
@@ -367,22 +388,22 @@ export default function AttendancePage() {
                     ))}
                   </select>
                 </div>
-                <div className="col-md-2">
-                  <label className="form-label">Status</label>
+                <div className="col-lg-2 col-md-4">
+                  <label className="form-label fw-semibold">📊 Status</label>
                   <select
                     className="form-select"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
                     <option value="">All Status</option>
-                    <option value="Present">Present</option>
-                    <option value="Half Day">Half Day</option>
-                    <option value="Absent">Absent</option>
+                    <option value="Present">✅ Present</option>
+                    <option value="Half Day">⏰ Half Day</option>
+                    <option value="Absent">❌ Absent</option>
                   </select>
                 </div>
-                <div className="col-md-3 d-flex align-items-end">
+                <div className="col-lg-3 col-md-4 d-flex align-items-end">
                   <button className="btn btn-primary w-100" onClick={fetchAttendance}>
-                    Apply Filters
+                    🔍 Apply Filters
                   </button>
                 </div>
               </div>
@@ -393,62 +414,93 @@ export default function AttendancePage() {
 
 
         {/* Attendance Table */}
-        <div className="card">
-          <div className="card-body">
+        <div className="card shadow-sm">
+          <div className="card-header bg-primary text-white">
+            <div className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">📋 Attendance Records</h5>
+              <div className="badge bg-light text-dark fs-6">
+                {attendance.length} Records
+              </div>
+            </div>
+          </div>
+          <div className="card-body p-0">
             {loading ? (
-              <div className="text-center mt-5">
-                <div className="spinner-border" role="status">
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
+                <p className="mt-2 text-muted">Loading attendance records...</p>
               </div>
             ) : (
               <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead className="table-dark">
+                <table className="table table-hover align-middle mb-0">
+                  <thead className="table-light">
                     <tr>
-                      <th>Date</th>
-                      <th>Employee ID</th>
-                      <th>Employee Name</th>
-                      <th>Department</th>
-                      <th>Status</th>
-                      <th>Login</th>
-                      <th>Logout</th>
-                      <th>Total Hours</th>
-                      <th>Permission</th>
-                      <th>Overtime</th>
-
-                      <th>Remarks</th>
+                      <th>📅 Date</th>
+                      <th>🆔 Employee ID</th>
+                      <th>👤 Employee Name</th>
+                      <th>🏢 Department</th>
+                      <th>📊 Status</th>
+                      <th>🕐 Login</th>
+                      <th>🕕 Logout</th>
+                      <th>⏱️ Total Hours</th>
+                      <th>🚪 Permission</th>
+                      <th>⏰ Overtime</th>
+                      <th>📝 Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {attendance.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="text-center text-muted">
-                          No attendance records found.
+                        <td colSpan={11} className="text-center py-5">
+                          <div style={{fontSize: '3rem'}}>📋</div>
+                          <p className="text-muted mt-2 mb-0">No attendance records found.</p>
                         </td>
                       </tr>
                     )}
                     {attendance.map((a, idx) => (
                       <tr key={idx}>
-                        <td>{new Date(a.date).toLocaleDateString()}</td>
-                        <td>{a.employeeId}</td>
-                        <td>{a.employeeName || "Unknown"}</td>
-                        <td>{a.department || "Unknown"}</td>
+                        <td>
+                          <div className="fw-semibold">{new Date(a.date).toLocaleDateString()}</div>
+                        </td>
+                        <td>
+                          <code className="bg-light px-2 py-1 rounded">{a.employeeId}</code>
+                        </td>
+                        <td>
+                          <div className="fw-semibold">{a.employeeName || "Unknown"}</div>
+                        </td>
+                        <td>
+                          <span className="badge bg-secondary">{a.department || "Unknown"}</span>
+                        </td>
                         <td>
                           <span className={`badge ${
                             a.status === 'Present' ? 'bg-success' : 
-                            a.status === 'Half Day' ? 'bg-warning' : 'bg-danger'
+                            a.status === 'Half Day' ? 'bg-warning text-dark' : 
+                            a.status === 'In Office' ? 'bg-primary' : 'bg-danger'
                           }`}>
-                            {a.status}
+                            {a.status === 'Present' ? '✅ Present' :
+                             a.status === 'Half Day' ? '⏰ Half Day' :
+                             a.status === 'In Office' ? '🏢 In Office' : '❌ Absent'}
                           </span>
                         </td>
-                        <td>{a.loginTime || "-"}</td>
-                        <td>{a.logoutTime || "-"}</td>
-                        <td>{(a.totalHours || 0).toFixed(2)}</td>
-                        <td>{(a.permissionHours || 0).toFixed(2)}</td>
-                        <td>{(a.overtimeHours || 0).toFixed(2)}</td>
-
-                        <td>{a.remarks || "-"}</td>
+                        <td>
+                          <span className="text-success fw-semibold">{a.loginTime || "—"}</span>
+                        </td>
+                        <td>
+                          <span className="text-danger fw-semibold">{a.logoutTime || "—"}</span>
+                        </td>
+                        <td>
+                          <span className="badge bg-info">{(a.totalHours || 0).toFixed(2)}h</span>
+                        </td>
+                        <td>
+                          <span className="badge bg-warning text-dark">{(a.permissionHours || 0).toFixed(2)}h</span>
+                        </td>
+                        <td>
+                          <span className="badge bg-secondary">{(a.overtimeHours || 0).toFixed(2)}h</span>
+                        </td>
+                        <td>
+                          <small className="text-muted">{a.remarks || "—"}</small>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

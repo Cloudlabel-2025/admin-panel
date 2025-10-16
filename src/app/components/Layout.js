@@ -24,7 +24,7 @@ export default function Layout({ children }) {
     setUserEmail(email);
     
     // Fetch user name
-    if (empId && (role === "Employee" || role === "Intern")) {
+    if (empId && (role === "Employee" || role === "Intern" || role === "Team-Lead" || role === "Team-admin")) {
       fetch(`/api/Employee/${empId}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -444,6 +444,163 @@ export default function Layout({ children }) {
                               onClick={() => navigate("/accounting/payroll")}>
                         <span className="me-2">💸</span>
                         {!sidebarCollapsed && <span>Payroll</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Team-Lead - Team Management Access */}
+            {userRole === "Team-Lead" && (
+              <>
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadManagementCollapse">
+                      <span className="me-2">👥</span>
+                      {!sidebarCollapsed && "Team Management"}
+                    </button>
+                  </h2>
+                  <div id="teamLeadManagementCollapse" className="accordion-collapse collapse show">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin/monitor")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>Monitor Team</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/project")}>
+                        <span className="me-2">📋</span>
+                        {!sidebarCollapsed && <span>Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/attendance")}>
+                        <span className="me-2">📅</span>
+                        {!sidebarCollapsed && <span>Team Attendance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/performance")}>
+                        <span className="me-2">📈</span>
+                        {!sidebarCollapsed && <span>Team Performance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/team-absence")}>
+                        <span className="me-2">🏖️</span>
+                        {!sidebarCollapsed && <span>Team Absence</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadPersonalCollapse">
+                      <span className="me-2">💼</span>
+                      {!sidebarCollapsed && "My Work"}
+                    </button>
+                  </h2>
+                  <div id="teamLeadPersonalCollapse" className="accordion-collapse collapse">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/timecard-entry")}>
+                        <span className="me-2">⏰</span>
+                        {!sidebarCollapsed && <span>Timecard Entry</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/daily-task")}>
+                        <span className="me-2">📝</span>
+                        {!sidebarCollapsed && <span>Daily Task</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/my-projects")}>
+                        <span className="me-2">📂</span>
+                        {!sidebarCollapsed && <span>My Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/employee-attendance")}>
+                        <span className="me-2">📅</span>
+                        {!sidebarCollapsed && <span>My Attendance</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Team-admin - Team Administration Access */}
+            {userRole === "Team-admin" && (
+              <>
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminManagementCollapse">
+                      <span className="me-2">⚙️</span>
+                      {!sidebarCollapsed && "Team Administration"}
+                    </button>
+                  </h2>
+                  <div id="teamAdminManagementCollapse" className="accordion-collapse collapse show">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin/monitor")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>Monitor Team</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/project")}>
+                        <span className="me-2">📋</span>
+                        {!sidebarCollapsed && <span>Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/attendance")}>
+                        <span className="me-2">📅</span>
+                        {!sidebarCollapsed && <span>Team Attendance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/performance")}>
+                        <span className="me-2">📈</span>
+                        {!sidebarCollapsed && <span>Team Performance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/team-absence")}>
+                        <span className="me-2">🏖️</span>
+                        {!sidebarCollapsed && <span>Team Absence</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/documents")}>
+                        <span className="me-2">📄</span>
+                        {!sidebarCollapsed && <span>Documents</span>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="accordion-item bg-dark border-0">
+                  <h2 className="accordion-header">
+                    <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminPersonalCollapse">
+                      <span className="me-2">💼</span>
+                      {!sidebarCollapsed && "My Work"}
+                    </button>
+                  </h2>
+                  <div id="teamAdminPersonalCollapse" className="accordion-collapse collapse">
+                    <div className="accordion-body bg-dark p-0">
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/timecard-entry")}>
+                        <span className="me-2">⏰</span>
+                        {!sidebarCollapsed && <span>Timecard Entry</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/daily-task")}>
+                        <span className="me-2">📝</span>
+                        {!sidebarCollapsed && <span>Daily Task</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/my-projects")}>
+                        <span className="me-2">📂</span>
+                        {!sidebarCollapsed && <span>My Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/employee-attendance")}>
+                        <span className="me-2">📅</span>
+                        {!sidebarCollapsed && <span>My Attendance</span>}
                       </button>
                     </div>
                   </div>

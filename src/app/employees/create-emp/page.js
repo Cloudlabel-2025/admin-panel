@@ -6,6 +6,9 @@ import Layout from "../../components/Layout";
 
 export default function CreateEmployeePage() {
   const router = useRouter();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     employeeId: "",
     firstName: "",
@@ -61,12 +64,16 @@ export default function CreateEmployeePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch("/api/Employee", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -74,7 +81,8 @@ export default function CreateEmployeePage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Employee created successfully! Employee can now signup with their email.");
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
         setFormData({
           employeeId: "",
           firstName: "",
@@ -103,20 +111,54 @@ export default function CreateEmployeePage() {
           },
         });
       } else {
-        alert(`Error: ${data.message || "Failed to create employee"}`);
+        setError(data.message || "Failed to create employee");
+        setTimeout(() => setError(""), 3000);
       }
     } catch (error) {
       console.error("Submission error:", error);
-      alert("❌ Submission failed. Please try again.");
+      setError("Submission failed. Please try again.");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Layout>
-      <h2>Employee Registration Form</h2>
+      {showSuccess && (
+        <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+            </svg>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>
+          {error}
+        </div>
+      )}
+      
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="text-primary mb-0">
+          <i className="bi bi-person-plus-fill me-2"></i>
+          Employee Registration
+        </h2>
+      </div>
 
-      <form className="row g-3" onSubmit={handleSubmit}>
-        {/* Basic Info */}
+      <div className="card shadow-sm">
+        <div className="card-body p-4">
+          <form className="row g-3" onSubmit={handleSubmit}>
+        {/* Basic Information Section */}
+        <div className="col-12">
+          <h5 className="text-secondary border-bottom pb-2 mb-3">
+            <i className="bi bi-person-circle me-2"></i>
+            Basic Information
+          </h5>
+        </div>
         <div className="col-md-6">
           <label className="form-label">Joining Date</label>
           <input
@@ -176,7 +218,13 @@ export default function CreateEmployeePage() {
           </select>
         </div>
 
-        {/* Contact Info */}
+        {/* Contact Information Section */}
+        <div className="col-12 mt-4">
+          <h5 className="text-secondary border-bottom pb-2 mb-3">
+            <i className="bi bi-telephone-fill me-2"></i>
+            Contact Information
+          </h5>
+        </div>
         <div className="col-md-6">
           <label className="form-label">
             Email <span className="text-danger">*</span>
@@ -219,7 +267,13 @@ export default function CreateEmployeePage() {
         </div>
 
 
-        {/* Role */}
+        {/* Work Information Section */}
+        <div className="col-12 mt-4">
+          <h5 className="text-secondary border-bottom pb-2 mb-3">
+            <i className="bi bi-briefcase-fill me-2"></i>
+            Work Information
+          </h5>
+        </div>
         <div className="col-md-6">
           <label className="form-label">Department</label>
           <select
@@ -257,8 +311,13 @@ export default function CreateEmployeePage() {
           </select>
         </div>
 
-        {/* Emergency Contact */}
-        <h5 className="mt-4">Emergency Contact</h5>
+        {/* Emergency Contact Section */}
+        <div className="col-12 mt-4">
+          <h5 className="text-secondary border-bottom pb-2 mb-3">
+            <i className="bi bi-person-exclamation me-2"></i>
+            Emergency Contact
+          </h5>
+        </div>
         <div className="col-md-6">
           <label className="form-label">Contact Person</label>
           <input
@@ -295,8 +354,13 @@ export default function CreateEmployeePage() {
         </div>
 
 
-        {/* Address */}
-        <h5 className="mt-4">Address</h5>
+        {/* Address Section */}
+        <div className="col-12 mt-4">
+          <h5 className="text-secondary border-bottom pb-2 mb-3">
+            <i className="bi bi-geo-alt-fill me-2"></i>
+            Address Information
+          </h5>
+        </div>
         <div className="col-12">
           <label className="form-label">Street</label>
           <input
@@ -348,8 +412,13 @@ export default function CreateEmployeePage() {
           />
         </div>
 
-        {/* Payroll Information */}
-        <h5 className="mt-4">Payroll Information</h5>
+        {/* Payroll Information Section */}
+        <div className="col-12 mt-4">
+          <h5 className="text-secondary border-bottom pb-2 mb-3">
+            <i className="bi bi-currency-dollar me-2"></i>
+            Payroll Information
+          </h5>
+        </div>
         <div className="col-md-6">
           <label className="form-label">Base Salary <span className="text-danger">*</span></label>
           <input
@@ -377,13 +446,44 @@ export default function CreateEmployeePage() {
         </div>
 
 
-        {/* Submit */}
-        <div className="col-12 text-center mt-4">
-          <button type="submit" className="btn btn-primary px-5">
-            Create Employee
+        {/* Submit Button */}
+        <div className="col-12 text-center mt-5">
+          <button 
+            type="submit" 
+            className="btn btn-primary btn-lg px-5" 
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                Creating Employee...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-person-plus-fill me-2"></i>
+                Create Employee
+              </>
+            )}
           </button>
         </div>
-      </form>
+          </form>
+        </div>
+      </div>
+      
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes drawCircle {
+          from { stroke-dasharray: 0 63; }
+          to { stroke-dasharray: 63 63; }
+        }
+        @keyframes drawCheck {
+          from { stroke-dasharray: 0 20; }
+          to { stroke-dasharray: 20 20; }
+        }
+      `}</style>
     </Layout>
   );
 }
