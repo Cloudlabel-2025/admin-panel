@@ -1,8 +1,9 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Invoice from "@/models/Invoice";
 import { NextResponse } from "next/server";
+import { requireRole } from "../../utilis/authMiddleware";
 
-export async function GET() {
+export const GET = requireRole(["super-admin", "admin"])(async function() {
   try {
     await connectMongoose();
     const invoices = await Invoice.find()
@@ -13,9 +14,9 @@ export async function GET() {
     console.error("Error fetching invoices:", err);
     return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
   }
-}
+});
 
-export async function POST(req) {
+export const POST = requireRole(["super-admin", "admin"])(async function(req) {
   try {
     await connectMongoose();
     const body = await req.json();
@@ -31,4 +32,4 @@ export async function POST(req) {
     console.error("Error creating invoice:", err);
     return NextResponse.json({ error: "Failed to create invoice" }, { status: 500 });
   }
-}
+});

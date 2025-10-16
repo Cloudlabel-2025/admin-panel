@@ -1,49 +1,40 @@
 import connectMongoose from "../../../../utilis/connectMongoose";
-import mongoose from "mongoose";
+import PurchaseOrder from "../../../../../models/PurchaseOrder";
 import { NextResponse } from "next/server";
+import { requireRole } from "../../../../utilis/authMiddleware";
+import { unlink } from 'fs/promises';
+import path from 'path';
 
-export async function GET(req, { params }) {
+export const GET = requireRole(["super-admin", "admin"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { id } = await params;
-    
-    const db = mongoose.connection.db;
-    const order = await db.collection('purchaseorders').findOne({ _id: new mongoose.Types.ObjectId(id) });
-    
+    const order = await PurchaseOrder.findById(id);
     return NextResponse.json(order, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
-export async function PUT(req, { params }) {
-  try {
-    await connectMongoose();
-    const { id } = await params;
-    const body = await req.json();
-    
-    const db = mongoose.connection.db;
-    await db.collection('purchaseorders').updateOne(
-      { _id: new mongoose.Types.ObjectId(id) },
-      { $set: { ...body, updatedAt: new Date() } }
-    );
-    
-    return NextResponse.json({ message: "Purchase order updated successfully" }, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
-export async function DELETE(req, { params }) {
+export const DELETE = requireRole(["super-admin", "admin"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { id } = await params;
     
-    const db = mongoose.connection.db;
-    await db.collection('purchaseorders').deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+    // Get the order to delete the file
+    const order = await PurchaseOrder.findById(id);
+    if (order && order.fileUrl) {
+      const filePath = path.join(process.cwd(), 'public', order.fileUrl);
+      try {
+        await unlink(filePath);
+      } catch (fileErr) {
+        console.log('File deletion error:', fileErr.message);
+      }
+    }
     
+    await PurchaseOrder.findByIdAndDelete(id);
     return NextResponse.json({ message: "Purchase order deleted successfully" }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});

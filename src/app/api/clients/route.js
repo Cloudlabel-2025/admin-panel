@@ -1,8 +1,9 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Client from "@/models/Client";
 import { NextResponse } from "next/server";
+import { requireRole } from "../../utilis/authMiddleware";
 
-export async function GET() {
+export const GET = requireRole(["super-admin", "admin"])(async function() {
   try {
     await connectMongoose();
     const clients = await Client.find().sort({ createdAt: -1 });
@@ -11,9 +12,9 @@ export async function GET() {
     console.error("Error fetching clients:", err);
     return NextResponse.json({ error: "Failed to fetch clients" }, { status: 500 });
   }
-}
+});
 
-export async function POST(req) {
+export const POST = requireRole(["super-admin", "admin"])(async function(req) {
   try {
     await connectMongoose();
     const body = await req.json();
@@ -23,4 +24,4 @@ export async function POST(req) {
     console.error("Error creating client:", err);
     return NextResponse.json({ error: "Failed to create client" }, { status: 500 });
   }
-}
+});
