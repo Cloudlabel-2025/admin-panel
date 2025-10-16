@@ -15,7 +15,7 @@ export default function AdminAbsencePage() {
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (role !== "super-admin" && role !== "Super-admin" && role !== "admin" && role !== "developer") {
+    if (role !== "super-admin" && role !== "Super-admin" && role !== "admin" && role !== "developer" && role !== "Team-Lead" && role !== "Team-admin") {
       window.location.href = "/";
       return;
     }

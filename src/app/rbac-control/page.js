@@ -4,9 +4,11 @@ import Layout from "../components/Layout";
 
 export default function RBACControlPage() {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const modules = {
     "Management": {
@@ -48,10 +50,24 @@ export default function RBACControlPage() {
         role: user.role
       }));
       setUsers(formattedUsers);
+      setFilteredUsers(formattedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    if (term.trim() === "") {
+      setFilteredUsers(users);
+    } else {
+      const filtered = users.filter(user => 
+        user.name.toLowerCase().includes(term.toLowerCase()) ||
+        user.email.toLowerCase().includes(term.toLowerCase())
+      );
+      setFilteredUsers(filtered);
     }
   };
 
@@ -167,8 +183,22 @@ export default function RBACControlPage() {
               <div className="card-header bg-primary text-white">
                 <h5 className="mb-0">Users</h5>
               </div>
+              <div className="card-body p-3">
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <i className="fas fa-search"></i>
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by name or email..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
+              </div>
               <div className="card-body p-0">
-                {users.map(user => (
+                {filteredUsers.map(user => (
                   <div 
                     key={user.id}
                     className={`p-3 border-bottom cursor-pointer ${selectedUser?.id === user.id ? 'bg-light' : ''}`}
@@ -189,6 +219,12 @@ export default function RBACControlPage() {
                     </div>
                   </div>
                 ))}
+                {filteredUsers.length === 0 && searchTerm && (
+                  <div className="p-4 text-center text-muted">
+                    <i className="fas fa-search fa-2x mb-2"></i>
+                    <div>No users found matching "{searchTerm}"</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
