@@ -353,7 +353,7 @@ export default function PayrollPage() {
                   {selectedEmployee && (
                     <div className="alert alert-info mb-3">
                       <i className="bi bi-info-circle"></i> 
-                      <strong>Note:</strong> Generated payroll will be automatically sent to the employee's "My Payroll" section and they will receive a notification.
+                      <strong>Note:</strong> Generated payroll will be automatically sent to the employee&apos;s &quot;My Payroll&quot; section and they will receive a notification.
                     </div>
                   )}
                   
