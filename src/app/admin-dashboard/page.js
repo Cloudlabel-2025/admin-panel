@@ -59,54 +59,109 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      // Fetch employees data
       const employeesRes = await makeAuthenticatedRequest('/api/Employee').catch(() => ({ json: () => [] }));
       const employees = await employeesRes.json();
-      
-      // Calculate real metrics
       const totalEmployees = Array.isArray(employees) ? employees.length : 0;
-      const totalRevenue = 125000; // Mock revenue - API exists but intermittent 500 errors
-      const attendanceRate = 87; // Mock - can be connected to attendance API later  
-      const activeProjects = 8; // Mock - can be connected to projects API later
       
-      // TODO: Uncomment when /api/transactions is stable
-      // const transactionsRes = await fetch('/api/transactions').catch(() => ({ json: () => [] }));
-      // const transactions = await transactionsRes.json();
-      // const totalRevenue = Array.isArray(transactions) ? 
-      //   transactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0;
+      // Fetch transactions for revenue
+      let totalRevenue = 0;
+      try {
+        const transactionsRes = await fetch('/api/accounting/transactions');
+        if (transactionsRes.ok) {
+          const transactions = await transactionsRes.json();
+          totalRevenue = Array.isArray(transactions) ? 
+            transactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0;
+        }
+      } catch (error) {
+        console.log('Transactions API unavailable, using fallback');
+        totalRevenue = 125000; // Fallback
+      }
       
-      // Recent activities from actual data
+      // Fetch attendance data
+      let attendanceRate = 87; // Default fallback
+      try {
+        const attendanceRes = await fetch('/api/attendance');
+        if (attendanceRes.ok) {
+          const attendanceData = await attendanceRes.json();
+          if (Array.isArray(attendanceData) && attendanceData.length > 0) {
+            const presentCount = attendanceData.filter(a => a.status === 'Present').length;
+            attendanceRate = Math.round((presentCount / attendanceData.length) * 100);
+          }
+        }
+      } catch (error) {
+        console.log('Attendance API unavailable, using fallback');
+      }
+      
+      // Fetch projects data
+      let activeProjects = 8; // Default fallback
+      try {
+        const projectsRes = await fetch('/api/project');
+        if (projectsRes.ok) {
+          const projects = await projectsRes.json();
+          activeProjects = Array.isArray(projects) ? 
+            projects.filter(p => p.status === 'Active' || p.status === 'In Progress').length : 0;
+        }
+      } catch (error) {
+        console.log('Projects API unavailable, using fallback');
+      }
+      
+      // Recent activities from real data
       const recentActivities = [];
+      
       // Add recent employee activities
-      if (Array.isArray(employees)) {
+      if (Array.isArray(employees) && employees.length > 0) {
         employees.slice(-3).forEach((emp, index) => {
           recentActivities.push({
             id: `emp-${index}`,
-            action: `Employee "${emp.firstName} ${emp.lastName}" joined`,
+            action: `Employee "${emp.firstName} ${emp.lastName}" joined ${emp.department || 'the team'}`,
             time: new Date(emp.createdAt || Date.now()).toLocaleDateString(),
             type: 'success'
           });
         });
       }
       
-      // Add mock system activities
-      recentActivities.push(
-        {
-          id: 'sys-1',
-          action: 'System backup completed successfully',
-          time: new Date().toLocaleDateString(),
-          type: 'info'
-        },
-        {
-          id: 'sys-2', 
-          action: 'Monthly attendance report generated',
-          time: new Date(Date.now() - 86400000).toLocaleDateString(),
-          type: 'success'
+      // Add recent transaction activities
+      try {
+        const transactionsRes = await fetch('/api/accounting/transactions');
+        if (transactionsRes.ok) {
+          const transactions = await transactionsRes.json();
+          if (Array.isArray(transactions) && transactions.length > 0) {
+            transactions.slice(-2).forEach((txn, index) => {
+              recentActivities.push({
+                id: `txn-${index}`,
+                action: `${txn.type || 'Transaction'}: ₹${parseFloat(txn.amount || 0).toLocaleString()}`,
+                time: new Date(txn.date || txn.createdAt || Date.now()).toLocaleDateString(),
+                type: 'info'
+              });
+            });
+          }
         }
-      );
+      } catch (error) {
+        console.log('Unable to fetch recent transactions');
+      }
+      
+      // Add system activities if no real data
+      if (recentActivities.length === 0) {
+        recentActivities.push(
+          {
+            id: 'sys-1',
+            action: 'System backup completed successfully',
+            time: new Date().toLocaleDateString(),
+            type: 'info'
+          },
+          {
+            id: 'sys-2', 
+            action: 'Monthly attendance report generated',
+            time: new Date(Date.now() - 86400000).toLocaleDateString(),
+            type: 'success'
+          }
+        );
+      }
       
       setDashboardData({
         employees: totalEmployees,
-        totalRevenue,
+        totalRevenue: Math.round(totalRevenue),
         attendanceRate,
         activeProjects,
         recentActivities: recentActivities.slice(0, 5)
