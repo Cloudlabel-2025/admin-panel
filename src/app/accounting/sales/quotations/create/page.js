@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import SuccessMessage from "../../../components/SuccessMessage";
+import SuccessMessage from "../../../../components/SuccessMessage";
 
 export default function CreateQuotationPage() {
   const router = useRouter();
