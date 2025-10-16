@@ -2,11 +2,10 @@ import mongoose from "mongoose";
 
 const BudgetSchema = new mongoose.Schema(
   {
-    project: { type: String, required: true },
-    department: { type: String, required: true },
-    allocatedAmount: { type: Number, required: true },
+    category: { type: String, required: true },
+    allocatedAmout: { type: Number, required: true },
     spentAmount: { type: Number, required: true },
-    fiscalYear: { type: String },
+    period: { type: String, required: true },
   },
   {
     timestamps: true,

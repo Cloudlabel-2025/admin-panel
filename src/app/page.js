@@ -30,6 +30,7 @@ export default function HomePage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("employeeId", data.user.employeeId);
+      localStorage.setItem("userId", data.user._id || data.user.id);
       localStorage.setItem("userEmail", data.user.email);
       localStorage.setItem("userRole", data.user.role);
       

@@ -12,6 +12,7 @@ export default function Layout({ children }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userPermissions, setUserPermissions] = useState({});
   const router = useRouter();
   const pathname = usePathname();
 
@@ -19,9 +20,15 @@ export default function Layout({ children }) {
     const role = localStorage.getItem("userRole");
     const email = localStorage.getItem("userEmail");
     const empId = localStorage.getItem("employeeId");
+    const userId = localStorage.getItem("userId");
     
     setUserRole(role);
     setUserEmail(email);
+    
+    // Fetch user permissions for RBAC
+    if (userId) {
+      fetchUserPermissions(userId);
+    }
     
     // Fetch user name
     if (empId && (role === "Employee" || role === "Intern" || role === "Team-Lead" || role === "Team-admin")) {
@@ -54,6 +61,25 @@ export default function Layout({ children }) {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showProfileDropdown, showNotifications]);
+
+  const fetchUserPermissions = async (userId) => {
+    try {
+      const response = await fetch(`/api/rbac?userId=${userId}`);
+      const permissions = await response.json();
+      setUserPermissions(permissions);
+    } catch (error) {
+      console.error('Error fetching user permissions:', error);
+    }
+  };
+
+  const hasPermission = (module, subModule, action) => {
+    // Check if user has RBAC permissions set
+    if (Object.keys(userPermissions).length > 0) {
+      return userPermissions[module]?.[subModule]?.[action] || false;
+    }
+    // Fallback to role-based access if no RBAC permissions
+    return true;
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -217,11 +243,13 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="superAdminManagementCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-dashboard")}>
-                        <span className="me-2">🏠</span>
-                        {!sidebarCollapsed && <span>Dashboard</span>}
-                      </button>
+                      {hasPermission('Management', 'Dashboard', 'view') && (
+                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                                onClick={() => navigate("/admin-dashboard")}>
+                          <span className="me-2">🏠</span>
+                          {!sidebarCollapsed && <span>Dashboard</span>}
+                        </button>
+                      )}
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employees/create-emp")}>
                         <span className="me-2">👤</span>
@@ -257,11 +285,6 @@ export default function Layout({ children }) {
                         <span className="me-2">📈</span>
                         {!sidebarCollapsed && <span>Performance</span>}
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/fund-transfer")}>
-                        <span className="me-2">💰</span>
-                        {!sidebarCollapsed && <span>Fund Transfer</span>}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -276,11 +299,6 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="superAdminAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/accounts")}>
-                        <span className="me-2">🏦</span>
-                        {!sidebarCollapsed && <span>Accounts</span>}
-                      </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/transactions")}>
                         <span className="me-2">💳</span>
@@ -302,15 +320,22 @@ export default function Layout({ children }) {
                         {!sidebarCollapsed && <span>Inventory</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/invoices")}>
-                        <span className="me-2">🧾</span>
-                        {!sidebarCollapsed && <span>Invoice Management</span>}
-                      </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/payroll")}>
                         <span className="me-2">💸</span>
                         {!sidebarCollapsed && <span>Payroll</span>}
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/fund-transfer")}>
+                        <span className="me-2">💰</span>
+                        {!sidebarCollapsed && <span>Fund Transfer</span>}
+                      </button>
+                      {userRole === "developer" && (
+                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                                onClick={() => navigate("/rbac-control")}>
+                          <span className="me-2">🔐</span>
+                          {!sidebarCollapsed && <span>RBAC Control</span>}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -326,24 +351,9 @@ export default function Layout({ children }) {
                   <div id="superAdminSalesCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/sales/customers")}>
-                        <span className="me-2">👥</span>
-                        {!sidebarCollapsed && <span>Customers</span>}
-                      </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/sales/orders")}>
-                        <span className="me-2">📋</span>
-                        {!sidebarCollapsed && <span>Sales Orders</span>}
-                      </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/sales/invoices")}>
+                              onClick={() => navigate("/invoices")}>
                         <span className="me-2">🧾</span>
-                        {!sidebarCollapsed && <span>Sales Invoices</span>}
-                      </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/purchasing/vendors")}>
-                        <span className="me-2">🏢</span>
-                        {!sidebarCollapsed && <span>Vendors</span>}
+                        {!sidebarCollapsed && <span>Invoice Management</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/purchasing/purchase-orders")}>
@@ -799,7 +809,7 @@ export default function Layout({ children }) {
               </div>
             )}
 
-            {/* Employee - Standard Access */}
+            {/* Employee - RBAC Controlled Access */}
             {userRole === "Employee" && (
               <div className="accordion-item bg-dark border-0">
                 <h2 className="accordion-header">
@@ -810,6 +820,13 @@ export default function Layout({ children }) {
                 </h2>
                 <div id="employeeWorkCollapse" className="accordion-collapse collapse show">
                   <div className="accordion-body bg-dark p-0">
+                    {hasPermission('Management', 'Dashboard', 'view') && (
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin-dashboard")}>
+                        <span className="me-2">🏠</span>
+                        {!sidebarCollapsed && <span>Dashboard</span>}
+                      </button>
+                    )}
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/timecard-entry")}>
                       <span className="me-2">⏰</span>

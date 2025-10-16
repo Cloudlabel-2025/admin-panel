@@ -32,6 +32,7 @@ export async function POST(req) {
         token: accessToken,
         refreshToken,
         user: {
+          _id: "super-admin",
           employeeId: "ADMIN001",
           name: "Super Admin",
           email: process.env.SUPER_ADMIN_EMAIL,
@@ -104,6 +105,7 @@ export async function POST(req) {
       token: accessToken,
       refreshToken,
       user: {
+        _id: user._id,
         employeeId: user.employeeId,
         name: employeeData.name,
         email: user.email,
