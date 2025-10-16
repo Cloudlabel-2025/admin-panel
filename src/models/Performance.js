@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const PerformanceSchema = new mongoose.Schema(
   {
-    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
+    employeeName: { type: String },
     reviewPeriod: { type: String, required: true },
     reviewer: { type: String },
     goals: [{ type: String }],

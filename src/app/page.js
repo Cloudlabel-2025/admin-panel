@@ -32,13 +32,21 @@ export default function HomePage() {
       localStorage.setItem("employeeId", data.user.employeeId);
       localStorage.setItem("userEmail", data.user.email);
       localStorage.setItem("userRole", data.user.role);
+      
+      console.log('Login successful - Role set to:', data.user.role);
+      console.log('All user data:', data.user);
 
       setShowSuccess(true);
       
       // Route based on role from server after animation
       setTimeout(() => {
-        if (data.user.role === "super-admin") {
+        const userRole = data.user.role;
+        if (userRole === "super-admin" || userRole === "Super-admin") {
           router.push("/admin-dashboard");
+        } else if (userRole === "admin") {
+          router.push("/admin-dashboard");
+        } else if (userRole === "Team-Lead" || userRole === "Team-admin") {
+          router.push("/admin/monitor");
         } else {
           router.push("/timecard-entry");
         }

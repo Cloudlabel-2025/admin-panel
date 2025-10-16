@@ -187,6 +187,7 @@ export default function Layout({ children }) {
                   <h5 className="mb-1 text-primary">
                     {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Admin Panel" : 
                      (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
+                     userRole === "Intern" ? "Intern Portal" :
                      "Employee Panel"}
                   </h5>
                   <small className="text-white-50">Role: {userRole}</small>
@@ -407,6 +408,11 @@ export default function Layout({ children }) {
                         <span className="me-2">📋</span>
                         {!sidebarCollapsed && <span>Absence</span>}
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/my-performance")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>My Performance</span>}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -488,6 +494,11 @@ export default function Layout({ children }) {
                         <span className="me-2">🏖️</span>
                         {!sidebarCollapsed && <span>Team Absence</span>}
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/skills")}>
+                        <span className="me-2">🎯</span>
+                        {!sidebarCollapsed && <span>Team Skills</span>}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -515,6 +526,11 @@ export default function Layout({ children }) {
                               onClick={() => navigate("/my-projects")}>
                         <span className="me-2">📂</span>
                         {!sidebarCollapsed && <span>My Projects</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/my-performance")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>My Performance</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employee-attendance")}>
@@ -569,6 +585,11 @@ export default function Layout({ children }) {
                         <span className="me-2">📄</span>
                         {!sidebarCollapsed && <span>Documents</span>}
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/skills")}>
+                        <span className="me-2">🎯</span>
+                        {!sidebarCollapsed && <span>Team Skills</span>}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -598,6 +619,11 @@ export default function Layout({ children }) {
                         {!sidebarCollapsed && <span>My Projects</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/my-performance")}>
+                        <span className="me-2">📊</span>
+                        {!sidebarCollapsed && <span>My Performance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employee-attendance")}>
                         <span className="me-2">📅</span>
                         {!sidebarCollapsed && <span>My Attendance</span>}
@@ -606,6 +632,52 @@ export default function Layout({ children }) {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Intern - Limited Access */}
+            {userRole === "Intern" && (
+              <div className="accordion-item bg-dark border-0">
+                <h2 className="accordion-header">
+                  <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#internWorkCollapse">
+                    <span className="me-2">🎓</span>
+                    {!sidebarCollapsed && "My Work"}
+                  </button>
+                </h2>
+                <div id="internWorkCollapse" className="accordion-collapse collapse show">
+                  <div className="accordion-body bg-dark p-0">
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/timecard-entry")}>
+                      <span className="me-2">⏰</span>
+                      {!sidebarCollapsed && <span>Timecard Entry</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/daily-task")}>
+                      <span className="me-2">📝</span>
+                      {!sidebarCollapsed && <span>Daily Task</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/my-projects")}>
+                      <span className="me-2">📂</span>
+                      {!sidebarCollapsed && <span>My Projects</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/my-performance")}>
+                      <span className="me-2">📊</span>
+                      {!sidebarCollapsed && <span>My Performance</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/employee-attendance")}>
+                      <span className="me-2">📅</span>
+                      {!sidebarCollapsed && <span>My Attendance</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/my-skills")}>
+                      <span className="me-2">🎯</span>
+                      {!sidebarCollapsed && <span>My Skills</span>}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Employee - Standard Access */}
@@ -653,6 +725,11 @@ export default function Layout({ children }) {
                             onClick={() => navigate("/accounting/payroll")}>
                       <span className="me-2">💸</span>
                       {!sidebarCollapsed && <span>My Payroll</span>}
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                            onClick={() => navigate("/my-skills")}>
+                      <span className="me-2">🎯</span>
+                      {!sidebarCollapsed && <span>My Skills</span>}
                     </button>
                   </div>
                 </div>

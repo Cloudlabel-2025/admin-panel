@@ -1,10 +1,12 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Performance from "@/models/Performance";
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
     try{
-     const body = req.json();
+     await connectMongoose();
+     const body = await req.json();
      const performance = await Performance.create(body);
      return NextResponse.json(performance,{status:201});
     }
@@ -17,38 +19,36 @@ export async function GET(req) {
     try{
      await connectMongoose();
      const { searchParams } = new URL(req.url);
-     const userRole = searchParams.get("userRole");
-     const userDepartment = searchParams.get("userDepartment");
+     const employeeParam = searchParams.get("employee");
+     const employeeId = searchParams.get("employeeId");
      
      let query = {};
      
-     // Filter by department for team roles
-     if ((userRole === "Team-Lead" || userRole === "Team-admin") && userDepartment) {
-       // Get employees from the same department
-       const mongoose = require('mongoose');
-       const departmentModels = Object.keys(mongoose.models).filter(name =>
-         name.endsWith("_department")
-       );
-       
-       let departmentEmployeeIds = [];
-       for (const modelName of departmentModels) {
-         if (modelName === `${userDepartment}_department`) {
-           const Model = mongoose.models[modelName];
-           const employees = await Model.find({ role: { $ne: "Team-Lead" } });
-           departmentEmployeeIds = employees.map(emp => emp.employeeId);
-           break;
-         }
-       }
-       
-       if (departmentEmployeeIds.length > 0) {
-         query.employeeId = { $in: departmentEmployeeIds };
-       }
+     // Filter for specific employee (My Performance page)
+     if (employeeParam === "true" && employeeId) {
+       query.employeeId = employeeId;
      }
      
-     const performance = await Performance.find(query)
-     .populate("employeeId name")
-     .sort({createdAt:-1});
-    return NextResponse.json(performance,{status:200});
+     const performance = await Performance.find(query).sort({createdAt:-1});
+     
+     // Fetch employee names from department collections
+     const collections = Object.keys(mongoose.connection.collections);
+     const departmentCollections = collections.filter(name => name.endsWith('_department'));
+     
+     const performanceWithNames = performance.map(perf => perf.toObject());
+     
+     return NextResponse.json(performanceWithNames,{status:200});
+    }
+    catch(err){
+    return NextResponse.json({error:err.message},{status:500});
+    }
+}
+
+export async function DELETE(req) {
+    try{
+     await connectMongoose();
+     await Performance.deleteMany({});
+     return NextResponse.json({message:"All performance records deleted"},{status:200});
     }
     catch(err){
     return NextResponse.json({error:err.message},{status:500});

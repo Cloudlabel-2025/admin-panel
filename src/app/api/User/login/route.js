@@ -51,30 +51,49 @@ export async function POST(req) {
       return NextResponse.json({ error: "Incorrect password" }, { status: 400 });
     }
 
-    // Get actual role from employee database
-    let employeeRole = "Employee";
+    // Get employee details from department collections
+    let employeeData = {
+      role: "Employee",
+      name: user.name,
+      department: null
+    };
+    
     try {
       const mongoose = await import('mongoose');
-      const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
-        name.endsWith('_department')
-      );
+      const db = mongoose.default.connection.db;
+      const collections = await db.listCollections().toArray();
+      const departmentCollections = collections
+        .map(col => col.name)
+        .filter(name => name.endsWith('_department'));
       
-      for (const collName of collections) {
-        const collection = mongoose.default.connection.collections[collName];
-        const employee = await collection.findOne({ employeeId: user.employeeId });
-        if (employee && employee.role) {
-          employeeRole = employee.role;
-          break;
+      console.log(`Searching for employee ${user.employeeId} in collections:`, departmentCollections);
+      
+      for (const collName of departmentCollections) {
+        try {
+          const employee = await db.collection(collName).findOne({ employeeId: user.employeeId });
+          if (employee) {
+            console.log(`Found employee in ${collName}:`, { employeeId: employee.employeeId, role: employee.role, department: employee.department });
+            employeeData = {
+              role: employee.role || "Employee",
+              name: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || user.name,
+              department: employee.department || collName.replace('_department', '')
+            };
+            break;
+          }
+        } catch (collErr) {
+          console.error(`Error searching in ${collName}:`, collErr.message);
+          continue;
         }
       }
+      console.log(`Final employee data for ${user.employeeId}:`, employeeData);
     } catch (err) {
-      console.error('Error fetching employee role:', err);
+      console.error('Error fetching employee details:', err);
     }
 
     const payload = {
       userId: user._id,
       email: user.email,
-      role: employeeRole,
+      role: employeeData.role,
       employeeId: user.employeeId
     };
     
@@ -86,9 +105,10 @@ export async function POST(req) {
       refreshToken,
       user: {
         employeeId: user.employeeId,
-        name: user.name,
+        name: employeeData.name,
         email: user.email,
-        role: employeeRole
+        role: employeeData.role,
+        department: employeeData.department
       }
     });
   } catch (err) {
