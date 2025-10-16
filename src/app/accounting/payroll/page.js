@@ -38,36 +38,6 @@ export default function PayrollPage() {
     reason: ''
   });
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole") || "employee";
-    const empId = localStorage.getItem("employeeId") || "";
-    setUserRole(role);
-    setCurrentEmployeeId(empId);
-    
-    if (role === "super-admin" || role === "admin") {
-      fetchEmployees();
-      setActiveTab("generate");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userRole && (userRole === "super-admin" || userRole === "admin" || currentEmployeeId)) {
-      fetchPayrolls();
-    }
-  }, [userRole, currentEmployeeId, fetchPayrolls]);
-
-  const fetchEmployees = async () => {
-    try {
-      const res = await fetch("/api/Employee/search");
-      if (res.ok) {
-        const data = await res.json();
-        setEmployees(data.employees || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch employees:", err);
-    }
-  };
-
   const fetchPayrolls = useCallback(async () => {
     if (!userRole) return;
     
@@ -97,6 +67,36 @@ export default function PayrollPage() {
       setLoading(false);
     }
   }, [userRole, currentEmployeeId, filters]);
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch("/api/Employee/search");
+      if (res.ok) {
+        const data = await res.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch employees:", err);
+    }
+  };
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole") || "employee";
+    const empId = localStorage.getItem("employeeId") || "";
+    setUserRole(role);
+    setCurrentEmployeeId(empId);
+    
+    if (role === "super-admin" || role === "admin") {
+      fetchEmployees();
+      setActiveTab("generate");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userRole && (userRole === "super-admin" || userRole === "admin" || currentEmployeeId)) {
+      fetchPayrolls();
+    }
+  }, [userRole, currentEmployeeId, fetchPayrolls]);
 
   const generatePayroll = async () => {
     if (!selectedEmployee || !payPeriod) {
