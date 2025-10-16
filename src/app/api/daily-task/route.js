@@ -25,31 +25,54 @@ export async function GET(req) {
       
       // If department filter is provided, filter by department
       if (department) {
-        // Get all employees from that department first
-        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${department}`);
-        if (employeeRes.ok) {
-          const employeeData = await employeeRes.json();
-          const employeeIds = employeeData.employees.map(emp => emp.employeeId);
-          query.employeeId = { $in: employeeIds };
+        try {
+          const mongoose = await import('mongoose');
+          const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+            name.endsWith('_department')
+          );
+          
+          let employeeIds = [];
+          for (const collName of collections) {
+            const collection = mongoose.default.connection.collections[collName];
+            const employees = await collection.find({ department }).toArray();
+            employeeIds.push(...employees.map(emp => emp.employeeId));
+          }
+          
+          if (employeeIds.length > 0) {
+            query.employeeId = { $in: employeeIds };
+          }
+        } catch (err) {
+          console.error('Error filtering by department:', err);
         }
       }
       
       const tasks = await DailyTask.find(query).sort({ employeeId: 1, date: -1 }).lean();
       
-      // Add employee names to tasks if missing
+      // Add employee names to tasks if missing using direct database query
       const tasksWithNames = await Promise.all(
         tasks.map(async (task) => {
           if (!task.employeeName && task.employeeId) {
             try {
-              const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/${task.employeeId}`);
-              if (employeeRes.ok) {
-                const employeeData = await employeeRes.json();
-                return {
-                  ...task,
-                  employeeName: `${employeeData.firstName || ''} ${employeeData.lastName || ''}`.trim() || 'Unknown',
-                  designation: employeeData.designation || task.designation || 'N/A'
-                };
+              const mongoose = await import('mongoose');
+              const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+                name.endsWith('_department')
+              );
+              
+              let employee = null;
+              for (const collName of collections) {
+                const collection = mongoose.default.connection.collections[collName];
+                const emp = await collection.findOne({ employeeId: task.employeeId });
+                if (emp) {
+                  employee = emp;
+                  break;
+                }
               }
+              
+              return {
+                ...task,
+                employeeName: employee ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
+                designation: employee ? employee.designation || task.designation || 'N/A' : task.designation || 'N/A'
+              };
             } catch (err) {
               console.error(`Error fetching employee ${task.employeeId}:`, err);
             }

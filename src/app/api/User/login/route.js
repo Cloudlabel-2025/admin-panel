@@ -51,10 +51,30 @@ export async function POST(req) {
       return NextResponse.json({ error: "Incorrect password" }, { status: 400 });
     }
 
+    // Get actual role from employee database
+    let employeeRole = "Employee";
+    try {
+      const mongoose = await import('mongoose');
+      const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+        name.endsWith('_department')
+      );
+      
+      for (const collName of collections) {
+        const collection = mongoose.default.connection.collections[collName];
+        const employee = await collection.findOne({ employeeId: user.employeeId });
+        if (employee && employee.role) {
+          employeeRole = employee.role;
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching employee role:', err);
+    }
+
     const payload = {
       userId: user._id,
       email: user.email,
-      role: "employee",
+      role: employeeRole,
       employeeId: user.employeeId
     };
     
@@ -68,7 +88,7 @@ export async function POST(req) {
         employeeId: user.employeeId,
         name: user.name,
         email: user.email,
-        role: "employee"
+        role: employeeRole
       }
     });
   } catch (err) {

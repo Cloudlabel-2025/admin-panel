@@ -16,6 +16,10 @@ export async function POST(req) {
     const title = formData.get("title");
     const description = formData.get("description");
     const documentNumber = formData.get("documentNumber");
+    const employeeId = formData.get("employeeId");
+    const employeeName = formData.get("employeeName");
+    
+
 
     if (!file || !title || !documentNumber) {
       return NextResponse.json(
@@ -59,13 +63,16 @@ export async function POST(req) {
     fs.writeFileSync(filePath, buffer);
 
     // ✅ Save to DB
-    const doc = await Document.create({
+    const docData = {
       title,
       description,
       documentNumber,
+      employeeId,
+      employeeName,
       fileUrl: `/documents/${uniqueName}`,
       fileType: file.type,
-    });
+    };
+    const doc = await Document.create(docData);
 
     return NextResponse.json(
       { message: "Document uploaded successfully", document: doc },

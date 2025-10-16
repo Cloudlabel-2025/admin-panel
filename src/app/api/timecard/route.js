@@ -18,7 +18,7 @@ export const POST = requireAuth(async function(req,res){
     }
 });
 
-export const GET = requireAuth(async function(req,res) {
+export async function GET(req) {
     try{
     await connectMongoose();
     const { searchParams } = new URL(req.url);
@@ -43,10 +43,20 @@ export const GET = requireAuth(async function(req,res) {
     // Filter by department for team roles
     if (isAdmin && department) {
       try {
-        const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${department}`);
-        if (employeeRes.ok) {
-          const employeeData = await employeeRes.json();
-          const employeeIds = employeeData.employees.map(emp => emp.employeeId);
+        // Direct database query instead of API call to avoid auth issues
+        const mongoose = await import('mongoose');
+        const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+          name.endsWith('_department')
+        );
+        
+        let employeeIds = [];
+        for (const collName of collections) {
+          const collection = mongoose.default.connection.collections[collName];
+          const employees = await collection.find({ department }).toArray();
+          employeeIds.push(...employees.map(emp => emp.employeeId));
+        }
+        
+        if (employeeIds.length > 0) {
           query.employeeId = { $in: employeeIds };
         }
       } catch (err) {
@@ -56,25 +66,36 @@ export const GET = requireAuth(async function(req,res) {
     
     const timecards = await Timecard.find(query).sort({date:-1});
     
-    // Add employee names to timecards
+    // Add employee names to timecards using direct database query
     const timecardsWithNames = await Promise.all(
       timecards.map(async (timecard) => {
         try {
-          const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/${timecard.employeeId}`);
-          if (employeeRes.ok) {
-            const employeeData = await employeeRes.json();
-            return {
-              ...timecard.toObject(),
-              employeeName: `${employeeData.firstName || ''} ${employeeData.lastName || ''}`.trim() || 'Unknown'
-            };
+          const mongoose = await import('mongoose');
+          const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+            name.endsWith('_department')
+          );
+          
+          let employee = null;
+          for (const collName of collections) {
+            const collection = mongoose.default.connection.collections[collName];
+            const emp = await collection.findOne({ employeeId: timecard.employeeId });
+            if (emp) {
+              employee = emp;
+              break;
+            }
           }
+          
+          return {
+            ...timecard.toObject(),
+            employeeName: employee ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown' : 'Unknown'
+          };
         } catch (err) {
           console.error(`Error fetching employee ${timecard.employeeId}:`, err);
+          return {
+            ...timecard.toObject(),
+            employeeName: 'Unknown'
+          };
         }
-        return {
-          ...timecard.toObject(),
-          employeeName: 'Unknown'
-        };
       })
     );
     
@@ -83,7 +104,7 @@ export const GET = requireAuth(async function(req,res) {
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
     }
-});
+}
 
 export const PUT = requireAuth(async function(req){
   try {

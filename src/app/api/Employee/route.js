@@ -28,7 +28,7 @@ async function getNextEmployeeId() {
   return "CHC" + nextId.toString().padStart(4, "0");
 }
 
-export const GET = requireRole(["super-admin"])(async function() {
+export async function GET() {
   try {
     await connectMongoose();
 
@@ -51,7 +51,7 @@ export const GET = requireRole(["super-admin"])(async function() {
     console.error("Error fetching employees:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-});
+}
 
 export const POST = requireRole(["super-admin"])(async function(req) {
   try {
