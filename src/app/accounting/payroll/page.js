@@ -30,6 +30,13 @@ export default function PayrollPage() {
   const [previewData, setPreviewData] = useState(null);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showHikeModal, setShowHikeModal] = useState(false);
+  const [hikeData, setHikeData] = useState({
+    employeeId: '',
+    newSalary: '',
+    effectiveDate: '',
+    reason: ''
+  });
 
   useEffect(() => {
     const role = localStorage.getItem("userRole") || "employee";
@@ -157,6 +164,40 @@ export default function PayrollPage() {
     }
   };
 
+  const processSalaryHike = async () => {
+    if (!hikeData.employeeId || !hikeData.newSalary || !hikeData.effectiveDate) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch('/api/payroll', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'salary-hike',
+          ...hikeData,
+          processedBy: localStorage.getItem('userEmail')
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Salary hike processed successfully for ${data.employeeName}!`);
+        setShowHikeModal(false);
+        setHikeData({ employeeId: '', newSalary: '', effectiveDate: '', reason: '' });
+      } else {
+        alert(data.error || 'Failed to process salary hike');
+      }
+    } catch (err) {
+      console.error('Salary hike error:', err);
+      alert('Failed to process salary hike');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const exportPayrolls = () => {
     const wsData = payrolls.map(p => ({
       Employee: p.employeeName,
@@ -190,9 +231,16 @@ export default function PayrollPage() {
       <div className="container-fluid p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>💰 Payroll Management</h2>
-          <button className="btn btn-success" onClick={exportPayrolls}>
-            📊 Export Report
-          </button>
+          <div className="d-flex gap-2">
+            {(userRole === "super-admin" || userRole === "admin") && (
+              <button className="btn btn-warning" onClick={() => setShowHikeModal(true)}>
+                📈 Salary Hike
+              </button>
+            )}
+            <button className="btn btn-success" onClick={exportPayrolls}>
+              📊 Export Report
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -775,6 +823,84 @@ export default function PayrollPage() {
                     onClick={() => setShowModal(false)}
                   >
                     Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Salary Hike Modal */}
+        {showHikeModal && (
+          <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">📈 Process Salary Hike</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowHikeModal(false)}></button>
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">Employee</label>
+                    <select 
+                      className="form-select"
+                      value={hikeData.employeeId}
+                      onChange={(e) => setHikeData({...hikeData, employeeId: e.target.value})}
+                    >
+                      <option value="">Select Employee...</option>
+                      {employees.map(emp => (
+                        <option key={emp.employeeId} value={emp.employeeId}>
+                          {emp.firstName} {emp.lastName} ({emp.employeeId})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">New Gross Salary (₹)</label>
+                    <input 
+                      type="number"
+                      className="form-control"
+                      value={hikeData.newSalary}
+                      onChange={(e) => setHikeData({...hikeData, newSalary: e.target.value})}
+                      placeholder="Enter new salary amount"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Effective Date</label>
+                    <input 
+                      type="date"
+                      className="form-control"
+                      value={hikeData.effectiveDate}
+                      onChange={(e) => setHikeData({...hikeData, effectiveDate: e.target.value})}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Reason</label>
+                    <select 
+                      className="form-select"
+                      value={hikeData.reason}
+                      onChange={(e) => setHikeData({...hikeData, reason: e.target.value})}
+                    >
+                      <option value="">Select reason...</option>
+                      <option value="Promotion">Promotion</option>
+                      <option value="Annual Increment">Annual Increment</option>
+                      <option value="Performance Bonus">Performance Bonus</option>
+                      <option value="Market Adjustment">Market Adjustment</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowHikeModal(false)}>
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-warning"
+                    onClick={processSalaryHike}
+                    disabled={loading}
+                  >
+                    {loading ? '⏳ Processing...' : '📈 Process Hike'}
                   </button>
                 </div>
               </div>

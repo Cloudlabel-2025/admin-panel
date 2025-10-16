@@ -398,7 +398,7 @@ export default function Layout({ children }) {
                         {!sidebarCollapsed && <span>Performance</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/team-absence")}>
+                              onClick={() => navigate("/admin-absence")}>
                         <span className="me-2">🏖️</span>
                         {!sidebarCollapsed && <span>Team Absence</span>}
                       </button>
@@ -490,7 +490,7 @@ export default function Layout({ children }) {
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/absence")}>
                       <span className="me-2">🏖️</span>
-                      {!sidebarCollapsed && <span>Absence</span>}
+                      {!sidebarCollapsed && <span>My Absence</span>}
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-payroll")}>
