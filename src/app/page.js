@@ -119,7 +119,7 @@ export default function HomePage() {
         </div>
       )}
       <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{
-        backgroundImage: 'url("/login-bg.jpg")',
+        backgroundImage: 'url("/bg-6.png")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
@@ -136,17 +136,17 @@ export default function HomePage() {
             }}>
               <div className="card-body p-4">
                 <div className="text-center mb-4">
-                  <h2 className="text-white fw-bold mb-2">
+                  <h2 className="text-dark fw-bold mb-2">
                     {isLogin ? "Welcome Back" : "Join Our Team"}
                   </h2>
-                  <p className="text-white mb-0" style={{opacity: 0.8}}>
+                  <p className="text-dark mb-0" style={{opacity: 0.8}}>
                     {isLogin ? "Sign in to your account" : "Create your employee account"}
                   </p>
                 </div>
 
                 <form onSubmit={isLogin ? handleLogin : handleSignup}>
                   <div className="mb-3">
-                    <label className="form-label text-white">Email</label>
+                    <label className="form-label text-dark">Email</label>
                     <input
                       type="email"
                       className="form-control text-white"
@@ -166,10 +166,10 @@ export default function HomePage() {
                   </div>
                   
                   <div className="mb-4">
-                    <label className="form-label text-white">Password</label>
+                    <label className="form-label text-dark">Password</label>
                     <input
                       type="password"
-                      className="form-control text-white"
+                      className="form-control text-dark"
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -188,21 +188,21 @@ export default function HomePage() {
 
                   <button 
                     type="submit" 
-                    className="btn w-100 py-2 text-white fw-semibold" 
+                    className="btn w-100 py-2  fw-semibold" 
                     suppressHydrationWarning
                     style={{
                       backgroundColor: 'rgba(255,255,255,0.2)',
-                      border: '1px solid rgba(255,255,255,0.3)',
+                      border: '1px solid rgba(10, 8, 8, 0.3)',
                       borderRadius: '8px',
                       transition: 'all 0.3s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = 'rgba(255,255,255,0.3)';
-                      e.target.style.color = '#000';
+                      e.target.style.backgroundColor = '#535353';
+                      e.target.style.color = '#fff';
                     }}
                     onMouseLeave={(e) => {
                       e.target.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                      e.target.style.color = '#fff';
+                      e.target.style.color = '#000';
                     }}
                   >
                     {isLogin ? "Sign In" : "Create Account"}
@@ -211,7 +211,7 @@ export default function HomePage() {
 
                 <div className="text-center mt-3">
                   <button
-                    className="btn btn-link text-white p-0"
+                    className="btn btn-link text-dark p-0"
                     onClick={() => {
                       setIsLogin(!isLogin);
                       setEmail("");
