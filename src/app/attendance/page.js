@@ -421,7 +421,7 @@ export default function AttendancePage() {
                       <tr key={idx}>
                         <td>{new Date(a.date).toLocaleDateString()}</td>
                         <td>{a.employeeId}</td>
-                        <td>{a.employeeName || a.name || "Unknown"}</td>
+                        <td>{a.employeeName}</td>
                         <td>
                           <span className={`badge ${
                             a.status === 'Present' ? 'bg-success' : 

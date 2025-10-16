@@ -113,45 +113,98 @@ export async function GET(req) {
       query.employeeId = { $in: departmentEmployeeIds };
     }
     
-    // Generate attendance from timecard data
-    const timecards = await Timecard.find(query).sort({ date: -1 });
-    const attendanceData = [];
+    // First try to get from attendance records
+    let attendanceRecords = await Attendance.find(query).sort({ date: -1 });
     
-    for (const tc of timecards) {
-      const totalHours = timeToHours(tc.totalHours || "00:00");
-      const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-      const hasLogout = tc.logOut && tc.logOut.trim() !== "";
-      const status = calculateAttendance(totalHours, permissionHours, hasLogout);
-      const employeeData = await getEmployeeData(tc.employeeId);
+    // If no attendance records found, generate from timecard data
+    if (attendanceRecords.length === 0) {
+      const timecards = await Timecard.find(query).sort({ date: -1 });
       
-      // Store/update in attendance database
-      await Attendance.findOneAndUpdate(
-        { employeeId: tc.employeeId, date: tc.date },
-        {
-          employeeId: tc.employeeId,
-          date: tc.date,
-          status,
-          totalHours,
-          permissionHours,
-          loginTime: tc.logIn || "",
-          logoutTime: tc.logOut || ""
-        },
-        { upsert: true, new: true }
-      );
+      for (const tc of timecards) {
+        const totalHours = timeToHours(tc.totalHours || "00:00");
+        const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
+        const hasLogout = tc.logOut && tc.logOut.trim() !== "";
+        const status = calculateAttendance(totalHours, permissionHours, hasLogout);
+        const employeeData = await getEmployeeData(tc.employeeId);
+        
+        // Store in attendance database
+        await Attendance.findOneAndUpdate(
+          { employeeId: tc.employeeId, date: tc.date },
+          {
+            employeeId: tc.employeeId,
+            employeeName: employeeData.name,
+            department: employeeData.department,
+            date: tc.date,
+            status,
+            totalHours,
+            permissionHours,
+            loginTime: tc.logIn || "",
+            logoutTime: tc.logOut || "",
+            overtimeHours: Math.max(0, totalHours - 8),
+            remarks: tc.reason || ""
+          },
+          { upsert: true, new: true }
+        );
+      }
+      
+      // Fetch the newly created records
+      attendanceRecords = await Attendance.find(query).sort({ date: -1 });
+    }
+    
+    // Clean up Unknown employee names in database
+    const unknownRecords = await Attendance.find({ 
+      $or: [
+        { employeeName: "Unknown" },
+        { employeeName: { $exists: false } },
+        { employeeName: "" }
+      ]
+    });
+    
+    for (const record of unknownRecords) {
+      const employeeData = await getEmployeeData(record.employeeId);
+      if (employeeData) {
+        await Attendance.findByIdAndUpdate(record._id, {
+          employeeName: employeeData.name,
+          department: employeeData.department
+        });
+      }
+    }
+    
+    // Fetch updated records
+    attendanceRecords = await Attendance.find(query).sort({ date: -1 });
+    
+    // Populate employee names for all records
+    const attendanceData = [];
+    for (const record of attendanceRecords) {
+      let employeeName = record.employeeName;
+      let department = record.department;
+      
+      // If still no name, fetch employee data
+      if (!employeeName || employeeName === "Unknown") {
+        const employeeData = await getEmployeeData(record.employeeId);
+        if (employeeData) {
+          employeeName = employeeData.name;
+          department = employeeData.department;
+          
+          await Attendance.findByIdAndUpdate(record._id, {
+            employeeName: employeeData.name,
+            department: employeeData.department
+          });
+        }
+      }
       
       attendanceData.push({
-        date: tc.date,
-        employeeId: tc.employeeId,
-        employeeName: employeeData.name,
-        employeeEmail: employeeData.email,
-        department: employeeData.department,
-        totalHours,
-        permissionHours,
-        overtimeHours: Math.max(0, totalHours - 8),
-        loginTime: tc.logIn || "",
-        logoutTime: tc.logOut || "",
-        status,
-        remarks: tc.reason || ""
+        date: record.date,
+        employeeId: record.employeeId,
+        employeeName: employeeName || record.employeeId,
+        department: department || "Unknown",
+        totalHours: record.totalHours || 0,
+        permissionHours: record.permissionHours || 0,
+        overtimeHours: record.overtimeHours || 0,
+        loginTime: record.loginTime || "",
+        logoutTime: record.logoutTime || "",
+        status: record.status,
+        remarks: record.remarks || ""
       });
     }
 

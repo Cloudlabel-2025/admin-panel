@@ -3,6 +3,52 @@ import Payroll from "../../../models/Payroll";
 import connectMongoose from "@/app/utilis/connectMongoose";
 import mongoose from "mongoose";
 
+const SalaryHikeSchema = new mongoose.Schema({
+  employeeId: { type: String, required: true },
+  employeeName: { type: String, required: true },
+  department: { type: String, required: true },
+  previousSalary: { type: Number, required: true },
+  newSalary: { type: Number, required: true },
+  effectiveDate: { type: Date, required: true },
+  reason: { type: String, required: true },
+  processedBy: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const SalaryHike = mongoose.models.SalaryHike || mongoose.model('SalaryHike', SalaryHikeSchema);
+
+// Helper to get current salary for employee
+async function getCurrentSalary(employeeId, payPeriod) {
+  try {
+    const [year, month] = payPeriod.split('-');
+    const payPeriodDate = new Date(year, month - 1, 1);
+    
+    const latestHike = await SalaryHike.findOne({
+      employeeId,
+      effectiveDate: { $lte: payPeriodDate }
+    }).sort({ effectiveDate: -1 });
+    
+    if (latestHike) {
+      return latestHike.newSalary;
+    }
+    
+    const departmentModels = Object.keys(mongoose.models).filter(name =>
+      name.endsWith("_department")
+    );
+    
+    for (const modelName of departmentModels) {
+      const Model = mongoose.models[modelName];
+      const employee = await Model.findOne({ employeeId });
+      if (employee) {
+        return employee.payroll?.salary || 0;
+      }
+    }
+  } catch (error) {
+    console.error('Error getting current salary:', error);
+  }
+  return 0;
+}
+
 // Helper to get employee data
 async function getEmployeeData(employeeId) {
   try {
@@ -176,8 +222,9 @@ export async function POST(req) {
     
     const attendance = await getAttendanceData(employeeId, payPeriod);
     
-    // Calculate salary components
-    const grossSalary = customData?.grossSalary || employee.grossSalary;
+    // Get current salary (considering hikes)
+    const currentSalary = await getCurrentSalary(employeeId, payPeriod);
+    const grossSalary = customData?.grossSalary || currentSalary || employee.grossSalary;
     const basicSalary = Math.round(grossSalary * 0.5);
     const hra = Math.round(grossSalary * 0.2);
     const da = Math.round(grossSalary * 0.15);
@@ -276,13 +323,70 @@ export async function POST(req) {
   }
 }
 
-// PUT: Update payroll
+// PUT: Update payroll or process salary hike
 export async function PUT(req) {
   try {
     await connectMongoose();
     const body = await req.json();
-    const { _id, ...updates } = body;
     
+    // Handle salary hike
+    if (body.action === 'salary-hike') {
+      const { employeeId, newSalary, effectiveDate, reason, processedBy } = body;
+      
+      if (!employeeId || !newSalary || !effectiveDate || !reason) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+      
+      // Get employee data and update salary
+      const departmentModels = Object.keys(mongoose.models).filter(name =>
+        name.endsWith("_department")
+      );
+      
+      let employeeData = null;
+      for (const modelName of departmentModels) {
+        const Model = mongoose.models[modelName];
+        const employee = await Model.findOne({ employeeId });
+        if (employee) {
+          const previousSalary = employee.payroll?.salary || 0;
+          await Model.findOneAndUpdate(
+            { employeeId },
+            { 'payroll.salary': Number(newSalary) },
+            { new: true }
+          );
+          employeeData = {
+            name: `${employee.firstName} ${employee.lastName}`,
+            department: modelName.replace("_department", ""),
+            previousSalary
+          };
+          break;
+        }
+      }
+      
+      if (!employeeData) {
+        return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+      }
+      
+      // Create salary hike record
+      const salaryHike = await SalaryHike.create({
+        employeeId,
+        employeeName: employeeData.name,
+        department: employeeData.department,
+        previousSalary: employeeData.previousSalary,
+        newSalary: Number(newSalary),
+        effectiveDate: new Date(effectiveDate),
+        reason,
+        processedBy
+      });
+      
+      return NextResponse.json({ 
+        success: true, 
+        salaryHike,
+        employeeName: employeeData.name
+      });
+    }
+    
+    // Handle regular payroll update
+    const { _id, ...updates } = body;
     updates.updatedAt = new Date();
     
     const payroll = await Payroll.findByIdAndUpdate(_id, updates, { new: true });
