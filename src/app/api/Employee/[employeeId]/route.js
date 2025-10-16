@@ -26,8 +26,8 @@ async function findEmployeeInDepartments(employeeId) {
   return null;
 }
 
-// ✅ GET: Single employee
-export const GET = requireAuth(async function(req, { params }) {
+// ✅ GET: Single employee (public for profile access)
+export async function GET(req, { params }) {
   try {
     await connectMongoose();
     const { employeeId } = await params;
@@ -42,7 +42,7 @@ export const GET = requireAuth(async function(req, { params }) {
     console.error("Error fetching employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-});
+}
 
 // ✅ PATCH: Update employee (handles department transfer)
 export const PATCH = requireRole(["super-admin"])(async function(req, { params }) {

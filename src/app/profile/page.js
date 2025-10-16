@@ -52,7 +52,7 @@ export default function ProfilePage() {
             lastName: "(Contact Admin)",
             email: userEmail,
             department: "Not Assigned",
-            role: "Employee",
+            role: userRole || "Employee",
             profileIncomplete: true
           });
           return null;
@@ -159,9 +159,14 @@ export default function ProfilePage() {
     <Layout>
       <div className="d-flex justify-content-between align-items-center">
         <h2>{localStorage.getItem("userRole") === "super-admin" ? "Admin Profile" : "Employee Profile"}</h2>
-        <button className="btn btn-info" onClick={refreshProfile}>
-          Refresh
-        </button>
+        <div className="d-flex gap-2">
+          <button className="btn btn-primary" onClick={() => window.print()}>
+            📄 View
+          </button>
+          <button className="btn btn-info" onClick={refreshProfile}>
+            🔄 Refresh
+          </button>
+        </div>
       </div>
       {user.profileIncomplete && (
         <div className="alert alert-warning mt-4">
@@ -191,7 +196,7 @@ export default function ProfilePage() {
           <div className="col-md-6">
             <h5>Work Information</h5>
             <p><strong>Department:</strong> {user.department || 'N/A'}</p>
-            <p><strong>Role/Position:</strong> {user.role || 'N/A'}</p>
+            <p><strong>Role/Position:</strong> {user.role || localStorage.getItem('userRole') || 'N/A'}</p>
             <p><strong>Joining Date:</strong> {user.joiningDate ? new Date(user.joiningDate).toLocaleDateString() : 'N/A'}</p>
             <p><strong>Account Created:</strong> {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</p>
             <p><strong>Last Updated:</strong> {user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'N/A'}</p>

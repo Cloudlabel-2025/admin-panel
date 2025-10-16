@@ -218,7 +218,14 @@ export default function SkillList() {
                           )}
                         </td>
                         <td>
-                          <div className="btn-group" role="group">
+                          <div className="d-flex gap-1">
+                            <Link
+                              href={`/skills/${s._id}`}
+                              className="btn btn-sm btn-outline-info"
+                              title="View Skill"
+                            >
+                              👁️ View
+                            </Link>
                             <Link
                               href={`/skills/${s._id}/edit`}
                               className="btn btn-sm btn-outline-primary"
@@ -226,13 +233,6 @@ export default function SkillList() {
                             >
                               ✏️ Edit
                             </Link>
-                            <button
-                              onClick={() => handleDelete(s._id)}
-                              className="btn btn-sm btn-outline-danger"
-                              title="Delete Skill"
-                            >
-                              🗑️ Delete
-                            </button>
                           </div>
                         </td>
                       </tr>
