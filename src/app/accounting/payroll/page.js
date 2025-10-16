@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "../../components/Layout";
 import * as XLSX from "xlsx";
 
@@ -47,7 +47,7 @@ export default function PayrollPage() {
     if (userRole && (userRole === "super-admin" || userRole === "admin" || currentEmployeeId)) {
       fetchPayrolls();
     }
-  }, [userRole, currentEmployeeId]);
+  }, [userRole, currentEmployeeId, fetchPayrolls]);
 
   const fetchEmployees = async () => {
     try {
@@ -61,7 +61,7 @@ export default function PayrollPage() {
     }
   };
 
-  const fetchPayrolls = async () => {
+  const fetchPayrolls = useCallback(async () => {
     if (!userRole) return;
     
     try {
@@ -89,7 +89,7 @@ export default function PayrollPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userRole, currentEmployeeId, filters]);
 
   const generatePayroll = async () => {
     if (!selectedEmployee || !payPeriod) {
