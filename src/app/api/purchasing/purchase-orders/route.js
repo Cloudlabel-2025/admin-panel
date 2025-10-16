@@ -5,7 +5,7 @@ import { requireRole } from "../../../utilis/authMiddleware";
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
-export const POST = requireRole(["super-admin", "admin"])(async function(req) {
+export const POST = requireRole(["super-admin", "admin", "developer"])(async function(req) {
   try {
     await connectMongoose();
     const formData = await req.formData();
@@ -57,7 +57,7 @@ export const POST = requireRole(["super-admin", "admin"])(async function(req) {
   }
 });
 
-export const GET = requireRole(["super-admin", "admin"])(async function() {
+export const GET = requireRole(["super-admin", "admin", "developer"])(async function() {
   try {
     await connectMongoose();
     const orders = await PurchaseOrder.find().sort({ createdAt: -1 });

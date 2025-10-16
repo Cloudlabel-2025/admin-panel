@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function FundTransferPage() {
   const router = useRouter();
@@ -10,10 +11,12 @@ export default function FundTransferPage() {
     description: ""
   });
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "Super-admin") {
+    if (userRole !== "super-admin" && userRole !== "Super-admin" && userRole !== "admin" && userRole !== "developer") {
       router.push("/");
       return;
     }
@@ -32,14 +35,17 @@ export default function FundTransferPage() {
       });
 
       if (response.ok) {
-        alert("✅ Fund transfer notification sent to admin successfully!");
+        setSuccessMessage("✅ Fund transfer notification sent to admin successfully!");
+        setShowSuccess(true);
         setFormData({ amount: "", description: "" });
       } else {
-        alert("❌ Failed to send fund transfer notification");
+        setSuccessMessage("❌ Failed to send fund transfer notification");
+        setShowSuccess(true);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("❌ Error occurred while processing transfer");
+      setSuccessMessage("❌ Error occurred while processing transfer");
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -47,6 +53,12 @@ export default function FundTransferPage() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container">
         <h2>💰 Fund Transfer to Admin</h2>
         <p className="text-muted">Transfer funds to admin account and notify them</p>

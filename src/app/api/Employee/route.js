@@ -53,7 +53,7 @@ export async function GET() {
   }
 }
 
-export const POST = requireRole(["super-admin", "admin"])(async function(req) {
+export const POST = requireRole(["super-admin", "admin", "developer"])(async function(req) {
   try {
     await connectMongoose();
 

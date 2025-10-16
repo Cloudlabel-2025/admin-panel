@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function DailyTaskComponent() {
   const [dailyTasks, setDailyTasks] = useState([]);
@@ -14,6 +15,7 @@ export default function DailyTaskComponent() {
   });
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
   const router = useRouter();
 
   // Fetch Timecard and DailyTask
@@ -188,7 +190,8 @@ export default function DailyTaskComponent() {
       });
       
       if (response.ok) {
-        alert('Tasks updated successfully!');
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       } else {
         const errorData = await response.json();
         alert('Update failed: ' + (errorData.error || 'Unknown error'));
@@ -264,7 +267,8 @@ export default function DailyTaskComponent() {
       });
       
       if (res.ok) {
-        alert("Tasks saved! You can now only update their status.");
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
         setDailyTasks(tasksToSave);
       } else {
         const data = await res.json();
@@ -485,6 +489,11 @@ export default function DailyTaskComponent() {
         >
           Generate Report
         </button>
+        <SuccessMessage 
+          show={showSuccess} 
+          message="Tasks saved successfully!" 
+          onClose={() => setShowSuccess(false)} 
+        />
       </div>
     </div>
    </Layout>

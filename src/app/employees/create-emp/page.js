@@ -9,6 +9,7 @@ export default function CreateEmployeePage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState("");
   const [formData, setFormData] = useState({
     employeeId: "",
     firstName: "",
@@ -39,7 +40,8 @@ export default function CreateEmployeePage() {
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (role !== "super-admin") {
+    setUserRole(role);
+    if (role !== "super-admin" && role !== "Super-admin" && role !== "admin" && role !== "developer") {
       router.push("/");
       return;
     }
@@ -301,9 +303,10 @@ export default function CreateEmployeePage() {
             required
           >
             <option value="">Select Role</option>
-            <option value="Super-admin">Super-admin</option>
+            {(userRole === "developer" || userRole === "admin") && (
+              <option value="Super-admin">Super-admin</option>
+            )}
             <option value="admin">Admin</option>
-
             <option value="Team-Lead">Team-Lead</option>
             <option value="Team-admin">Team-admin</option>
             <option value="Employee">Employee</option>

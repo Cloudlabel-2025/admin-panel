@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/app/components/Layout";
 import { makeAuthenticatedRequest } from "@/app/utilis/tokenManager";
+import SuccessMessage from "@/app/components/SuccessMessage";
 
 export default function PurchaseOrdersPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function PurchaseOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({
     vendorName: '',
     vendorEmail: '',
@@ -21,7 +23,7 @@ export default function PurchaseOrdersPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "admin") {
+    if (userRole !== "super-admin" && userRole !== "admin" && userRole !== "developer") {
       router.push("/");
       return;
     }
@@ -105,7 +107,8 @@ export default function PurchaseOrdersPage() {
           description: ''
         });
         fetchOrders();
-        alert('Purchase Order uploaded successfully!');
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       } else {
         alert('Error uploading purchase order');
       }
@@ -277,6 +280,11 @@ export default function PurchaseOrdersPage() {
           </div>
         </div>
       )}
+      <SuccessMessage 
+        show={showSuccess} 
+        message="Operation completed successfully!" 
+        onClose={() => setShowSuccess(false)} 
+      />
     </div>
     </Layout>
   );
@@ -289,7 +297,8 @@ export default function PurchaseOrdersPage() {
         });
         if (response.ok) {
           fetchOrders();
-          alert('Purchase order deleted successfully!');
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 3000);
         }
       } catch (error) {
         console.error('Error deleting order:', error);

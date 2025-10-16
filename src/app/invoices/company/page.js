@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../../components/Layout";
+import SuccessMessage from "../../components/SuccessMessage";
 
 export default function CompanySettingsPage() {
   const [company, setCompany] = useState({
@@ -20,11 +21,13 @@ export default function CompanySettingsPage() {
     website: "www.yourcompany.com"
   });
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "admin") {
+    if (userRole !== "super-admin" && userRole !== "admin" && userRole !== "developer") {
       router.push("/");
       return;
     }
@@ -39,7 +42,8 @@ export default function CompanySettingsPage() {
     
     setTimeout(() => {
       setLoading(false);
-      alert("Company settings saved successfully!");
+      setSuccessMessage("Company settings saved successfully!");
+      setShowSuccess(true);
     }, 1000);
   };
 
@@ -63,6 +67,12 @@ export default function CompanySettingsPage() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container-fluid">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>

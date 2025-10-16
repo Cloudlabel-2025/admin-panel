@@ -3,10 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
+import SuccessMessage from "../../components/SuccessMessage";
 
 export default function ViewSkill() {
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const params = useParams();
   const router = useRouter();
 
@@ -23,8 +26,9 @@ export default function ViewSkill() {
         })
         .catch((err) => {
           console.error(err);
-          alert("Skill not found");
-          router.push("/skills");
+          setSuccessMessage("Skill not found");
+          setShowSuccess(true);
+          setTimeout(() => router.push("/skills"), 2000);
         });
     }
   }, [params.id, router]);
@@ -34,6 +38,12 @@ export default function ViewSkill() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container py-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="text-primary">🎯 Skill Details</h1>

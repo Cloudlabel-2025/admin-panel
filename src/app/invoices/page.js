@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
 import { makeAuthenticatedRequest } from "../utilis/tokenManager";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -16,11 +17,12 @@ export default function InvoicesPage() {
   const [poNumber, setPoNumber] = useState("DLE42852P");
   const [taxPercent, setTaxPercent] = useState(18);
   const [notes, setNotes] = useState("Thanks for your business.");
+  const [showSuccess, setShowSuccess] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "admin") {
+    if (userRole !== "super-admin" && userRole !== "admin" && userRole !== "developer") {
       router.push("/");
       return;
     }
@@ -79,7 +81,7 @@ export default function InvoicesPage() {
     }));
 
     if (validItems.length === 0) {
-      alert("Please add at least one valid item with description, quantity, and rate.");
+      return;
       return;
     }
 
@@ -113,6 +115,8 @@ export default function InvoicesPage() {
         setTaxPercent(18);
         setNotes("Thanks for your business.");
         setDueDate("");
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -407,6 +411,11 @@ export default function InvoicesPage() {
             </div>
           </div>
         )}
+        <SuccessMessage 
+          show={showSuccess} 
+          message="Invoice created successfully!" 
+          onClose={() => setShowSuccess(false)} 
+        />
       </div>
     </Layout>
   );

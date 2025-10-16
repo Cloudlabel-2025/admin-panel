@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function SkillList() {
   const [skills, setSkills] = useState([]);
@@ -10,9 +11,15 @@ export default function SkillList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    setUserRole(role);
+    
     fetch("/api/skills")
       .then((res) => res.json())
       .then((data) => {
@@ -37,7 +44,8 @@ export default function SkillList() {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      alert("❌ Error deleting skill. Please try again.");
+      setSuccessMessage("❌ Error deleting skill. Please try again.");
+      setShowSuccessMessage(true);
     }
   }
 
@@ -61,6 +69,12 @@ export default function SkillList() {
 
   return (
     <Layout>
+      {showSuccessMessage && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccessMessage(false)} 
+        />
+      )}
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
@@ -233,6 +247,15 @@ export default function SkillList() {
                             >
                               ✏️ Edit
                             </Link>
+                            {userRole === "developer" && (
+                              <button
+                                onClick={() => handleDelete(s._id)}
+                                className="btn btn-sm btn-outline-danger"
+                                title="Delete Skill"
+                              >
+                                🗑️ Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

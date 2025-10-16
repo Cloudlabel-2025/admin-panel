@@ -53,43 +53,43 @@ export async function POST(req) {
 
     // Get employee details from department collections
     let employeeData = {
-      role: "Employee",
+      role: user.role || "Employee", // Use role from User model first
       name: user.name,
       department: null
     };
     
-    try {
-      const mongoose = await import('mongoose');
-      const db = mongoose.default.connection.db;
-      const collections = await db.listCollections().toArray();
-      const departmentCollections = collections
-        .map(col => col.name)
-        .filter(name => name.endsWith('_department'));
-      
-      console.log(`Searching for employee ${user.employeeId} in collections:`, departmentCollections);
-      
-      for (const collName of departmentCollections) {
-        try {
-          const employee = await db.collection(collName).findOne({ employeeId: user.employeeId });
-          if (employee) {
-            console.log(`Found employee in ${collName}:`, { employeeId: employee.employeeId, role: employee.role, department: employee.department });
-            employeeData = {
-              role: employee.role || "Employee",
-              name: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || user.name,
-              department: employee.department || collName.replace('_department', '')
-            };
-            break;
+    // Only check department collections if user doesn't have a specific role
+    if (!user.role || user.role === "Employee") {
+      try {
+        const mongoose = await import('mongoose');
+        const db = mongoose.default.connection.db;
+        const collections = await db.listCollections().toArray();
+        const departmentCollections = collections
+          .map(col => col.name)
+          .filter(name => name.endsWith('_department'));
+        
+        for (const collName of departmentCollections) {
+          try {
+            const employee = await db.collection(collName).findOne({ employeeId: user.employeeId });
+            if (employee) {
+              employeeData = {
+                role: employee.role || user.role || "Employee",
+                name: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || user.name,
+                department: employee.department || collName.replace('_department', '')
+              };
+              break;
+            }
+          } catch (collErr) {
+            continue;
           }
-        } catch (collErr) {
-          console.error(`Error searching in ${collName}:`, collErr.message);
-          continue;
         }
+      } catch (err) {
+        console.error('Error fetching employee details:', err);
       }
-      console.log(`Final employee data for ${user.employeeId}:`, employeeData);
-    } catch (err) {
-      console.error('Error fetching employee details:', err);
     }
 
+
+    
     const payload = {
       userId: user._id,
       email: user.email,

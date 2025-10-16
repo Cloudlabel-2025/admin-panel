@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function MyProjectsPage() {
   const [projects, setProjects] = useState([]);
@@ -9,6 +10,8 @@ export default function MyProjectsPage() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [responseReason, setResponseReason] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const empId = localStorage.getItem("employeeId");
@@ -45,16 +48,19 @@ export default function MyProjectsPage() {
       });
 
       if (res.ok) {
-        alert(`Project ${action}ed successfully`);
+        setSuccessMessage(`Project ${action}ed successfully`);
+        setShowSuccess(true);
         setShowModal(false);
         setResponseReason("");
         fetchMyProjects(employeeId);
       } else {
-        alert("Failed to respond to project");
+        setSuccessMessage("Failed to respond to project");
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error("Error responding to project:", err);
-      alert("Error responding to project");
+      setSuccessMessage("Error responding to project");
+      setShowSuccess(true);
     }
   };
 
@@ -74,6 +80,12 @@ export default function MyProjectsPage() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container mt-4">
         <h2>My Assigned Projects</h2>
         

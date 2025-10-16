@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -70,7 +73,8 @@ export default function ProfilePage() {
       })
       .catch((err) => {
         console.error("Profile fetch error:", err);
-        alert(`Unable to load employee profile. Error: ${err.message}`);
+        setSuccessMessage(`Unable to load employee profile. Error: ${err.message}`);
+        setShowSuccess(true);
       });
   }, [router]);
 
@@ -83,7 +87,11 @@ export default function ProfilePage() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!currentPassword || !newPassword) return alert("Enter current and new password");
+    if (!currentPassword || !newPassword) {
+      setSuccessMessage("Enter current and new password");
+      setShowSuccess(true);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -98,14 +106,20 @@ export default function ProfilePage() {
       });
 
       const data = await res.json();
-      if (!res.ok) return alert(data.error || "Failed to update password");
+      if (!res.ok) {
+        setSuccessMessage(data.error || "Failed to update password");
+        setShowSuccess(true);
+        return;
+      }
 
-      alert("Password updated successfully!");
+      setSuccessMessage("Password updated successfully!");
+      setShowSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
     } catch (err) {
       console.error(err);
-      alert("Error updating password");
+      setSuccessMessage("Error updating password");
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -134,7 +148,8 @@ export default function ProfilePage() {
       fetch(`/api/Employee/${employeeId}`)
         .then((res) => {
           if (res.status === 404) {
-            alert("Employee profile not found. Contact admin to create your profile.");
+            setSuccessMessage("Employee profile not found. Contact admin to create your profile.");
+            setShowSuccess(true);
             return null;
           }
           if (!res.ok) {
@@ -150,13 +165,20 @@ export default function ProfilePage() {
         })
         .catch((err) => {
           console.error("Refresh error:", err);
-          alert(`Unable to refresh profile: ${err.message}`);
+          setSuccessMessage(`Unable to refresh profile: ${err.message}`);
+          setShowSuccess(true);
         });
     }
   };
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="d-flex justify-content-between align-items-center">
         <h2>{localStorage.getItem("userRole") === "super-admin" ? "Admin Profile" : "Employee Profile"}</h2>
         <div className="d-flex gap-2">

@@ -2,29 +2,34 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function PerformancePage() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [periodFilter, setPeriodFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("");
   const [employeesList, setEmployeesList] = useState([]);
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
     const fetchPerformance = async () => {
       try {
-        const userRole = localStorage.getItem("userRole");
+        const role = localStorage.getItem("userRole");
+        setUserRole(role);
         const empId = localStorage.getItem("employeeId");
         
         let url = "/api/performance";
         const params = new URLSearchParams();
         
-        if (userRole) params.append("userRole", userRole);
+        if (role) params.append("userRole", role);
         
         // For team roles, add department filter
-        if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
+        if ((role === "Team-Lead" || role === "Team-admin") && empId) {
           const userRes = await fetch(`/api/Employee/${empId}`);
           if (userRes.ok) {
             const userData = await userRes.json();
@@ -91,7 +96,8 @@ export default function PerformancePage() {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      alert("❌ Error deleting review. Please try again.");
+      setSuccessMessage("❌ Error deleting review. Please try again.");
+      setShowSuccessMessage(true);
     }
   }
 
@@ -117,6 +123,12 @@ export default function PerformancePage() {
 
   return (
     <Layout>
+      {showSuccessMessage && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccessMessage(false)} 
+        />
+      )}
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
@@ -300,13 +312,15 @@ export default function PerformancePage() {
                             >
                               ✏️ Edit
                             </Link>
-                            <button
-                              onClick={() => handleDelete(r._id)}
-                              className="btn btn-sm btn-outline-danger"
-                              title="Delete Review"
-                            >
-                              🗑️ Delete
-                            </button>
+                            {userRole === "developer" && (
+                              <button
+                                onClick={() => handleDelete(r._id)}
+                                className="btn btn-sm btn-outline-danger"
+                                title="Delete Review"
+                              >
+                                🗑️ Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

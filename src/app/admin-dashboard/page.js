@@ -20,12 +20,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-
-
-
-
-    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "Team-Lead" || role === "Team-admin")) {
-
+    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "developer" || role === "Team-Lead" || role === "Team-admin")) {
       router.push("/");
       return;
     }
@@ -129,7 +124,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading || !(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin")) {
+  if (loading || !(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer" || userRole === "Team-Lead" || userRole === "Team-admin")) {
     return (
       <Layout>
         <div className="d-flex justify-content-center align-items-center" style={{minHeight: '400px'}}>
@@ -151,10 +146,10 @@ export default function AdminDashboard() {
         <div className="col-12">
           <div className="bg-white rounded shadow-sm p-4">
             <h2 className="text-primary mb-1">
-              📊 {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Admin Dashboard" : "Team Management Dashboard"}
+              📊 {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Dashboard" : "Team Management Dashboard"}
             </h2>
             <p className="text-muted mb-0">
-              {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ?
+              {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ?
                 "Overview of your organization's key metrics and activities" :
                 "Monitor your team's performance and activities"}
             </p>

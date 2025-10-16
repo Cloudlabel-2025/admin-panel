@@ -5,7 +5,7 @@ import { requireRole } from "../../../../utilis/authMiddleware";
 import { unlink } from 'fs/promises';
 import path from 'path';
 
-export const GET = requireRole(["super-admin", "admin"])(async function(req, { params }) {
+export const GET = requireRole(["super-admin", "admin", "developer"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { id } = await params;
@@ -16,7 +16,7 @@ export const GET = requireRole(["super-admin", "admin"])(async function(req, { p
   }
 });
 
-export const DELETE = requireRole(["super-admin", "admin"])(async function(req, { params }) {
+export const DELETE = requireRole(["super-admin", "admin", "developer"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { id } = await params;

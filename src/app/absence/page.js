@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function AbsencePage() {
   const [absences, setAbsences] = useState([]);
@@ -18,6 +19,8 @@ export default function AbsencePage() {
   const [filter, setFilter] = useState({ status: "", employeeId: "" });
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole") || "";
@@ -117,7 +120,8 @@ export default function AbsencePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.employeeId || !form.absenceType || !form.startDate || !form.endDate || !form.reason) {
-      alert("Please fill all required fields");
+      setSuccessMessage("Please fill all required fields");
+      setShowSuccess(true);
       return;
     }
 
@@ -136,7 +140,8 @@ export default function AbsencePage() {
       });
 
       if (res.ok) {
-        alert("Absence request submitted successfully");
+        setSuccessMessage("Absence request submitted successfully");
+        setShowSuccess(true);
         setForm({
           employeeId: "",
           employeeName: "",
@@ -149,11 +154,13 @@ export default function AbsencePage() {
         fetchAbsences();
       } else {
         const errorData = await res.json();
-        alert(errorData.error || "Failed to submit absence request");
+        setSuccessMessage(errorData.error || "Failed to submit absence request");
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error(err);
-      alert("Error submitting request");
+      setSuccessMessage("Error submitting request");
+      setShowSuccess(true);
     }
     setLoading(false);
   };
@@ -172,10 +179,12 @@ export default function AbsencePage() {
       });
 
       if (res.ok) {
-        alert(`Absence ${action}d successfully`);
+        setSuccessMessage(`Absence ${action}d successfully`);
+        setShowSuccess(true);
         fetchAbsences();
       } else {
-        alert(`Failed to ${action} absence`);
+        setSuccessMessage(`Failed to ${action} absence`);
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error(err);
@@ -183,7 +192,8 @@ export default function AbsencePage() {
   };
 
   const viewAbsenceDetails = (absence) => {
-    alert(`Employee: ${absence.employeeName}\nType: ${absence.absenceType}\nDates: ${new Date(absence.startDate).toLocaleDateString()} - ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.reason}`);
+    setSuccessMessage(`Employee: ${absence.employeeName}\nType: ${absence.absenceType}\nDates: ${new Date(absence.startDate).toLocaleDateString()} - ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.reason}`);
+    setShowSuccess(true);
   };
 
   const getStatusBadge = (status) => {
@@ -198,6 +208,12 @@ export default function AbsencePage() {
   return (
     <Layout>
       <div className="container-fluid p-4">
+        {showSuccess && (
+          <SuccessMessage 
+            message={successMessage} 
+            onClose={() => setShowSuccess(false)} 
+          />
+        )}
         <h2 className="mb-4">Absence Management</h2>
 
         {/* Submit Absence Request */}

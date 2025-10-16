@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 import { makeAuthenticatedRequest } from "../utilis/tokenManager";
 
 export default function TimecardPage() {
@@ -29,6 +30,8 @@ export default function TimecardPage() {
   const [breaks, setBreaks] = useState([]);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [breakReason, setBreakReason] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Helpers
   const getTimeString = () =>
@@ -235,7 +238,8 @@ export default function TimecardPage() {
   const handleLunchOut = () => {
     // Rule 5: No lunch actions after logout
     if (current?.logOut) {
-      alert("Cannot take lunch break after logout");
+      setSuccessMessage("Cannot take lunch break after logout");
+      setShowSuccess(true);
       return;
     }
     
@@ -248,7 +252,8 @@ export default function TimecardPage() {
   const handleLunchIn = () => {
     // Rule 5: No lunch actions after logout
     if (current?.logOut) {
-      alert("Cannot return from lunch after logout");
+      setSuccessMessage("Cannot return from lunch after logout");
+      setShowSuccess(true);
       return;
     }
     
@@ -264,15 +269,18 @@ export default function TimecardPage() {
 
   const handleSavePermission = () => {
     if (current?.logOut) {
-      alert("Cannot add permission after logout");
+      setSuccessMessage("Cannot add permission after logout");
+      setShowSuccess(true);
       return;
     }
     if (permission > 2) {
-      alert("Permission cannot exceed 2 hours");
+      setSuccessMessage("Permission cannot exceed 2 hours");
+      setShowSuccess(true);
       return;
     }
     if (!reason.trim()) {
-      alert("Please provide a reason for permission");
+      setSuccessMessage("Please provide a reason for permission");
+      setShowSuccess(true);
       return;
     }
     updateTimecard({ permission, reason });
@@ -281,19 +289,23 @@ export default function TimecardPage() {
 
   const handleBreakOut = () => {
     if (current?.logOut) {
-      alert("Cannot take break after logout");
+      setSuccessMessage("Cannot take break after logout");
+      setShowSuccess(true);
       return;
     }
     if (isOnBreak) {
-      alert("Already on break");
+      setSuccessMessage("Already on break");
+      setShowSuccess(true);
       return;
     }
     if (breaks.length >= 3) {
-      alert("Maximum 3 breaks allowed per day");
+      setSuccessMessage("Maximum 3 breaks allowed per day");
+      setShowSuccess(true);
       return;
     }
     if (!breakReason.trim()) {
-      alert("Please provide a reason for break");
+      setSuccessMessage("Please provide a reason for break");
+      setShowSuccess(true);
       return;
     }
     
@@ -310,11 +322,13 @@ export default function TimecardPage() {
 
   const handleBreakIn = () => {
     if (current?.logOut) {
-      alert("Cannot return from break after logout");
+      setSuccessMessage("Cannot return from break after logout");
+      setShowSuccess(true);
       return;
     }
     if (!isOnBreak) {
-      alert("Not currently on break");
+      setSuccessMessage("Not currently on break");
+      setShowSuccess(true);
       return;
     }
     
@@ -447,6 +461,12 @@ export default function TimecardPage() {
   return (
     <Layout>
       <div className="container-fluid p-4">
+        {showSuccess && (
+          <SuccessMessage 
+            message={successMessage} 
+            onClose={() => setShowSuccess(false)} 
+          />
+        )}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>My Timecard</h2>
           <button onClick={exportReport} className="btn btn-success">

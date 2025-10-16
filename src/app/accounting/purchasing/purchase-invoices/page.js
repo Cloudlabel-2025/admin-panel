@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/app/components/Layout";
 import { makeAuthenticatedRequest } from "@/app/utilis/tokenManager";
+import SuccessMessage from "@/app/components/SuccessMessage";
 
 export default function PurchaseInvoicesPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function PurchaseInvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({
     poNumber: '',
     vendorName: '',
@@ -23,7 +25,7 @@ export default function PurchaseInvoicesPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "admin") {
+    if (userRole !== "super-admin" && userRole !== "admin" && userRole !== "developer") {
       router.push("/");
       return;
     }
@@ -109,7 +111,8 @@ export default function PurchaseInvoicesPage() {
           description: ''
         });
         fetchInvoices();
-        alert('Purchase Invoice uploaded successfully!');
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       } else {
         alert('Error uploading purchase invoice');
       }
@@ -305,6 +308,11 @@ export default function PurchaseInvoicesPage() {
           </div>
         </div>
       )}
+      <SuccessMessage 
+        show={showSuccess} 
+        message="Operation completed successfully!" 
+        onClose={() => setShowSuccess(false)} 
+      />
     </div>
     </Layout>
   );
@@ -317,7 +325,8 @@ export default function PurchaseInvoicesPage() {
         });
         if (response.ok) {
           fetchInvoices();
-          alert('Purchase invoice deleted successfully!');
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 3000);
         }
       } catch (error) {
         console.error('Error deleting invoice:', error);

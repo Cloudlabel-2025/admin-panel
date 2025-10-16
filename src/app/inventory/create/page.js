@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/app/components/Layout";
+import SuccessMessage from "@/app/components/SuccessMessage";
 
 export default function CreateItem() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function CreateItem() {
     status: "Available",
   });
   const [users, setUsers] = useState([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     // Fetch users for "assignedTo"
@@ -38,15 +41,23 @@ export default function CreateItem() {
         router.push("/inventory");
       } else {
         const error = await response.json();
-        alert(`Error: ${error.details || error.error}`);
+        setSuccessMessage(`Error: ${error.details || error.error}`);
+        setShowSuccess(true);
       }
     } catch (error) {
-      alert('Failed to create item. Please try again.');
+      setSuccessMessage('Failed to create item. Please try again.');
+      setShowSuccess(true);
     }
   };
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container-fluid px-4">
         {/* Header */}
         <div className="row mb-4">

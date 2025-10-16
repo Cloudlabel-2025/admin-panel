@@ -51,7 +51,7 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-export const GET = requireRole(["super-admin", "admin"])(async function(request, { params }) {
+export const GET = requireRole(["super-admin", "admin", "developer"])(async function(request, { params }) {
   try {
     await connectMongoose();
     const resolvedParams = await params;

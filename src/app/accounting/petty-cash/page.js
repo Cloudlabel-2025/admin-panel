@@ -6,6 +6,7 @@ import Layout from "../../components/Layout";
 export default function PettyCashPage() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("");
   const [accountBalance, setAccountBalance] = useState(0);
   const [filters, setFilters] = useState({
     date: "",
@@ -25,6 +26,8 @@ export default function PettyCashPage() {
   });
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    setUserRole(role);
     fetchEntries();
     fetchAccountBalance();
   }, []);
@@ -222,7 +225,9 @@ export default function PettyCashPage() {
                       <td>{entry.approvedBy || 'Pending'}</td>
                       <td>
                         <Link href={`/accounting/petty-cash/${entry._id}/edit`} className="btn btn-sm btn-outline-primary me-1">✏️ Edit</Link>
-                        <button onClick={() => deleteEntry(entry._id)} className="btn btn-sm btn-outline-danger">🗑️ Delete</button>
+                        {userRole === "developer" && (
+                          <button onClick={() => deleteEntry(entry._id)} className="btn btn-sm btn-outline-danger">🗑️ Delete</button>
+                        )}
                       </td>
                     </tr>
                   ))}

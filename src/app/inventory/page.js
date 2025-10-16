@@ -7,8 +7,12 @@ export default function InventoryList() {
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    setUserRole(role);
+    
     fetch("/api/inventory")
       .then((res) => res.json())
       .then((data) => {
@@ -178,13 +182,15 @@ export default function InventoryList() {
                               >
                                 ✏️
                               </Link>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDelete(item._id)}
-                                title="Delete"
-                              >
-                                🗑️
-                              </button>
+                              {userRole === "developer" && (
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDelete(item._id)}
+                                  title="Delete"
+                                >
+                                  🗑️
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

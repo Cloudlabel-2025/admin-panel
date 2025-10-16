@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 import * as XLSX from "xlsx";
 
 export default function AttendancePage() {
@@ -22,6 +23,8 @@ export default function AttendancePage() {
     totalInOffice: 0,
     avgHours: 0
   });
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -157,14 +160,17 @@ export default function AttendancePage() {
       });
       
       if (res.ok) {
-        alert("Attendance generated from timecard data");
+        setSuccessMessage("Attendance generated from timecard data");
+        setShowSuccess(true);
         fetchAttendance();
       } else {
-        alert("Failed to generate attendance");
+        setSuccessMessage("Failed to generate attendance");
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error(err);
-      alert("Error generating attendance");
+      setSuccessMessage("Error generating attendance");
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -214,6 +220,12 @@ export default function AttendancePage() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container-fluid p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>

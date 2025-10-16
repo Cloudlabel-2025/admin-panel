@@ -33,15 +33,14 @@ export default function HomePage() {
       localStorage.setItem("userEmail", data.user.email);
       localStorage.setItem("userRole", data.user.role);
       
-      console.log('Login successful - Role set to:', data.user.role);
-      console.log('All user data:', data.user);
+
 
       setShowSuccess(true);
       
       // Route based on role from server after animation
       setTimeout(() => {
         const userRole = data.user.role;
-        if (userRole === "super-admin" || userRole === "Super-admin") {
+        if (userRole === "super-admin" || userRole === "Super-admin" || userRole === "developer") {
           router.push("/admin-dashboard");
         } else if (userRole === "admin") {
           router.push("/admin-dashboard");
@@ -93,8 +92,8 @@ export default function HomePage() {
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
             <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
-              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+              <path d="M9 12L11 14L15 10" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#000" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
             </svg>
           </div>
         </div>
@@ -103,8 +102,8 @@ export default function HomePage() {
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-3 d-flex flex-column align-items-center justify-content-center shadow-lg p-4" style={{ minWidth: '250px', animation: 'fadeIn 0.5s ease-in-out' }}>
             <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-3">
-              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
-              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+              <path d="M9 12L11 14L15 10" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#000" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
             </svg>
             <h5 className="text-success mb-2">Account Created!</h5>
             <p className="text-muted text-center mb-0">You can now login with your credentials</p>
@@ -149,7 +148,7 @@ export default function HomePage() {
                     <label className="form-label text-dark">Email</label>
                     <input
                       type="email"
-                      className="form-control text-white"
+                      className="form-control text-dark"
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}

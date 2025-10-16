@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Layout from "../../components/Layout";
+import SuccessMessage from "../../components/SuccessMessage";
 import * as XLSX from "xlsx";
 
 export default function PayrollPage() {
@@ -37,6 +38,8 @@ export default function PayrollPage() {
     effectiveDate: '',
     reason: ''
   });
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const fetchPayrolls = useCallback(async () => {
     if (!userRole) return;
@@ -100,7 +103,8 @@ export default function PayrollPage() {
 
   const generatePayroll = async () => {
     if (!selectedEmployee || !payPeriod) {
-      alert("Please select employee and pay period");
+      setSuccessMessage("Please select employee and pay period");
+      setShowSuccess(true);
       return;
     }
 
@@ -121,7 +125,8 @@ export default function PayrollPage() {
       const data = await res.json();
       if (res.ok) {
         const employeeName = employees.find(emp => emp.employeeId === selectedEmployee)?.firstName + ' ' + employees.find(emp => emp.employeeId === selectedEmployee)?.lastName;
-        alert(`Payroll generated successfully and sent to ${employeeName}! Employee can now view it in their My Payroll section.`);
+        setSuccessMessage(`Payroll generated successfully and sent to ${employeeName}! Employee can now view it in their My Payroll section.`);
+        setShowSuccess(true);
         setPreviewData(data.payroll);
         fetchPayrolls();
         // Reset form
@@ -129,11 +134,13 @@ export default function PayrollPage() {
         setPayPeriod("");
         setCustomData({ bonus: 0, incentive: 0, loanDeduction: 0, otherDeductions: 0 });
       } else {
-        alert(data.error || "Failed to generate payroll");
+        setSuccessMessage(data.error || "Failed to generate payroll");
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error("Generate payroll error:", err);
-      alert("Failed to generate payroll");
+      setSuccessMessage("Failed to generate payroll");
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -153,20 +160,24 @@ export default function PayrollPage() {
       });
 
       if (res.ok) {
-        alert(`Payroll ${status.toLowerCase()} successfully!`);
+        setSuccessMessage(`Payroll ${status.toLowerCase()} successfully!`);
+        setShowSuccess(true);
         fetchPayrolls();
       } else {
-        alert("Failed to update payroll status");
+        setSuccessMessage("Failed to update payroll status");
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error("Update status error:", err);
-      alert("Failed to update payroll status");
+      setSuccessMessage("Failed to update payroll status");
+      setShowSuccess(true);
     }
   };
 
   const processSalaryHike = async () => {
     if (!hikeData.employeeId || !hikeData.newSalary || !hikeData.effectiveDate) {
-      alert('Please fill all required fields');
+      setSuccessMessage('Please fill all required fields');
+      setShowSuccess(true);
       return;
     }
 
@@ -184,15 +195,18 @@ export default function PayrollPage() {
 
       const data = await res.json();
       if (res.ok) {
-        alert(`Salary hike processed successfully for ${data.employeeName}!`);
+        setSuccessMessage(`Salary hike processed successfully for ${data.employeeName}!`);
+        setShowSuccess(true);
         setShowHikeModal(false);
         setHikeData({ employeeId: '', newSalary: '', effectiveDate: '', reason: '' });
       } else {
-        alert(data.error || 'Failed to process salary hike');
+        setSuccessMessage(data.error || 'Failed to process salary hike');
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error('Salary hike error:', err);
-      alert('Failed to process salary hike');
+      setSuccessMessage('Failed to process salary hike');
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -229,6 +243,12 @@ export default function PayrollPage() {
   return (
     <Layout>
       <div className="container-fluid p-4">
+        {showSuccess && (
+          <SuccessMessage 
+            message={successMessage} 
+            onClose={() => setShowSuccess(false)} 
+          />
+        )}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>💰 Payroll Management</h2>
           <div className="d-flex gap-2">

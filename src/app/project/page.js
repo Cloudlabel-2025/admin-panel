@@ -24,8 +24,11 @@ export default function ProjectPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingProject, setViewingProject] = useState(null);
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    setUserRole(role);
     fetchProjects();
     fetchUsers();
   }, []);
@@ -311,6 +314,15 @@ export default function ProjectPage() {
                               >
                                 ✏️ Edit
                               </button>
+                              {userRole === "developer" && (
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => deleteProject(p._id)}
+                                  title="Delete Project"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

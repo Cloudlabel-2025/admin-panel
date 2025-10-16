@@ -11,7 +11,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "admin") {
+    if (userRole !== "super-admin" && userRole !== "admin" && userRole !== "developer") {
       router.push("/");
       return;
     }

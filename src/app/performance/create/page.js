@@ -2,12 +2,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/app/components/Layout";
+import SuccessMessage from "@/app/components/SuccessMessage";
 
 export default function CreatePerformance() {
   const router = useRouter();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [form, setForm] = useState({
     employeeId: "",
     reviewPeriod: "",
@@ -124,7 +127,8 @@ export default function CreatePerformance() {
       }, 2000);
     } catch (err) {
       console.error(err);
-      alert("❌ Error creating review. Please try again.");
+      setSuccessMessage("❌ Error creating review. Please try again.");
+      setShowSuccessMessage(true);
     } finally {
       setLoading(false);
     }
@@ -132,6 +136,12 @@ export default function CreatePerformance() {
 
   return (
     <Layout>
+      {showSuccessMessage && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccessMessage(false)} 
+        />
+      )}
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>

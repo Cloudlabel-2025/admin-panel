@@ -3,7 +3,7 @@ import Invoice from "@/models/Invoice";
 import { NextResponse } from "next/server";
 import { requireRole } from "../../utilis/authMiddleware";
 
-export const GET = requireRole(["super-admin", "admin"])(async function() {
+export const GET = requireRole(["super-admin", "admin", "developer"])(async function() {
   try {
     await connectMongoose();
     const invoices = await Invoice.find()
@@ -16,7 +16,7 @@ export const GET = requireRole(["super-admin", "admin"])(async function() {
   }
 });
 
-export const POST = requireRole(["super-admin", "admin"])(async function(req) {
+export const POST = requireRole(["super-admin", "admin", "developer"])(async function(req) {
   try {
     await connectMongoose();
     const body = await req.json();

@@ -18,12 +18,14 @@ export default function AccountsPage() {
     assetAccounts: 0,
     liabilityAccounts: 0
   });
+  const [userRole, setUserRole] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     // Check if user is admin
-    const userRole = localStorage.getItem("userRole");
-    if (userRole !== "super-admin" && userRole !== "admin") {
+    const role = localStorage.getItem("userRole");
+    setUserRole(role);
+    if (role !== "super-admin" && role !== "admin" && role !== "developer") {
       router.push("/");
       return;
     }
@@ -348,13 +350,15 @@ export default function AccountsPage() {
                               >
                                 <i className="bi bi-pencil"></i>
                               </Link>
-                              <button 
-                                onClick={() => deleteAccount(account._id)} 
-                                className="btn btn-sm btn-outline-danger"
-                                title="Delete Account"
-                              >
-                                <i className="bi bi-trash"></i>
-                              </button>
+                              {userRole === "developer" && (
+                                <button 
+                                  onClick={() => deleteAccount(account._id)} 
+                                  className="btn btn-sm btn-outline-danger"
+                                  title="Delete Account"
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

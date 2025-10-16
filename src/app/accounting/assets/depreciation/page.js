@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../../../components/Layout";
+import SuccessMessage from "../../../components/SuccessMessage";
 
 export default function DepreciationPage() {
   const router = useRouter();
@@ -9,6 +10,8 @@ export default function DepreciationPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     fetchAssets();
@@ -45,7 +48,8 @@ export default function DepreciationPage() {
 
   const runDepreciation = async () => {
     if (selectedAssets.length === 0) {
-      alert("Please select at least one asset to depreciate.");
+      setSuccessMessage("Please select at least one asset to depreciate.");
+      setShowSuccess(true);
       return;
     }
 
@@ -66,11 +70,13 @@ export default function DepreciationPage() {
         });
       }
       
-      alert("Depreciation calculated successfully!");
-      router.push("/accounting/assets");
+      setSuccessMessage("Depreciation calculated successfully!");
+      setShowSuccess(true);
+      setTimeout(() => router.push("/accounting/assets"), 2000);
     } catch (error) {
       console.error("Error running depreciation:", error);
-      alert("Error calculating depreciation. Please try again.");
+      setSuccessMessage("Error calculating depreciation. Please try again.");
+      setShowSuccess(true);
     } finally {
       setProcessing(false);
     }
@@ -96,6 +102,12 @@ export default function DepreciationPage() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container-fluid">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>📊 Run Depreciation</h2>

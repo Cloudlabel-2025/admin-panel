@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import SuccessMessage from "../components/SuccessMessage";
 
 export default function AdminAbsencePage() {
   const [absences, setAbsences] = useState([]);
@@ -9,10 +10,12 @@ export default function AdminAbsencePage() {
   const [selectedAbsence, setSelectedAbsence] = useState(null);
   const [adminComments, setAdminComments] = useState("");
   const [isLOP, setIsLOP] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (role !== "super-admin") {
+    if (role !== "super-admin" && role !== "Super-admin" && role !== "admin" && role !== "developer") {
       window.location.href = "/";
       return;
     }
@@ -52,17 +55,20 @@ export default function AdminAbsencePage() {
       });
 
       if (res.ok) {
-        alert(`Leave request ${action}d successfully`);
+        setSuccessMessage(`Leave request ${action}d successfully`);
+        setShowSuccess(true);
         setSelectedAbsence(null);
         setAdminComments("");
         setIsLOP(false);
         fetchAbsences();
       } else {
-        alert(`Failed to ${action} leave request`);
+        setSuccessMessage(`Failed to ${action} leave request`);
+        setShowSuccess(true);
       }
     } catch (err) {
       console.error(err);
-      alert("Error processing request");
+      setSuccessMessage("Error processing request");
+      setShowSuccess(true);
     }
   };
 
@@ -81,6 +87,12 @@ export default function AdminAbsencePage() {
 
   return (
     <Layout>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
       <div className="container-fluid p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>Leave Request Management</h2>

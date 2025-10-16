@@ -6,6 +6,7 @@ import Layout from "../../components/Layout";
 export default function AssetsPage() {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("");
   const [filters, setFilters] = useState({
     category: "",
     location: "",
@@ -13,6 +14,8 @@ export default function AssetsPage() {
   });
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    setUserRole(role);
     fetchAssets();
   }, []);
 
@@ -176,7 +179,9 @@ export default function AssetsPage() {
                       </td>
                       <td>
                         <Link href={`/accounting/assets/${asset._id}/edit`} className="btn btn-sm btn-outline-primary me-1">✏️ Edit</Link>
-                        <button onClick={() => deleteAsset(asset._id)} className="btn btn-sm btn-outline-danger">🗑️ Delete</button>
+                        {userRole === "developer" && (
+                          <button onClick={() => deleteAsset(asset._id)} className="btn btn-sm btn-outline-danger">🗑️ Delete</button>
+                        )}
                       </td>
                     </tr>
                   ))}

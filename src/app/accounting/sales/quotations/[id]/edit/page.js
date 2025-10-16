@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import SuccessMessage from "../../../../components/SuccessMessage";
 
 export default function EditQuotationPage() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function EditQuotationPage() {
     items: [{ description: "", quantity: 1, price: 0 }],
     notes: ""
   });
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     // Since there's no quotations API yet, we'll use placeholder data
@@ -37,12 +40,20 @@ export default function EditQuotationPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Since there's no quotations API yet, we'll just redirect
-    alert("Quotation functionality will be available once the API is implemented");
-    router.push("/sales/quotations");
+    setSuccessMessage("Quotation functionality will be available once the API is implemented");
+    setShowSuccess(true);
+    setTimeout(() => router.push("/sales/quotations"), 2000);
   };
 
   return (
-    <div className="container mt-4">
+    <>
+      {showSuccess && (
+        <SuccessMessage 
+          message={successMessage} 
+          onClose={() => setShowSuccess(false)} 
+        />
+      )}
+      <div className="container mt-4">
       <h1>✏️ Edit Quotation</h1>
       <form onSubmit={handleSubmit}>
         <div className="row">
@@ -155,5 +166,6 @@ export default function EditQuotationPage() {
         <button type="button" onClick={() => router.back()} className="btn btn-secondary ms-2">Cancel</button>
       </form>
     </div>
+    </>
   );
 }
