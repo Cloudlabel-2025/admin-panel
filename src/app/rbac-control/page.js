@@ -222,7 +222,7 @@ export default function RBACControlPage() {
                 {filteredUsers.length === 0 && searchTerm && (
                   <div className="p-4 text-center text-muted">
                     <i className="fas fa-search fa-2x mb-2"></i>
-                    <div>No users found matching "{searchTerm}"</div>
+                    <div>No users found matching &quot;{searchTerm}&quot;</div>
                   </div>
                 )}
               </div>
