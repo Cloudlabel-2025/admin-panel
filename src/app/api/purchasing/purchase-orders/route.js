@@ -1,34 +1,68 @@
 import connectMongoose from "../../../utilis/connectMongoose";
+import PurchaseOrder from "../../../../models/PurchaseOrder";
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
+import { requireRole } from "../../../utilis/authMiddleware";
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
-export async function POST(req) {
+export const POST = requireRole(["super-admin", "admin"])(async function(req) {
   try {
     await connectMongoose();
-    const body = await req.json();
+    const formData = await req.formData();
+    const file = formData.get('file');
     
-    const db = mongoose.connection.db;
-    const result = await db.collection('purchaseorders').insertOne({
-      ...body,
-      poNumber: body.orderNumber,
-      createdAt: new Date()
-    });
+    if (!file) {
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    // Generate unique filename
+    const fileExtension = path.extname(file.name);
+    const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
+    const documentsDir = path.join(process.cwd(), 'public', 'documents');
+    const filePath = path.join(documentsDir, uniqueFilename);
     
-    return NextResponse.json({ _id: result.insertedId, ...body }, { status: 201 });
+    // Ensure documents directory exists
+    await mkdir(documentsDir, { recursive: true });
+    
+    // Save file
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filePath, buffer);
+    
+    // Generate PO number
+    const lastPO = await PurchaseOrder.findOne().sort({ createdAt: -1 });
+    const nextNum = lastPO ? parseInt(lastPO.poNumber.replace('PO-', '')) + 1 : 1;
+    const poNumber = `PO-${nextNum.toString().padStart(6, '0')}`;
+    
+    // Create purchase order with file info
+    const purchaseOrderData = {
+      poNumber,
+      vendorName: formData.get('vendorName'),
+      vendorEmail: formData.get('vendorEmail') || '',
+      vendorPhone: formData.get('vendorPhone') || '',
+      deliveryDate: formData.get('deliveryDate') || null,
+      totalAmount: formData.get('totalAmount') ? Number(formData.get('totalAmount')) : null,
+      description: formData.get('description') || '',
+      fileName: file.name,
+      fileUrl: `/documents/${uniqueFilename}`,
+      fileSize: file.size,
+      uploadedBy: 'admin'
+    };
+    
+    const purchaseOrder = await PurchaseOrder.create(purchaseOrderData);
+    return NextResponse.json(purchaseOrder, { status: 201 });
   } catch (err) {
+    console.error('Purchase Order POST Error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
-export async function GET() {
+export const GET = requireRole(["super-admin", "admin"])(async function() {
   try {
     await connectMongoose();
-    
-    const db = mongoose.connection.db;
-    const orders = await db.collection('purchaseorders').find({}).sort({ createdAt: -1 }).toArray();
-    
+    const orders = await PurchaseOrder.find().sort({ createdAt: -1 });
     return NextResponse.json(orders, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});

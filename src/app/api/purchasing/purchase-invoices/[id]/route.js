@@ -1,50 +1,41 @@
 import connectMongoose from "../../../../utilis/connectMongoose";
-import mongoose from "mongoose";
+import PurchaseInvoice from "../../../../../models/PurchaseInvoice";
 import { NextResponse } from "next/server";
+import { requireRole } from "../../../../utilis/authMiddleware";
+import { unlink } from 'fs/promises';
+import path from 'path';
 
-export async function GET(req, { params }) {
+export const GET = requireRole(["super-admin", "admin"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { id } = await params;
-    
-    const db = mongoose.connection.db;
-    const invoice = await db.collection('purchaseinvoices').findOne({ _id: new mongoose.Types.ObjectId(id) });
-    
+    const invoice = await PurchaseInvoice.findById(id);
     return NextResponse.json(invoice, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
-export async function PUT(req, { params }) {
-  try {
-    await connectMongoose();
-    const { id } = await params;
-    const body = await req.json();
-    
-    const db = mongoose.connection.db;
-    await db.collection('purchaseinvoices').updateOne(
-      { _id: new mongoose.Types.ObjectId(id) },
-      { $set: { ...body, updatedAt: new Date() } }
-    );
-    
-    return NextResponse.json({ message: "Purchase invoice updated successfully" }, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
-export async function DELETE(req, { params }) {
+export const DELETE = requireRole(["super-admin", "admin"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { id } = await params;
     
-    const db = mongoose.connection.db;
-    await db.collection('purchaseinvoices').deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+    // Get the invoice to delete the file
+    const invoice = await PurchaseInvoice.findById(id);
+    if (invoice && invoice.fileUrl) {
+      const filePath = path.join(process.cwd(), 'public', invoice.fileUrl);
+      try {
+        await unlink(filePath);
+      } catch (fileErr) {
+        console.log('File deletion error:', fileErr.message);
+      }
+    }
     
+    await PurchaseInvoice.findByIdAndDelete(id);
     return NextResponse.json({ message: "Purchase invoice deleted successfully" }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 

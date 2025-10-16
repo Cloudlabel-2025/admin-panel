@@ -1,51 +1,74 @@
 import connectMongoose from "../../../utilis/connectMongoose";
-import mongoose from "mongoose";
+import PurchaseInvoice from "../../../../models/PurchaseInvoice";
 import { NextResponse } from "next/server";
+import { requireRole } from "../../../utilis/authMiddleware";
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import crypto from 'crypto';
 
-export async function POST(req) {
+export const POST = requireRole(["super-admin", "admin"])(async function(req) {
   try {
     await connectMongoose();
-    const body = await req.json();
+    const formData = await req.formData();
+    const file = formData.get('file');
     
-    const db = mongoose.connection.db;
-    const result = await db.collection('purchaseinvoices').insertOne({
-      ...body,
-      createdAt: new Date()
-    });
+    if (!file) {
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    // Generate unique filename
+    const fileExtension = path.extname(file.name);
+    const uniqueFilename = `${crypto.randomUUID()}${fileExtension}`;
+    const documentsDir = path.join(process.cwd(), 'public', 'documents');
+    const filePath = path.join(documentsDir, uniqueFilename);
     
-    return NextResponse.json({ _id: result.insertedId, ...body }, { status: 201 });
+    // Ensure documents directory exists
+    try {
+      await mkdir(documentsDir, { recursive: true });
+    } catch (err) {
+      // Directory might already exist
+    }
+    
+    // Save file
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filePath, buffer);
+    
+    // Generate invoice number
+    const lastInvoice = await PurchaseInvoice.findOne().sort({ createdAt: -1 });
+    const nextNum = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace('PI-', '')) + 1 : 1;
+    const invoiceNumber = `PI-${nextNum.toString().padStart(6, '0')}`;
+    
+    // Create purchase invoice with file info
+    const purchaseInvoiceData = {
+      invoiceNumber,
+      poNumber: formData.get('poNumber'),
+      vendorName: formData.get('vendorName'),
+      vendorEmail: formData.get('vendorEmail'),
+      invoiceDate: formData.get('invoiceDate') || null,
+      dueDate: formData.get('dueDate') || null,
+      totalAmount: formData.get('totalAmount') || null,
+      paidAmount: formData.get('paidAmount') || 0,
+      description: formData.get('description'),
+      fileName: file.name,
+      fileUrl: `/documents/${uniqueFilename}`,
+      fileSize: file.size,
+      uploadedBy: 'admin'
+    };
+    
+    const purchaseInvoice = await PurchaseInvoice.create(purchaseInvoiceData);
+    return NextResponse.json(purchaseInvoice, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
-export async function GET() {
+export const GET = requireRole(["super-admin", "admin"])(async function() {
   try {
     await connectMongoose();
-    
-    const db = mongoose.connection.db;
-    const invoices = await db.collection('purchaseinvoices').find({}).sort({ createdAt: -1 }).toArray();
-    
-    // Fetch vendor names for each invoice
-    const invoicesWithVendors = await Promise.all(
-      invoices.map(async (invoice) => {
-        if (invoice.vendor) {
-          try {
-            const vendor = await db.collection('vendors').findOne({ _id: new mongoose.Types.ObjectId(invoice.vendor) });
-            return {
-              ...invoice,
-              vendor: vendor ? { _id: vendor._id, name: vendor.name } : null
-            };
-          } catch (err) {
-            return { ...invoice, vendor: null };
-          }
-        }
-        return invoice;
-      })
-    );
-    
-    return NextResponse.json(invoicesWithVendors, { status: 200 });
+    const invoices = await PurchaseInvoice.find().sort({ createdAt: -1 });
+    return NextResponse.json(invoices, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});

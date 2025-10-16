@@ -1,7 +1,7 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Timecard from "@/models/Timecard";
 import { NextResponse } from "next/server";
-import { requireAuth } from "../utilis/authMiddleware";
+import { requireAuth } from "../../utilis/authMiddleware";
 
 export const POST = requireAuth(async function(req,res){
     try{

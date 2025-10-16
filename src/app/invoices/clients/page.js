@@ -3,14 +3,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../../components/Layout";
+import { makeAuthenticatedRequest } from "../../utilis/tokenManager";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: "", email: "", phone: "", company: "", taxId: "",
-    address: { street: "", city: "", state: "", zipCode: "", country: "" }
+    name: "", email: "", phone: "", company: "", gstin: "",
+    address: { street: "", city: "", state: "", zipCode: "", country: "India" },
+    placeOfSupply: "Telangana (36)"
   });
   const router = useRouter();
 
@@ -25,7 +27,7 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("/api/clients");
+      const response = await makeAuthenticatedRequest("/api/clients");
       const data = await response.json();
       setClients(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -38,9 +40,8 @@ export default function ClientsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("/api/clients", {
+      const response = await makeAuthenticatedRequest("/api/clients", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
 
@@ -48,8 +49,9 @@ export default function ClientsPage() {
         setShowModal(false);
         fetchClients();
         setFormData({
-          name: "", email: "", phone: "", company: "", taxId: "",
-          address: { street: "", city: "", state: "", zipCode: "", country: "" }
+          name: "", email: "", phone: "", company: "", gstin: "",
+          address: { street: "", city: "", state: "", zipCode: "", country: "India" },
+          placeOfSupply: "Telangana (36)"
         });
       }
     } catch (error) {
@@ -183,10 +185,11 @@ export default function ClientsPage() {
                     </div>
                     <div className="row mb-3">
                       <div className="col-md-12">
-                        <label className="form-label">Street Address</label>
+                        <label className="form-label">Street Address *</label>
                         <input 
                           type="text" 
                           className="form-control"
+                          required
                           value={formData.address.street}
                           onChange={(e) => setFormData({...formData, address: {...formData.address, street: e.target.value}})}
                         />
@@ -194,30 +197,53 @@ export default function ClientsPage() {
                     </div>
                     <div className="row mb-3">
                       <div className="col-md-4">
-                        <label className="form-label">City</label>
+                        <label className="form-label">City *</label>
                         <input 
                           type="text" 
                           className="form-control"
+                          required
                           value={formData.address.city}
                           onChange={(e) => setFormData({...formData, address: {...formData.address, city: e.target.value}})}
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">State</label>
+                        <label className="form-label">State *</label>
                         <input 
                           type="text" 
                           className="form-control"
+                          required
                           value={formData.address.state}
                           onChange={(e) => setFormData({...formData, address: {...formData.address, state: e.target.value}})}
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">ZIP Code</label>
+                        <label className="form-label">ZIP Code *</label>
                         <input 
                           type="text" 
                           className="form-control"
+                          required
                           value={formData.address.zipCode}
                           onChange={(e) => setFormData({...formData, address: {...formData.address, zipCode: e.target.value}})}
+                        />
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-md-6">
+                        <label className="form-label">GSTIN</label>
+                        <input 
+                          type="text" 
+                          className="form-control"
+                          value={formData.gstin}
+                          onChange={(e) => setFormData({...formData, gstin: e.target.value})}
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Place of Supply</label>
+                        <input 
+                          type="text" 
+                          className="form-control"
+                          value={formData.placeOfSupply}
+                          onChange={(e) => setFormData({...formData, placeOfSupply: e.target.value})}
                         />
                       </div>
                     </div>

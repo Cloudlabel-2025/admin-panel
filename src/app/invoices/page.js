@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
+import { makeAuthenticatedRequest } from "../utilis/tokenManager";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -10,9 +11,11 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState("");
-  const [invoiceItems, setInvoiceItems] = useState([{ description: "", quantity: 1, rate: 0, amount: 0 }]);
+  const [invoiceItems, setInvoiceItems] = useState([{ description: "", hsnSac: "998311", quantity: 1, rate: 0, igst: "18%", amount: 0 }]);
   const [dueDate, setDueDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [poNumber, setPoNumber] = useState("DLE42852P");
+  const [taxPercent, setTaxPercent] = useState(18);
+  const [notes, setNotes] = useState("Thanks for your business.");
   const router = useRouter();
 
   useEffect(() => {
@@ -27,8 +30,8 @@ export default function InvoicesPage() {
   const fetchData = async () => {
     try {
       const [invoicesRes, clientsRes] = await Promise.all([
-        fetch("/api/invoices"),
-        fetch("/api/clients")
+        makeAuthenticatedRequest("/api/invoices"),
+        makeAuthenticatedRequest("/api/clients")
       ]);
       const invoicesData = await invoicesRes.json();
       const clientsData = await clientsRes.json();
@@ -51,7 +54,7 @@ export default function InvoicesPage() {
   };
 
   const addItem = () => {
-    setInvoiceItems([...invoiceItems, { description: "", quantity: 1, rate: 0, amount: 0 }]);
+    setInvoiceItems([...invoiceItems, { description: "", hsnSac: "998311", quantity: 1, rate: 0, igst: `${taxPercent}%`, amount: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -65,12 +68,15 @@ export default function InvoicesPage() {
   const createInvoice = async () => {
     if (!selectedClient || invoiceItems.length === 0) return;
 
-    // Validate items
     const validItems = invoiceItems.filter(item => 
       item.description && item.description.trim() && 
       item.quantity > 0 && 
       item.rate >= 0
-    );
+    ).map(item => ({
+      ...item,
+      hsnSac: item.hsnSac || '998311',
+      igst: item.igst || '18%'
+    }));
 
     if (validItems.length === 0) {
       alert("Please add at least one valid item with description, quantity, and rate.");
@@ -78,18 +84,19 @@ export default function InvoicesPage() {
     }
 
     const subtotal = calculateTotal();
-    const tax = subtotal * 0.18; // 18% tax
+    const tax = subtotal * (taxPercent / 100);
     const total = subtotal + tax;
 
     try {
-      const response = await fetch("/api/invoices", {
+      const response = await makeAuthenticatedRequest("/api/invoices", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId: selectedClient,
           dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          poNumber,
           items: validItems,
           subtotal,
+          taxPercent,
           tax,
           total,
           notes,
@@ -100,10 +107,11 @@ export default function InvoicesPage() {
       if (response.ok) {
         setShowCreateModal(false);
         fetchData();
-        // Reset form
         setSelectedClient("");
-        setInvoiceItems([{ description: "", quantity: 1, rate: 0, amount: 0 }]);
-        setNotes("");
+        setInvoiceItems([{ description: "", hsnSac: "998311", quantity: 1, rate: 0, igst: "18%", amount: 0 }]);
+        setPoNumber("DLE42852P");
+        setTaxPercent(18);
+        setNotes("Thanks for your business.");
         setDueDate("");
       }
     } catch (error) {
@@ -113,7 +121,7 @@ export default function InvoicesPage() {
 
   const generatePDF = async (invoiceId) => {
     try {
-      const response = await fetch(`/api/invoices/${invoiceId}/pdf`);
+      const response = await makeAuthenticatedRequest(`/api/invoices/${invoiceId}/pdf`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -138,7 +146,6 @@ export default function InvoicesPage() {
   return (
     <Layout>
       <div className="container-fluid">
-        {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h2 className="mb-1"><i className="bi bi-receipt me-2"></i>Invoice Management</h2>
@@ -157,7 +164,6 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* Invoices Table */}
         <div className="card border-0 shadow-sm">
           <div className="card-header bg-white border-0">
             <h6 className="mb-0"><i className="bi bi-table me-2"></i>Invoices ({invoices.length})</h6>
@@ -214,10 +220,9 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* Create Invoice Modal */}
         {showCreateModal && (
           <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
-            <div className="modal-dialog modal-lg">
+            <div className="modal-dialog modal-xl">
               <div className="modal-content">
                 <div className="modal-header">
                   <h5 className="modal-title">Create New Invoice</h5>
@@ -225,8 +230,8 @@ export default function InvoicesPage() {
                 </div>
                 <div className="modal-body">
                   <div className="row mb-3">
-                    <div className="col-md-6">
-                      <label className="form-label">Select Client</label>
+                    <div className="col-md-3">
+                      <label className="form-label">Select Client *</label>
                       <select 
                         className="form-select" 
                         value={selectedClient} 
@@ -238,7 +243,7 @@ export default function InvoicesPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-3">
                       <label className="form-label">Due Date</label>
                       <input 
                         type="date" 
@@ -247,16 +252,48 @@ export default function InvoicesPage() {
                         onChange={(e) => setDueDate(e.target.value)}
                       />
                     </div>
+                    <div className="col-md-3">
+                      <label className="form-label">P.O. Number</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={poNumber}
+                        onChange={(e) => setPoNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-md-3">
+                      <label className="form-label">Tax %</label>
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        value={taxPercent}
+                        onChange={(e) => setTaxPercent(parseFloat(e.target.value) || 0)}
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                    </div>
                   </div>
 
-                  <h6>Invoice Items</h6>
+                  <h6 className="mb-3">Invoice Items</h6>
+                  
+                  <div className="row mb-2">
+                    <div className="col-md-3"><label className="form-label fw-bold">Description</label></div>
+                    <div className="col-md-2"><label className="form-label fw-bold">HSN/SAC</label></div>
+                    <div className="col-md-1"><label className="form-label fw-bold">Qty</label></div>
+                    <div className="col-md-2"><label className="form-label fw-bold">Rate</label></div>
+                    <div className="col-md-1"><label className="form-label fw-bold">IGST</label></div>
+                    <div className="col-md-2"><label className="form-label fw-bold">Amount</label></div>
+                    <div className="col-md-1"><label className="form-label fw-bold">Action</label></div>
+                  </div>
+                  
                   {invoiceItems.map((item, index) => (
                     <div key={index} className="row mb-2">
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <input 
                           type="text" 
                           className="form-control" 
-                          placeholder="Description *"
+                          placeholder="Enter description"
                           value={item.description}
                           onChange={(e) => updateItemAmount(index, 'description', e.target.value)}
                           required
@@ -264,9 +301,18 @@ export default function InvoicesPage() {
                       </div>
                       <div className="col-md-2">
                         <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="998311"
+                          value={item.hsnSac}
+                          onChange={(e) => updateItemAmount(index, 'hsnSac', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-md-1">
+                        <input 
                           type="number" 
                           className="form-control" 
-                          placeholder="Qty"
+                          placeholder="1"
                           value={item.quantity}
                           onChange={(e) => updateItemAmount(index, 'quantity', parseFloat(e.target.value) || 0)}
                         />
@@ -275,29 +321,42 @@ export default function InvoicesPage() {
                         <input 
                           type="number" 
                           className="form-control" 
-                          placeholder="Rate"
+                          placeholder="0.00"
                           value={item.rate}
                           onChange={(e) => updateItemAmount(index, 'rate', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="col-md-1">
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="18%"
+                          value={item.igst}
+                          onChange={(e) => updateItemAmount(index, 'igst', e.target.value)}
                         />
                       </div>
                       <div className="col-md-2">
                         <input 
                           type="number" 
                           className="form-control" 
-                          placeholder="Amount"
-                          value={item.amount}
+                          placeholder="0.00"
+                          value={item.amount.toFixed(2)}
                           readOnly
                         />
                       </div>
-                      <div className="col-md-2">
-                        <button className="btn btn-outline-danger btn-sm" onClick={() => removeItem(index)}>
+                      <div className="col-md-1">
+                        <button 
+                          className="btn btn-outline-danger btn-sm w-100" 
+                          onClick={() => removeItem(index)}
+                          disabled={invoiceItems.length === 1}
+                        >
                           <i className="bi bi-trash"></i>
                         </button>
                       </div>
                     </div>
                   ))}
                   
-                  <button className="btn btn-outline-primary btn-sm mb-3" onClick={addItem}>
+                  <button className="btn btn-outline-primary btn-sm mb-4" onClick={addItem}>
                     <i className="bi bi-plus"></i> Add Item
                   </button>
 
@@ -306,26 +365,28 @@ export default function InvoicesPage() {
                       <label className="form-label">Notes</label>
                       <textarea 
                         className="form-control" 
-                        rows="3"
+                        rows="4"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Thanks for your business."
                       ></textarea>
                     </div>
                     <div className="col-md-6">
                       <div className="card">
                         <div className="card-body">
-                          <div className="d-flex justify-content-between">
+                          <h6 className="card-title">Invoice Summary</h6>
+                          <div className="d-flex justify-content-between mb-2">
                             <span>Subtotal:</span>
-                            <span>₹{calculateTotal().toLocaleString()}</span>
+                            <span>₹{calculateTotal().toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                           </div>
-                          <div className="d-flex justify-content-between">
-                            <span>Tax (18%):</span>
-                            <span>₹{(calculateTotal() * 0.18).toLocaleString()}</span>
+                          <div className="d-flex justify-content-between mb-2">
+                            <span>Tax ({taxPercent}%):</span>
+                            <span>₹{(calculateTotal() * (taxPercent / 100)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                           </div>
                           <hr />
                           <div className="d-flex justify-content-between fw-bold">
                             <span>Total:</span>
-                            <span>₹{(calculateTotal() * 1.18).toLocaleString()}</span>
+                            <span>₹{(calculateTotal() * (1 + taxPercent / 100)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                           </div>
                         </div>
                       </div>
@@ -334,7 +395,13 @@ export default function InvoicesPage() {
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={createInvoice}>Create Invoice</button>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={createInvoice}
+                    disabled={!selectedClient || invoiceItems.length === 0}
+                  >
+                    <i className="bi bi-plus-circle me-2"></i>Create Invoice
+                  </button>
                 </div>
               </div>
             </div>
