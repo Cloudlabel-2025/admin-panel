@@ -33,6 +33,7 @@ export default function HomePage() {
       localStorage.setItem("userId", data.user._id || data.user.id);
       localStorage.setItem("userEmail", data.user.email);
       localStorage.setItem("userRole", data.user.role);
+      localStorage.setItem("userName", data.user.name);
       
 
 

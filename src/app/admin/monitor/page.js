@@ -100,6 +100,7 @@ export default function MonitorEmployees() {
       const today = new Date().toISOString().split("T")[0];
       const userRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
+      const employeeName = localStorage.getItem("name");
       
       let url = `/api/timecard?admin=true&date=${today}&_t=${Date.now()}`;
       

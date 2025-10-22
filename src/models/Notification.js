@@ -2,8 +2,7 @@ import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
   employeeId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Employee",
+    type: String,
     required: true,
   },
   title: {
@@ -29,4 +28,9 @@ const notificationSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.models.Notification || mongoose.model("Notification", notificationSchema);
+// Force recreate model to apply schema changes
+if (mongoose.models.Notification) {
+  delete mongoose.models.Notification;
+}
+
+export default mongoose.model("Notification", notificationSchema);

@@ -31,8 +31,17 @@ async function getNextEmployeeId() {
 export async function GET() {
   try {
     await connectMongoose();
+    
+    // Ensure connection is ready
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
 
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Database instance not available');
+    }
+    
     const collections = await db.listCollections().toArray();
     const departmentCollections = collections
       .map((col) => col.name)
