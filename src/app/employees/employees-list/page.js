@@ -38,24 +38,26 @@ export default function EmployeeList() {
           <div className="table-responsive">
             <table className="table table-bordered table-hover align-middle">
               <thead className="table-primary">
-                <tr>
+                <tr className="text-center">
                   <th>S.no</th>
                   <th>Employee ID</th>
                   <th>First Name</th>
                   <th>Last Name</th>
+                  <th>Department</th> 
+                  <th>Role</th>
                   <th>Email</th>
-                  <th>Department</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user, index) => (
-                  <tr key={user._id}>
+                  <tr key={user._id} className="text-center">
                     <td>{index + 1}</td>
                     <td>{user.employeeId}</td>
-                    <td>{user.firstName}</td>
-                    <td>{user.lastName}</td>
-                    <td>{user.email}</td>
+                    <td className="text-lowercase">{user.firstName}</td>
+                    <td className="text-lowercase">{user.lastName}</td>
                     <td>{user.department} </td>
+                    <td>{user.role}</td>
+                    <td>{user.email}</td>
                   </tr>
                 ))}
               </tbody>
