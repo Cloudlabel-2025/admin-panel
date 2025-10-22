@@ -255,6 +255,11 @@ export default function Layout({ children }) {
                         <span className="me-2">👤</span>
                         {!sidebarCollapsed && <span>Add Employee</span>}
                       </button>
+                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/employees/employees-list")}>
+                        <span className="me-2">👤</span>
+                        {!sidebarCollapsed && <span>Employees List</span>}
+                      </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin/monitor")}>
                         <span className="me-2">📊</span>
