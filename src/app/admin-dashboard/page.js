@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Layout from "../components/Layout";
 import { makeAuthenticatedRequest } from "../utilis/tokenManager";
 
@@ -215,63 +216,77 @@ export default function AdminDashboard() {
       {/* Stats Cards */}
       <div className="row mb-4">
         <div className="col-lg-3 col-md-6 mb-3">
-          <div className="card bg-primary text-white h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title mb-1">👥 Employees</h6>
-                  <h2 className="mb-0">{dashboardData.employees}</h2>
-                  <small className="opacity-75">Total registered</small>
+          <Link href="/employees/employees-list" style={{ textDecoration: 'none' }}>
+            <div className="card bg-primary text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="card-title mb-1">👥 Employees</h6>
+                    <h2 className="mb-0">{dashboardData.employees}</h2>
+                    <small className="opacity-75">Total registered</small>
+                  </div>
+                  <div className="fs-1 opacity-30">👥</div>
                 </div>
-                <div className="fs-1 opacity-50">👥</div>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
         
         <div className="col-lg-3 col-md-6 mb-3">
-          <div className="card bg-success text-white h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title mb-1">💰 Revenue</h6>
-                  <h2 className="mb-0">₹{dashboardData.totalRevenue.toLocaleString()}</h2>
-                  <small className="opacity-75">Total transactions</small>
+          <Link href="/accounting/transactions" style={{ textDecoration: 'none' }}>
+            <div className="card bg-success text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="card-title mb-1">💰 Revenue</h6>
+                    <h2 className="mb-0">₹{(() => {
+                      const amount = dashboardData.totalRevenue;
+                      if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
+                      if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+                      if (amount >= 1000) return (amount / 1000).toFixed(2) + 'K';
+                      return amount.toLocaleString();
+                    })()}</h2>
+                    <small className="opacity-75">Total transactions</small>
+                  </div>
+                  <div className="fs-1 opacity-30">💰</div>
                 </div>
-                <div className="fs-1 opacity-50">💰</div>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
         
         <div className="col-lg-3 col-md-6 mb-3">
-          <div className="card bg-info text-white h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title mb-1">📅 Attendance</h6>
-                  <h2 className="mb-0">{dashboardData.attendanceRate}%</h2>
-                  <small className="opacity-75">This month</small>
+          <Link href="/attendance" style={{ textDecoration: 'none' }}>
+            <div className="card bg-info text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="card-title mb-1">📅 Attendance</h6>
+                    <h2 className="mb-0">{dashboardData.attendanceRate}%</h2>
+                    <small className="opacity-75">This month</small>
+                  </div>
+                  <div className="fs-1 opacity-30">📅</div>
                 </div>
-                <div className="fs-1 opacity-50">📅</div>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
         
         <div className="col-lg-3 col-md-6 mb-3">
-          <div className="card bg-warning text-white h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="card-title mb-1">📋 Projects</h6>
-                  <h2 className="mb-0">{dashboardData.activeProjects}</h2>
-                  <small className="opacity-75">Active projects</small>
+          <Link href="/project" style={{ textDecoration: 'none' }}>
+            <div className="card bg-warning text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="card-title mb-1">📋 Projects</h6>
+                    <h2 className="mb-0">{dashboardData.activeProjects}</h2>
+                    <small className="opacity-75">Active projects</small>
+                  </div>
+                  <div className="fs-1 opacity-30">📋</div>
                 </div>
-                <div className="fs-1 opacity-50">📋</div>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
 

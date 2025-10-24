@@ -3,7 +3,7 @@ import Timecard from "@/models/Timecard";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../utilis/authMiddleware";
 
-export const POST = requireAuth(async function(req,res){
+async function handlePOST(req) {
     try{
     await connectMongoose();
     const data = await req.json();
@@ -16,7 +16,9 @@ export const POST = requireAuth(async function(req,res){
     catch(err){
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
     }
-});
+}
+
+export const POST = requireAuth(handlePOST);
 
 export async function GET(req) {
     try{
@@ -106,7 +108,7 @@ export async function GET(req) {
     }
 }
 
-export const PUT = requireAuth(async function(req){
+async function handlePUT(req){
   try {
     await connectMongoose();
     const body = await req.json();
@@ -168,4 +170,6 @@ export const PUT = requireAuth(async function(req){
     console.error("PUT error:", err);
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
-});
+}
+
+export const PUT = requireAuth(handlePUT);

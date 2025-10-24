@@ -18,13 +18,13 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
+    "libphonenumber-js": "^1.12.24",
     "mongoose": "^8.18.0",
     "next": "15.5.2",
     "path": "^0.12.7",
     "pdfkit": "^0.17.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

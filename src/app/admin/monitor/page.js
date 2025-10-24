@@ -151,37 +151,42 @@ export default function MonitorEmployees() {
 
   return (
     <Layout>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2 className="text-primary mb-1">
-            <i className="bi bi-display me-2"></i>
-            Real-time {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Employee" : "Team"} Monitor
-          </h2>
-          <small className="text-muted">Last updated: {lastFetchTime || 'Never'}</small>
-        </div>
-        <div className="d-flex flex-column align-items-end">
-          <button className="btn btn-primary mb-2" onClick={fetchAllData} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                Loading...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-arrow-clockwise me-2"></i>
-                Refresh Now
-              </>
-            )}
-          </button>
-          <small className="text-muted">
-            Next refresh in: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
-          </small>
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h2 className="mb-1">
+                <i className="bi bi-display me-2"></i>
+                Real-time {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Employee" : "Team"} Monitor
+              </h2>
+              <small className="text-muted">Last updated: {lastFetchTime || 'Never'} • Auto-refresh every 5 minutes</small>
+            </div>
+            <div className="d-flex flex-column align-items-end">
+              <button className="btn btn-dark mb-2" onClick={fetchAllData} disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-arrow-clockwise me-2"></i>
+                    Refresh Now
+                  </>
+                )}
+              </button>
+              <small className="text-muted">
+                <i className="bi bi-clock me-1"></i>
+                Next refresh: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+              </small>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Timecards Section */}
-      <div className="card mb-4 shadow-sm">
-        <div className="card-header bg-info text-white">
+      <div className="card mb-4 shadow-sm border-0">
+        <div className="card-header bg-dark text-white border-0">
           <div className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0">
               <i className="bi bi-clock-history me-2"></i>
@@ -305,8 +310,8 @@ export default function MonitorEmployees() {
       */}
 
       {/* Daily Tasks Section */}
-      <div className="card shadow-sm">
-        <div className="card-header bg-primary text-white">
+      <div className="card shadow-sm border-0">
+        <div className="card-header bg-dark text-white border-0">
           <div className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0">
               <i className="bi bi-list-task me-2"></i>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 import Layout from "../../components/Layout";
 
 export default function CreateEmployeePage() {
@@ -37,6 +38,26 @@ export default function CreateEmployeePage() {
       currency: "INR",
     },
   });
+  const [dateError, setDateError] = useState("");
+  const [dobError, setDobError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [validated, setValidated] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [highlightErrors, setHighlightErrors] = useState(false);
+  const [countryCode, setCountryCode] = useState("IN");
+  const [emergencyCountryCode, setEmergencyCountryCode] = useState("IN");
+  const [emergencyPhoneError, setEmergencyPhoneError] = useState("");
+
+  const countryOptions = [
+    { code: "US", dial: "+1", name: "US/CA", regex: /^[0-9]{10}$/, format: "10 digits", pattern: "[0-9]{10}" },
+    { code: "GB", dial: "+44", name: "UK", regex: /^[0-9]{10,11}$/, format: "10-11 digits", pattern: "[0-9]{10,11}" },
+    { code: "AU", dial: "+61", name: "AU", regex: /^[0-9]{9}$/, format: "9 digits", pattern: "[0-9]{9}" },
+    { code: "JP", dial: "+81", name: "JP", regex: /^[0-9]{10}$/, format: "10 digits", pattern: "[0-9]{10}" },
+    { code: "CN", dial: "+86", name: "CN", regex: /^[0-9]{11}$/, format: "11 digits", pattern: "[0-9]{11}" },
+    { code: "IN", dial: "+91", name: "IN", regex: /^[0-9]{10}$/, format: "10 digits", pattern: "[0-9]{10}" },
+    { code: "AE", dial: "+971", name: "AE", regex: /^[0-9]{9}$/, format: "9 digits", pattern: "[0-9]{9}" }
+  ];
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -66,6 +87,21 @@ export default function CreateEmployeePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidated(true);
+    
+    // Validate required fields
+    if (!formData.firstName || !formData.email || !formData.phone || !formData.joiningDate || !formData.department || !formData.role || !formData.emergencyContact.contactNumber || !formData.payroll.salary) {
+      setError("Please fill all required fields marked with *");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+
+    if (dateError) {
+      setError("Please fix the joining date error");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -112,14 +148,26 @@ export default function CreateEmployeePage() {
             currency: "INR",
           },
         });
+        setCurrentStep(1);
+        setValidated(false);
+        setHighlightErrors(false);
+        setCountryCode("IN");
+        setEmergencyCountryCode("IN");
+        setDateError("");
+        setDobError("");
+        setEmailError("");
+        setPhoneError("");
+        setEmergencyPhoneError("");
       } else {
-        setError(data.message || "Failed to create employee");
-        setTimeout(() => setError(""), 3000);
+        const errorMsg = data.message || data.error || "Failed to create employee";
+        setError(errorMsg);
+        setTimeout(() => setError(""), 5000);
       }
     } catch (error) {
       console.error("Submission error:", error);
-      setError("Submission failed. Please try again.");
-      setTimeout(() => setError(""), 3000);
+      const errorMsg = error.message || "Network error. Please check your connection and try again.";
+      setError(errorMsg);
+      setTimeout(() => setError(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -151,10 +199,44 @@ export default function CreateEmployeePage() {
         </h2>
       </div>
 
+      {/* Progress Steps */}
+      <div className="card shadow-sm mb-4">
+        <div className="card-body p-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <div className={`flex-fill text-center ${currentStep >= 1 ? 'text-primary fw-bold' : 'text-muted'}`}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 1 ? 'bg-primary text-white' : 'bg-light'}`} style={{width: '40px', height: '40px'}}>1</div>
+              <div className="small">Basic Info</div>
+            </div>
+            <div className="flex-fill" style={{height: '2px', backgroundColor: currentStep >= 2 ? '#0d6efd' : '#dee2e6'}}></div>
+            <div className={`flex-fill text-center ${currentStep >= 2 ? 'text-primary fw-bold' : 'text-muted'}`}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-light'}`} style={{width: '40px', height: '40px'}}>2</div>
+              <div className="small">Contact</div>
+            </div>
+            <div className="flex-fill" style={{height: '2px', backgroundColor: currentStep >= 3 ? '#0d6efd' : '#dee2e6'}}></div>
+            <div className={`flex-fill text-center ${currentStep >= 3 ? 'text-primary fw-bold' : 'text-muted'}`}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 3 ? 'bg-primary text-white' : 'bg-light'}`} style={{width: '40px', height: '40px'}}>3</div>
+              <div className="small">Work Info</div>
+            </div>
+            <div className="flex-fill" style={{height: '2px', backgroundColor: currentStep >= 4 ? '#0d6efd' : '#dee2e6'}}></div>
+            <div className={`flex-fill text-center ${currentStep >= 4 ? 'text-primary fw-bold' : 'text-muted'}`}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 4 ? 'bg-primary text-white' : 'bg-light'}`} style={{width: '40px', height: '40px'}}>4</div>
+              <div className="small">Emergency</div>
+            </div>
+            <div className="flex-fill" style={{height: '2px', backgroundColor: currentStep >= 5 ? '#0d6efd' : '#dee2e6'}}></div>
+            <div className={`flex-fill text-center ${currentStep >= 5 ? 'text-primary fw-bold' : 'text-muted'}`}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 5 ? 'bg-primary text-white' : 'bg-light'}`} style={{width: '40px', height: '40px'}}>5</div>
+              <div className="small">Address & Payroll</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="card shadow-sm">
         <div className="card-body p-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
-        {/* Basic Information Section */}
+          <form className={`row g-3 ${validated ? 'was-validated' : ''}`} onSubmit={handleSubmit} noValidate suppressHydrationWarning>
+        {/* Step 1: Basic Information */}
+        {currentStep === 1 && (
+        <>
         <div className="col-12">
           <h5 className="text-secondary border-bottom pb-2 mb-3">
             <i className="bi bi-person-circle me-2"></i>
@@ -162,66 +244,140 @@ export default function CreateEmployeePage() {
           </h5>
         </div>
         <div className="col-md-6">
-          <label className="form-label">Joining Date</label>
+          <label className="form-label">Joining Date <span className="text-danger">*</span></label>
           <input
             type="date"
-            className="form-control"
+            className={`form-control ${dateError || (highlightErrors && !formData.joiningDate) ? 'is-invalid' : ''}`}
             name="joiningDate"
             value={formData.joiningDate}
-            onChange={handleChange}
+            onChange={(e) => {
+              handleChange(e);
+              
+              if (e.target.value) {
+                const selectedDate = new Date(e.target.value);
+                const minDate = new Date('2022-03-21');
+                const maxDate = new Date();
+                maxDate.setMonth(maxDate.getMonth() + 6);
+                
+                if (selectedDate < minDate || selectedDate > maxDate) {
+                  setDateError('Date must be between March 21, 2022 and 6 months from today');
+                } else {
+                  setDateError('');
+                }
+              } else {
+                setDateError('');
+              }
+            }}
+            min="2022-03-21"
+            max={(() => {
+              const today = new Date();
+              today.setMonth(today.getMonth() + 6);
+              return today.toISOString().split('T')[0];
+            })()}
+            required
           />
+          {dateError && <div className="invalid-feedback">{dateError}</div>}
+
         </div>
 
         <div className="col-md-6">
-          <label className="form-label">First Name</label>
+          <label className="form-label">First Name<span className="text-danger">*</span></label>
           <input
             type="text"
-            className="form-control"
+            className={`form-control ${highlightErrors && !formData.firstName ? 'is-invalid' : ''}`}
             name="firstName"
             value={formData.firstName}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^a-zA-Z\s.]/g, "");
+              setFormData((prev) => ({ ...prev, firstName: value }));
+            }}
+            pattern="[a-zA-Z\s.]+"
             required
           />
+
         </div>
         <div className="col-md-6">
-          <label className="form-label">Last Name</label>
+          <label className="form-label">Last Name <span className="text-danger">*</span></label>
           <input
             type="text"
-            className="form-control"
+            className={`form-control ${highlightErrors && !formData.lastName ? 'is-invalid' : ''}`}
             name="lastName"
             value={formData.lastName}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^a-zA-Z\s.]/g, "");
+              setFormData((prev) => ({ ...prev, lastName: value }));
+            }}
+            pattern="[a-zA-Z\s.]+"
             required
           />
+
         </div>
 
         <div className="col-md-6">
-          <label className="form-label">Date of Birth</label>
+          <label className="form-label">Date of Birth <span className="text-danger">*</span></label>
           <input
             type="date"
-            className="form-control"
+            className={`form-control ${dobError || (highlightErrors && !formData.dob) ? 'is-invalid' : ''}`}
             name="dob"
             value={formData.dob}
-            onChange={handleChange}
+            onChange={(e) => {
+              handleChange(e);
+              
+              if (e.target.value) {
+                const birthDate = new Date(e.target.value);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                  age--;
+                }
+                
+                if (age < 18) {
+                  setDobError('Employee must be at least 18 years old');
+                } else {
+                  setDobError('');
+                }
+              } else {
+                setDobError('');
+              }
+            }}
+            max={(() => {
+              const today = new Date();
+              today.setFullYear(today.getFullYear() - 18);
+              return today.toISOString().split('T')[0];
+            })()}
+            required
           />
+          {dobError && <div className="invalid-feedback">{dobError}</div>}
+
         </div>
         <div className="col-md-6">
-          <label className="form-label">Gender</label>
+          <label className="form-label">Gender <span className="text-danger">*</span></label>
           <select
-            className="form-select"
+            className={`form-select ${highlightErrors && !formData.gender ? 'is-invalid' : ''}`}
             name="gender"
             value={formData.gender}
             onChange={handleChange}
+            required
           >
             <option value="">Select</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
-            <option value="Other">Other</option>
+            <option value="Transwomen">Transwomen</option>
+            <option value="Transmen">Transmen</option>
+            <option value="Non-Binary">Non-Binary</option>
+            <option value="Prefer Not to Say">Prefer Not to Say</option>
           </select>
-        </div>
 
-        {/* Contact Information Section */}
-        <div className="col-12 mt-4">
+        </div>
+        </>
+        )}
+
+        {/* Step 2: Contact Information */}
+        {currentStep === 2 && (
+        <>
+        <div className="col-12">
           <h5 className="text-secondary border-bottom pb-2 mb-3">
             <i className="bi bi-telephone-fill me-2"></i>
             Contact Information
@@ -233,53 +389,93 @@ export default function CreateEmployeePage() {
           </label>
           <input
             type="email"
-            className="form-control"
+            className={`form-control ${emailError || (highlightErrors && (!formData.email || !formData.email.includes('@'))) ? 'is-invalid' : ''}`}
             name="email"
             value={formData.email}
-            onChange={(e) =>
+            onChange={(e) => {
+              const value = e.target.value;
               setFormData((prev) => ({
                 ...prev,
-                email: e.target.value.toLowerCase(),
-              }))
-            }
+                email: value,
+              }));
+              
+              if (value && !value.includes('@')) {
+                setEmailError('Please enter a valid email address');
+              } else {
+                setEmailError('');
+              }
+            }}
             required
           />
+          {emailError && <div className="invalid-feedback">{emailError}</div>}
+
         </div>
 
         <div className="col-md-6">
           <label className="form-label">
             Phone <span className="text-danger">*</span>
           </label>
-          <input
-            type="tel"
-            className="form-control"
-            name="phone"
-            value={formData.phone}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, ""); // allow only digits
-              if (value.length <= 10) {
+          <div className="input-group">
+            <select 
+              className="form-select" 
+              value={countryCode} 
+              onChange={(e) => {
+                setCountryCode(e.target.value);
+                setFormData((prev) => ({ ...prev, phone: "" }));
+                setPhoneError('');
+              }}
+              style={{maxWidth: '120px'}}
+            >
+              {countryOptions.map(country => (
+                <option key={country.code} value={country.code}>
+                  {country.dial} ({country.name})
+                </option>
+              ))}
+            </select>
+            <input
+              type="tel"
+              className={`form-control ${phoneError || (highlightErrors && !formData.phone) ? 'is-invalid' : ''}`}
+              name="phone"
+              value={formData.phone}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                const country = countryOptions.find(c => c.code === countryCode);
+                
                 setFormData((prev) => ({ ...prev, phone: value }));
-              }
-            }}
-            pattern="\d{10}"
-            maxLength="10"
-            required
-            placeholder="Enter 10-digit number"
-          />
+                
+                if (value.length > 0) {
+                  if (!country.regex.test(value)) {
+                    setPhoneError(`Please enter a valid phone number for ${country.name} (${country.format})`);
+                  } else {
+                    setPhoneError('');
+                  }
+                } else {
+                  setPhoneError('');
+                }
+              }}
+              pattern={countryOptions.find(c => c.code === countryCode).pattern}
+              required
+              placeholder={`Enter ${countryOptions.find(c => c.code === countryCode).format}`}
+            />
+            {phoneError && <div className="invalid-feedback">{phoneError}</div>}
+          </div>
         </div>
+        </>
+        )}
 
-
-        {/* Work Information Section */}
-        <div className="col-12 mt-4">
+        {/* Step 3: Work Information */}
+        {currentStep === 3 && (
+        <>
+        <div className="col-12">
           <h5 className="text-secondary border-bottom pb-2 mb-3">
             <i className="bi bi-briefcase-fill me-2"></i>
             Work Information
           </h5>
         </div>
         <div className="col-md-6">
-          <label className="form-label">Department</label>
+          <label className="form-label">Department <span className="text-danger">*</span></label>
           <select
-            className="form-select"
+            className={`form-select ${highlightErrors && !formData.department ? 'is-invalid' : ''}`}
             name="department"
             value={formData.department}
             onChange={handleChange}
@@ -292,11 +488,12 @@ export default function CreateEmployeePage() {
             <option value="OIC">OIC</option>
             <option value="Management">Management</option>
           </select>
+
         </div>
         <div className="col-md-6">
-          <label className="form-label">Role</label>
+          <label className="form-label">Role <span className="text-danger">*</span></label>
           <select
-            className="form-select"
+            className={`form-select ${highlightErrors && !formData.role ? 'is-invalid' : ''}`}
             name="role"
             value={formData.role}
             onChange={handleChange}
@@ -312,107 +509,198 @@ export default function CreateEmployeePage() {
             <option value="Employee">Employee</option>
             <option value="Intern">Intern</option>
           </select>
-        </div>
 
-        {/* Emergency Contact Section */}
-        <div className="col-12 mt-4">
+        </div>
+        </>
+        )}
+
+        {/* Step 4: Emergency Contact */}
+        {currentStep === 4 && (
+        <>
+        <div className="col-12">
           <h5 className="text-secondary border-bottom pb-2 mb-3">
             <i className="bi bi-person-exclamation me-2"></i>
             Emergency Contact
           </h5>
         </div>
         <div className="col-md-6">
-          <label className="form-label">Contact Person</label>
+          <label className="form-label">Contact Person <span className="text-danger">*</span></label>
           <input
             type="text"
-            className="form-control"
+            className={`form-control ${highlightErrors && !formData.emergencyContact.contactPerson ? 'is-invalid' : ''}`}
             name="emergencyContact.contactPerson"
             value={formData.emergencyContact.contactPerson}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^a-zA-Z\s.]/g, "");
+              setFormData((prev) => ({
+                ...prev,
+                emergencyContact: { ...prev.emergencyContact, contactPerson: value }
+              }));
+            }}
+            pattern="[a-zA-Z\s.]+"
+            required
           />
+
         </div>
         <div className="col-md-6">
           <label className="form-label">
             Contact Number <span className="text-danger">*</span>
           </label>
-          <input
-            type="tel"
-            className="form-control"
-            name="emergencyContact.contactNumber"
-            value={formData.emergencyContact.contactNumber}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, "");
-              if (value.length <= 10) {
+          <div className="input-group">
+            <select 
+              className="form-select" 
+              value={emergencyCountryCode} 
+              onChange={(e) => {
+                setEmergencyCountryCode(e.target.value);
                 setFormData((prev) => ({
                   ...prev,
-                  emergencyContact: { ...prev.emergencyContact, contactNumber: value },
+                  emergencyContact: { ...prev.emergencyContact, contactNumber: "" }
                 }));
-              }
-            }}
-            pattern="\d{10}"
-            maxLength="10"
-            required
-            placeholder="Enter 10-digit number"
-          />
+                setEmergencyPhoneError('');
+              }}
+              style={{maxWidth: '120px'}}
+            >
+              {countryOptions.map(country => (
+                <option key={country.code} value={country.code}>
+                  {country.dial} ({country.name})
+                </option>
+              ))}
+            </select>
+            <input
+              type="tel"
+              className={`form-control ${emergencyPhoneError || (highlightErrors && !formData.emergencyContact.contactNumber) ? 'is-invalid' : ''}`}
+              name="emergencyContact.contactNumber"
+              value={formData.emergencyContact.contactNumber}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                const country = countryOptions.find(c => c.code === emergencyCountryCode);
+                
+                setFormData((prev) => ({
+                  ...prev,
+                  emergencyContact: { ...prev.emergencyContact, contactNumber: value }
+                }));
+                
+                if (value.length > 0) {
+                  if (!country.regex.test(value)) {
+                    setEmergencyPhoneError(`Please enter a valid phone number for ${country.name} (${country.format})`);
+                  } else {
+                    setEmergencyPhoneError('');
+                  }
+                } else {
+                  setEmergencyPhoneError('');
+                }
+              }}
+              pattern={countryOptions.find(c => c.code === emergencyCountryCode).pattern}
+              required
+              placeholder={`Enter ${countryOptions.find(c => c.code === emergencyCountryCode).format}`}
+            />
+            {emergencyPhoneError && <div className="invalid-feedback">{emergencyPhoneError}</div>}
+          </div>
+
         </div>
+        </>
+        )}
 
-
-        {/* Address Section */}
-        <div className="col-12 mt-4">
+        {/* Step 5: Address & Payroll */}
+        {currentStep === 5 && (
+        <>
+        <div className="col-12">
           <h5 className="text-secondary border-bottom pb-2 mb-3">
             <i className="bi bi-geo-alt-fill me-2"></i>
             Address Information
           </h5>
         </div>
         <div className="col-12">
-          <label className="form-label">Street</label>
+          <label className="form-label">Street <span className="text-danger">*</span></label>
           <input
             type="text"
             className="form-control"
             name="address.street"
             value={formData.address.street}
             onChange={handleChange}
+            required
           />
+
         </div>
         <div className="col-md-4">
-          <label className="form-label">City</label>
+          <label className="form-label">City <span className="text-danger">*</span></label>
           <input
             type="text"
             className="form-control"
             name="address.city"
             value={formData.address.city}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+              setFormData((prev) => ({
+                ...prev,
+                address: { ...prev.address, city: value }
+              }));
+            }}
+            pattern="[a-zA-Z\s]+"
+            required
           />
+
         </div>
         <div className="col-md-4">
-          <label className="form-label">State</label>
+          <label className="form-label">State <span className="text-danger">*</span></label>
           <input
             type="text"
             className="form-control"
             name="address.state"
             value={formData.address.state}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+              setFormData((prev) => ({
+                ...prev,
+                address: { ...prev.address, state: value }
+              }));
+            }}
+            pattern="[a-zA-Z\s]+"
+            required
           />
+
         </div>
         <div className="col-md-2">
-          <label className="form-label">Zip</label>
+          <label className="form-label">Zip <span className="text-danger">*</span></label>
           <input
             type="text"
             className="form-control"
             name="address.zip"
             value={formData.address.zip}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9]/g, "");
+              if (value.length <= 6) {
+                setFormData((prev) => ({
+                  ...prev,
+                  address: { ...prev.address, zip: value }
+                }));
+              }
+            }}
+            pattern="[0-9]{6}"
+            maxLength="6"
+            required
+            placeholder="6 digits"
           />
+
         </div>
         <div className="col-md-2">
-          <label className="form-label">Country</label>
+          <label className="form-label">Country <span className="text-danger">*</span></label>
           <input
             type="text"
             className="form-control"
             name="address.country"
             value={formData.address.country}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+              setFormData((prev) => ({
+                ...prev,
+                address: { ...prev.address, country: value }
+              }));
+            }}
+            pattern="[a-zA-Z\s]+"
+            required
           />
+
         </div>
 
         {/* Payroll Information Section */}
@@ -424,56 +712,130 @@ export default function CreateEmployeePage() {
         </div>
         <div className="col-md-6">
           <label className="form-label">Base Salary <span className="text-danger">*</span></label>
-          <input
-            type="number"
-            className="form-control"
-            name="payroll.salary"
-            value={formData.payroll.salary}
-            onChange={handleChange}
-            placeholder="Monthly salary"
-            required
-            min="1000"
-          />
+          <div className="input-group">
+            <select 
+              className="form-select" 
+              value={formData.payroll.currency}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  payroll: { ...prev.payroll, currency: e.target.value }
+                }));
+              }}
+              style={{maxWidth: '100px'}}
+            >
+              <option value="INR">INR</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="AUD">AUD</option>
+              <option value="CAD">CAD</option>
+              <option value="JPY">JPY</option>
+            </select>
+            <input
+              type="text"
+              className="form-control"
+              name="payroll.salary"
+              value={formData.payroll.salary}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                if (value.length <= 7) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    payroll: { ...prev.payroll, salary: value }
+                  }));
+                }
+              }}
+              pattern="[0-9]{1,7}"
+              maxLength="7"
+              placeholder="Monthly salary"
+              required
+            />
+          </div>
         </div>
+        </>
+        )}
 
-        <div className="col-md-6">
-          <label className="form-label">Currency</label>
-          <input
-            type="text"
-            className="form-control"
-            name="payroll.currency"
-            value={formData.payroll.currency}
-            onChange={handleChange}
-            readOnly
-          />
-        </div>
-
-
-        {/* Submit Button */}
-        <div className="col-12 text-center mt-5">
-          <button 
-            type="submit" 
-            className="btn btn-primary btn-lg px-5" 
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                Creating Employee...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-person-plus-fill me-2"></i>
-                Create Employee
-              </>
-            )}
-          </button>
+        {/* Navigation Buttons */}
+        <div className="col-12 d-flex justify-content-between mt-5">
+          {currentStep > 1 && (
+            <button 
+              type="button" 
+              className="btn btn-secondary px-4"
+              onClick={() => setCurrentStep(currentStep - 1)}
+            >
+              <i className="bi bi-arrow-left me-2"></i>
+              Previous
+            </button>
+          )}
+          {currentStep < 5 ? (
+            <button 
+              type="button" 
+              className="btn btn-primary px-4 ms-auto"
+              onClick={() => {
+                // Validate current step before moving to next
+                let hasError = false;
+                if (currentStep === 1) {
+                  if (!formData.joiningDate || !formData.firstName || !formData.lastName || !formData.dob || !formData.gender || dateError || dobError) {
+                    hasError = true;
+                  }
+                } else if (currentStep === 2) {
+                  const country = countryOptions.find(c => c.code === countryCode);
+                  const phoneValid = formData.phone && country.regex.test(formData.phone);
+                  if (!formData.email || !formData.email.includes('@') || !phoneValid || phoneError) {
+                    hasError = true;
+                  }
+                } else if (currentStep === 3) {
+                  if (!formData.department || !formData.role) {
+                    hasError = true;
+                  }
+                } else if (currentStep === 4) {
+                  const country = countryOptions.find(c => c.code === emergencyCountryCode);
+                  const emergencyPhoneValid = formData.emergencyContact.contactNumber && country.regex.test(formData.emergencyContact.contactNumber);
+                  if (!formData.emergencyContact.contactPerson || !emergencyPhoneValid || emergencyPhoneError) {
+                    hasError = true;
+                  }
+                }
+                
+                if (hasError) {
+                  setHighlightErrors(true);
+                  setError('Please fill all required fields in this step');
+                  setTimeout(() => setError(''), 3000);
+                  return;
+                }
+                
+                setHighlightErrors(false);
+                setCurrentStep(currentStep + 1);
+              }}
+            >
+              Next
+              <i className="bi bi-arrow-right ms-2"></i>
+            </button>
+          ) : (
+            <button 
+              type="submit" 
+              className="btn btn-success px-5 ms-auto" 
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle me-2"></i>
+                  Create Employee
+                </>
+              )}
+            </button>
+          )}
         </div>
           </form>
         </div>
       </div>
       
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
           to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -485,6 +847,24 @@ export default function CreateEmployeePage() {
         @keyframes drawCheck {
           from { stroke-dasharray: 0 20; }
           to { stroke-dasharray: 20 20; }
+        }
+        .form-control.is-valid, .form-select.is-valid {
+          border-color: #ced4da !important;
+          background-image: none !important;
+          padding-right: 0.75rem !important;
+        }
+        .was-validated .form-control:valid, .was-validated .form-select:valid {
+          border-color: #ced4da !important;
+          background-image: none !important;
+          padding-right: 0.75rem !important;
+        }
+        .form-control.is-invalid, .form-select.is-invalid {
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+          background-repeat: no-repeat;
+          background-position: right calc(0.375em + 0.1875rem) center;
+          background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+          border-color: #dc3545;
+          padding-right: calc(1.5em + 0.75rem);
         }
       `}</style>
     </Layout>

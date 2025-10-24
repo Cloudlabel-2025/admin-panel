@@ -6,11 +6,13 @@ export async function GET(req, context) {
   try {
     const {id} = await context.params;
     await connectMongoose();
-    const performance = await Performance.findById(id).populate(
-      "employeeId","name"
-    );
+    const performance = await Performance.findById(id);
+    if (!performance) {
+      return NextResponse.json({ error: "Performance not found" }, { status: 404 });
+    }
     return NextResponse.json(performance, { status: 200 });
   } catch (err) {
+    console.error('Performance GET error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
@@ -19,7 +21,7 @@ export async function PUT(req, context) {
   try {
     const {id} = await context.params;
     await connectMongoose();
-    const body = req.json();
+    const body = await req.json();
     const updatedPerformance = await Performance.findByIdAndUpdate(
       id,
       body,

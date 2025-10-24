@@ -17,6 +17,9 @@ export async function POST(req) {
     }
 
     // Check for super admin credentials from environment
+    console.log('Login attempt:', { email, providedPassword: password?.substring(0, 3) + '***' });
+    console.log('Expected:', { email: process.env.SUPER_ADMIN_EMAIL, password: process.env.SUPER_ADMIN_PASSWORD?.substring(0, 3) + '***' });
+    
     if (email === process.env.SUPER_ADMIN_EMAIL && password === process.env.SUPER_ADMIN_PASSWORD) {
       const payload = {
         userId: "super-admin",
@@ -44,12 +47,12 @@ export async function POST(req) {
     // Regular user authentication
     const user = await User.findOne({ email });
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 400 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return NextResponse.json({ error: "Incorrect password" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 400 });
     }
 
     // Get employee details from department collections

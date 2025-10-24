@@ -7,7 +7,11 @@ export default function EditPerformance() {
   const { id } = useParams();
   const router = useRouter();
   const [employees, setEmployees] = useState([]);
-  const [form, setForm] = useState(null);
+  const [form, setForm] = useState({
+    goals: [],
+    achievements: [],
+    ratings: {}
+  });
 
   useEffect(() => {
     fetch("/api/User")
@@ -16,10 +20,17 @@ export default function EditPerformance() {
 
     fetch(`/api/performance/${id}`)
       .then((r) => r.json())
-      .then(setForm);
+      .then((data) => {
+        setForm({
+          ...data,
+          goals: data.goals || [],
+          achievements: data.achievements || [],
+          ratings: data.ratings || {}
+        });
+      });
   }, [id]);
 
-  if (!form) return <p className="p-6">Loading...</p>;
+  if (!form.employeeId) return <p className="p-6">Loading...</p>;
 
   function handleArrayChange(field, index, value) {
     const updated = [...form[field]];
@@ -95,7 +106,7 @@ export default function EditPerformance() {
               </div>
               <div className="mb-3">
                 <label className="form-label">Goals</label>
-                {form.goals.map((g, i) => (
+                {(form.goals || []).map((g, i) => (
                   <div key={i} className="d-flex mb-2">
                     <input
                       type="text"
@@ -122,7 +133,7 @@ export default function EditPerformance() {
               </div>
               <div className="mb-3">
                 <label className="form-label">Achievements</label>
-                {form.achievements.map((a, i) => (
+                {(form.achievements || []).map((a, i) => (
                   <div key={i} className="d-flex mb-2">
                     <input
                       type="text"
@@ -151,7 +162,7 @@ export default function EditPerformance() {
               </div>
               <h5 className="mt-4">Ratings (1–5)</h5>
               <div className="row">
-                {Object.keys(form.ratings).map((key) => (
+                {Object.keys(form.ratings || {}).map((key) => (
                   <div key={key} className="col-md-6 mb-3">
                     <label className="form-label text-capitalize">
                       {key.replace(/([A-Z])/g, " $1")}

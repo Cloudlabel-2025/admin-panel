@@ -192,7 +192,13 @@ export default function TransactionsPage() {
                   <i className="bi bi-arrow-up-circle" style={{fontSize: '2rem'}}></i>
                 </div>
                 <h5 className="card-title text-success">Total Credit</h5>
-                <h3 className="mb-0">₹{stats.totalCredit.toLocaleString()}</h3>
+                <h3 className="mb-0" title={`₹${stats.totalCredit.toLocaleString()}`} style={{cursor: 'help'}}>₹{(() => {
+                  const amount = stats.totalCredit;
+                  if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
+                  if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+                  if (amount >= 1000) return (amount / 1000).toFixed(2) + 'K';
+                  return amount.toLocaleString();
+                })()}</h3>
               </div>
             </div>
           </div>
@@ -203,7 +209,13 @@ export default function TransactionsPage() {
                   <i className="bi bi-arrow-down-circle" style={{fontSize: '2rem'}}></i>
                 </div>
                 <h5 className="card-title text-danger">Total Debit</h5>
-                <h3 className="mb-0">₹{stats.totalDebit.toLocaleString()}</h3>
+                <h3 className="mb-0" title={`₹${stats.totalDebit.toLocaleString()}`} style={{cursor: 'help'}}>₹{(() => {
+                  const amount = stats.totalDebit;
+                  if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
+                  if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+                  if (amount >= 1000) return (amount / 1000).toFixed(2) + 'K';
+                  return amount.toLocaleString();
+                })()}</h3>
               </div>
             </div>
           </div>
@@ -214,8 +226,14 @@ export default function TransactionsPage() {
                   <i className="bi bi-wallet2" style={{fontSize: '2rem'}}></i>
                 </div>
                 <h5 className="card-title">Net Balance</h5>
-                <h3 className={`mb-0 ${stats.balance >= 0 ? 'text-success' : 'text-danger'}`}>
-                  ₹{Math.abs(stats.balance).toLocaleString()}
+                <h3 className={`mb-0 ${stats.balance >= 0 ? 'text-success' : 'text-danger'}`} title={`₹${Math.abs(stats.balance).toLocaleString()}`} style={{cursor: 'help'}}>
+                  ₹{(() => {
+                    const amount = Math.abs(stats.balance);
+                    if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
+                    if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+                    if (amount >= 1000) return (amount / 1000).toFixed(2) + 'K';
+                    return amount.toLocaleString();
+                  })()}
                 </h3>
               </div>
             </div>
@@ -399,8 +417,18 @@ export default function TransactionsPage() {
                           </span>
                         </td>
                         <td>
-                          <div className={`fw-bold ${transaction.type === 'Credit' ? 'text-success' : 'text-danger'}`}>
-                            {transaction.type === 'Credit' ? '+' : '-'}₹{parseFloat(transaction.amount || 0).toLocaleString()}
+                          <div 
+                            className={`fw-bold ${transaction.type === 'Credit' ? 'text-success' : 'text-danger'}`}
+                            title={`₹${parseFloat(transaction.amount || 0).toLocaleString()}`}
+                            style={{ cursor: 'help' }}
+                          >
+                            {transaction.type === 'Credit' ? '+' : '-'}₹{(() => {
+                              const amount = parseFloat(transaction.amount || 0);
+                              if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
+                              if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+                              if (amount >= 1000) return (amount / 1000).toFixed(2) + 'K';
+                              return amount.toLocaleString();
+                            })()}
                           </div>
                         </td>
                         <td>

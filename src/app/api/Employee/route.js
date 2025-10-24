@@ -2,7 +2,7 @@ import connectMongoose from "../../utilis/connectMongoose";
 import { createEmployeeModel } from "../../../models/Employee";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { requireRole } from "../../utilis/authMiddleware";
+import { requireRole, requireAuth } from "../../utilis/authMiddleware";
 
 // helper: find the latest employeeId across all departments
 async function getNextEmployeeId() {
@@ -32,7 +32,6 @@ export async function GET() {
   try {
     await connectMongoose();
     
-    // Ensure connection is ready
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Database not connected');
     }
@@ -62,7 +61,7 @@ export async function GET() {
   }
 }
 
-export const POST = requireRole(["super-admin", "admin", "developer"])(async function(req) {
+async function handlePOST(req) {
   try {
     await connectMongoose();
 
@@ -117,4 +116,6 @@ export const POST = requireRole(["super-admin", "admin", "developer"])(async fun
     console.error("Error creating employee:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-});
+}
+
+export const POST = requireRole(["super-admin", "admin", "developer"])(handlePOST);

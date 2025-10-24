@@ -7,10 +7,27 @@ export default function HomePage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
   const [showSuccess, setShowSuccess] = useState(false);
   const [showSignupSuccess, setShowSignupSuccess] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  const checkPasswordStrength = (pwd) => {
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+
+    if (score === 0) return { score: 0, text: '', color: '' };
+    if (score <= 2) return { score: 1, text: 'Weak', color: '#dc3545' };
+    if (score === 3) return { score: 2, text: 'Fair', color: '#ffc107' };
+    if (score === 4) return { score: 3, text: 'Good', color: '#17a2b8' };
+    return { score: 4, text: 'Strong', color: '#28a745' };
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,12 +51,9 @@ export default function HomePage() {
       localStorage.setItem("userEmail", data.user.email);
       localStorage.setItem("userRole", data.user.role);
       localStorage.setItem("userName", data.user.name);
-      
-
 
       setShowSuccess(true);
       
-      // Route based on role from server after animation
       setTimeout(() => {
         const userRole = data.user.role;
         if (userRole === "super-admin" || userRole === "Super-admin" || userRole === "developer") {
@@ -61,6 +75,19 @@ export default function HomePage() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9])/.test(password)) {
+      setError("Password must contain uppercase, lowercase, number and special character");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    
     try {
       const res = await fetch("/api/User/signup", {
         method: "POST",
@@ -80,6 +107,7 @@ export default function HomePage() {
         setIsLogin(true);
         setEmail("");
         setPassword("");
+        setConfirmPassword("");
       }, 3000);
     } catch (err) {
       console.error(err);
@@ -112,13 +140,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-      {error && (
-        <div className="position-fixed top-0 end-0 m-3" style={{ zIndex: 9999 }}>
-          <div className="alert alert-danger mb-0" style={{ borderRadius: '8px' }}>
-            {error}
-          </div>
-        </div>
-      )}
       <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{
         backgroundImage: 'url("/bg-6.png")',
         backgroundSize: 'cover',
@@ -145,6 +166,13 @@ export default function HomePage() {
                   </p>
                 </div>
 
+                {error && (
+                  <div className="alert alert-danger" role="alert">
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                    {error}
+                  </div>
+                )}
+
                 <form onSubmit={isLogin ? handleLogin : handleSignup}>
                   <div className="mb-3">
                     <label className="form-label text-dark">Email</label>
@@ -166,14 +194,17 @@ export default function HomePage() {
                     />
                   </div>
                   
-                  <div className="mb-4">
+                  <div className={isLogin ? "mb-4" : "mb-2"}>
                     <label className="form-label text-dark">Password</label>
                     <input
                       type="password"
                       className="form-control text-dark"
                       placeholder="Enter your password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (!isLogin) setPasswordStrength(checkPasswordStrength(e.target.value));
+                      }}
                       autoComplete="current-password"
                       required
                       suppressHydrationWarning
@@ -185,7 +216,41 @@ export default function HomePage() {
                       onFocus={(e) => e.target.placeholder = ''}
                       onBlur={(e) => e.target.placeholder = 'Enter your password'}
                     />
+                    {!isLogin && password && (
+                      <div className="mt-2">
+                        <div className="d-flex align-items-center gap-2">
+                          <div className="flex-grow-1" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${(passwordStrength.score / 4) * 100}%`, height: '100%', backgroundColor: passwordStrength.color, transition: 'all 0.3s' }}></div>
+                          </div>
+                          <small style={{ color: passwordStrength.color, fontWeight: 'bold', minWidth: '60px' }}>{passwordStrength.text}</small>
+                        </div>
+                        <small className="text-dark" style={{ opacity: 0.7, fontSize: '0.75rem' }}>Must contain: uppercase, lowercase, number & special character</small>
+                      </div>
+                    )}
                   </div>
+
+                  {!isLogin && (
+                    <div className="mb-4">
+                      <label className="form-label text-dark">Confirm Password</label>
+                      <input
+                        type="password"
+                        className="form-control text-dark"
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                        required
+                        suppressHydrationWarning
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          borderRadius: '8px'
+                        }}
+                        onFocus={(e) => e.target.placeholder = ''}
+                        onBlur={(e) => e.target.placeholder = 'Confirm your password'}
+                      />
+                    </div>
+                  )}
 
                   <button 
                     type="submit" 
@@ -217,6 +282,9 @@ export default function HomePage() {
                       setIsLogin(!isLogin);
                       setEmail("");
                       setPassword("");
+                      setConfirmPassword("");
+                      setPasswordStrength({ score: 0, text: '', color: '' });
+                      setError("");
                     }}
                     suppressHydrationWarning
                     style={{opacity: 0.8, textDecoration: 'none'}}
