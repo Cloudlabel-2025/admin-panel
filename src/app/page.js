@@ -24,6 +24,43 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    // Protect password inputs from inspector edits
+    const observers = [];
+    
+    const protectInput = (input, expectedType) => {
+      if (!input) return;
+      
+      const forceType = () => {
+        try {
+          if (input.getAttribute('type') !== expectedType) {
+            input.setAttribute('type', expectedType);
+          }
+        } catch (e) {
+          // Ignore read-only errors
+        }
+      };
+      
+      const observer = new MutationObserver(() => forceType());
+      observer.observe(input, { attributes: true, attributeFilter: ['type'] });
+      observers.push(observer);
+      
+      const interval = setInterval(forceType, 50);
+      observers.push({ disconnect: () => clearInterval(interval) });
+    };
+
+    setTimeout(() => {
+      if (passwordRef.current) {
+        protectInput(passwordRef.current, showPassword ? 'text' : 'password');
+      }
+      if (confirmPasswordRef.current) {
+        protectInput(confirmPasswordRef.current, showConfirmPassword ? 'text' : 'password');
+      }
+    }, 100);
+
+    return () => observers.forEach(obs => obs.disconnect());
+  }, [showPassword, showConfirmPassword]);
+
   const checkPasswordStrength = (pwd) => {
     let score = 0;
     if (pwd.length >= 8) score++;
