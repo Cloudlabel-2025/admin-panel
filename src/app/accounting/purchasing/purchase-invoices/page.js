@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/app/components/Layout";
-import { makeAuthenticatedRequest } from "@/app/utilis/tokenManager";
+
 import SuccessMessage from "@/app/components/SuccessMessage";
 
 export default function PurchaseInvoicesPage() {
@@ -34,7 +34,10 @@ export default function PurchaseInvoicesPage() {
 
   const fetchInvoices = async () => {
     try {
-      const response = await makeAuthenticatedRequest("/api/purchasing/purchase-invoices");
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/purchasing/purchase-invoices", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
       setInvoices(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -320,8 +323,10 @@ export default function PurchaseInvoicesPage() {
   async function deleteInvoice(id) {
     if (confirm('Are you sure you want to delete this purchase invoice?')) {
       try {
-        const response = await makeAuthenticatedRequest(`/api/purchasing/purchase-invoices/${id}`, {
-          method: 'DELETE'
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/purchasing/purchase-invoices/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
           fetchInvoices();

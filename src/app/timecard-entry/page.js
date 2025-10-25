@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import Layout from "../components/Layout";
 import SuccessMessage from "../components/SuccessMessage";
-import { makeAuthenticatedRequest } from "../utilis/tokenManager";
+
 
 export default function TimecardPage() {
   const router = useRouter();
@@ -72,7 +72,10 @@ export default function TimecardPage() {
 
   const fetchEmployeeData = async (empId) => {
     try {
-      const res = await makeAuthenticatedRequest(`/api/Employee/${empId}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/Employee/${empId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         setEmployeeData(data);
@@ -85,7 +88,10 @@ export default function TimecardPage() {
   // Fetch all records
   const fetchTimecards = async () => {
     if (!employeeId) return;
-    const res = await makeAuthenticatedRequest(`/api/timecard?employeeId=${employeeId}`);
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/timecard?employeeId=${employeeId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!res.ok) return;
     const data = await res.json();
     setTimecards(data);
@@ -116,8 +122,13 @@ export default function TimecardPage() {
       
       if (incompleteTimecard) {
         // Auto-logout previous day's timecard at end of that day (23:59)
-        await makeAuthenticatedRequest("/api/timecard", {
+        const token = localStorage.getItem('token');
+        await fetch("/api/timecard", {
           method: "PUT",
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ 
             _id: incompleteTimecard._id, 
             logOut: "23:59",
@@ -128,8 +139,13 @@ export default function TimecardPage() {
       
       // Auto-create entry with login time when employee accesses the page
       const newEntry = { employeeId, date: getDateString(), logIn: getTimeString() };
-      const res2 = await makeAuthenticatedRequest("/api/timecard", {
+      const token = localStorage.getItem('token');
+      const res2 = await fetch("/api/timecard", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(newEntry),
       });
       const data2 = await res2.json();
@@ -210,8 +226,13 @@ export default function TimecardPage() {
   // Update record
   const updateTimecard = async (updates) => {
     if (!current?._id) return;
-    const res = await makeAuthenticatedRequest("/api/timecard", {
+    const token = localStorage.getItem('token');
+    const res = await fetch("/api/timecard", {
       method: "PUT",
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({ _id: current._id, ...updates }),
     });
     if (!res.ok) return;

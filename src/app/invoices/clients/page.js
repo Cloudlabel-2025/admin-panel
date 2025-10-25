@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../../components/Layout";
-import { makeAuthenticatedRequest } from "../../utilis/tokenManager";
+
 
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
@@ -27,7 +27,10 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await makeAuthenticatedRequest("/api/clients");
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/clients", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
       setClients(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -40,8 +43,13 @@ export default function ClientsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await makeAuthenticatedRequest("/api/clients", {
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/clients", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       });
 

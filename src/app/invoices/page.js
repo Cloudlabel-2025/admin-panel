@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
-import { makeAuthenticatedRequest } from "../utilis/tokenManager";
+
 import SuccessMessage from "../components/SuccessMessage";
 
 export default function InvoicesPage() {
@@ -31,9 +31,10 @@ export default function InvoicesPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const [invoicesRes, clientsRes] = await Promise.all([
-        makeAuthenticatedRequest("/api/invoices"),
-        makeAuthenticatedRequest("/api/clients")
+        fetch("/api/invoices", { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch("/api/clients", { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const invoicesData = await invoicesRes.json();
       const clientsData = await clientsRes.json();
@@ -90,8 +91,13 @@ export default function InvoicesPage() {
     const total = subtotal + tax;
 
     try {
-      const response = await makeAuthenticatedRequest("/api/invoices", {
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/invoices", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           clientId: selectedClient,
           dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -125,7 +131,10 @@ export default function InvoicesPage() {
 
   const generatePDF = async (invoiceId) => {
     try {
-      const response = await makeAuthenticatedRequest(`/api/invoices/${invoiceId}/pdf`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/invoices/${invoiceId}/pdf`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

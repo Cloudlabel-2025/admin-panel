@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/app/components/Layout";
-import { makeAuthenticatedRequest } from "@/app/utilis/tokenManager";
+
 import SuccessMessage from "@/app/components/SuccessMessage";
 
 export default function PurchaseOrdersPage() {
@@ -32,7 +32,10 @@ export default function PurchaseOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const response = await makeAuthenticatedRequest("/api/purchasing/purchase-orders");
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/purchasing/purchase-orders", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
       setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -292,8 +295,10 @@ export default function PurchaseOrdersPage() {
   async function deleteOrder(id) {
     if (confirm('Are you sure you want to delete this purchase order?')) {
       try {
-        const response = await makeAuthenticatedRequest(`/api/purchasing/purchase-orders/${id}`, {
-          method: 'DELETE'
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/purchasing/purchase-orders/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
           fetchOrders();
