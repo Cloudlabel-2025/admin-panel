@@ -672,7 +672,7 @@ export default function DailyTaskComponent() {
         <div className="col-12">
           <div className="card border-0 shadow-sm">
             <div className="card-body p-3">
-              <h6 className="mb-3 fs-6"><i className="bi bi-clock-history me-2"></i>Today's Timecard</h6>
+              <h6 className="mb-3 fs-6"><i className="bi bi-clock-history me-2"></i>Today&apos;s Timecard</h6>
               <div className="d-flex flex-wrap gap-2">
                 <span className="badge bg-primary p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
                   <i className="bi bi-box-arrow-in-right me-1"></i>Log In: {timecard.logIn || "--:--"}
@@ -801,7 +801,7 @@ export default function DailyTaskComponent() {
                       <tr>
                         <td colSpan="10" className="text-center py-4">
                           <i className="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
-                          <p className="text-muted mb-0">No tasks added yet. Click "Add Task" to get started.</p>
+                          <p className="text-muted mb-0">No tasks added yet. Click &quot;Add Task&quot; to get started.</p>
                         </td>
                       </tr>
                     ) : (
