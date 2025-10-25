@@ -384,6 +384,7 @@ export default function CreateEmployeePage() {
                     <option value="Transmen">Transmen</option>
                     <option value="Non-Binary">Non-Binary</option>
                     <option value="Prefer Not to Say">Prefer Not to Say</option>
+                    <option value="Other">Other</option>
                   </select>
 
                 </div>

@@ -182,16 +182,23 @@ export default function Layout({ children }) {
         }
         @media (max-width: 768px) {
           .sidebar {
-            position: fixed;
+            position: fixed !important;
             z-index: 1050;
             transform: translateX(-100%);
             transition: transform 0.3s ease;
+            width: 280px !important;
           }
           .sidebar.show {
             transform: translateX(0);
           }
           .main-content {
             margin-left: 0 !important;
+            width: 100% !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .sidebar {
+            position: relative;
           }
         }
       `}</style>
@@ -915,7 +922,7 @@ export default function Layout({ children }) {
         </div>
 
         {/* Main Content */}
-        <div className="flex-grow-1">
+        <div className="flex-grow-1 main-content" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
           {/* Top Navigation */}
           <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-3" style={{ overflowX: "hidden" }}>
             <div className="d-flex justify-content-between align-items-center w-100">
@@ -1146,8 +1153,8 @@ export default function Layout({ children }) {
           )}
 
           {/* Page Content */}
-          <div className="p-4 bg-light" style={{ minHeight: "calc(100vh - 76px)" }}>
-            <div className="container-fluid">
+          <div className="p-2 p-md-4 bg-light" style={{ minHeight: "calc(100vh - 76px)", width: '100%', overflowX: 'hidden' }}>
+            <div className="container-fluid" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
               {children}
             </div>
           </div>

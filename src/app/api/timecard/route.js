@@ -1,5 +1,6 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Timecard from "@/models/Timecard";
+import { createEmployeeModel } from "@/models/Employee";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../utilis/authMiddleware";
 
@@ -68,19 +69,16 @@ export async function GET(req) {
     
     const timecards = await Timecard.find(query).sort({date:-1});
     
-    // Add employee names to timecards using direct database query
+    // Add employee names to timecards
     const timecardsWithNames = await Promise.all(
       timecards.map(async (timecard) => {
         try {
-          const mongoose = await import('mongoose');
-          const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
-            name.endsWith('_department')
-          );
-          
+          const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
           let employee = null;
-          for (const collName of collections) {
-            const collection = mongoose.default.connection.collections[collName];
-            const emp = await collection.findOne({ employeeId: timecard.employeeId });
+          
+          for (const dept of departments) {
+            const EmployeeModel = createEmployeeModel(dept);
+            const emp = await EmployeeModel.findOne({ employeeId: timecard.employeeId });
             if (emp) {
               employee = emp;
               break;

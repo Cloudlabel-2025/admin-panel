@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
   const [showSuccess, setShowSuccess] = useState(false);
   const [showSignupSuccess, setShowSignupSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function HomePage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    const password = passwordRef.current?.value || "";
     try {
       const res = await fetch("/api/User/login", {
         method: "POST",
@@ -83,6 +86,8 @@ export default function HomePage() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    const password = passwordRef.current?.value || "";
+    const confirmPassword = confirmPasswordRef.current?.value || "";
     
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9])/.test(password)) {
       setError("Password must contain uppercase, lowercase, number and special character");
@@ -114,8 +119,8 @@ export default function HomePage() {
         setShowSignupSuccess(false);
         setIsLogin(true);
         setEmail("");
-        setPassword("");
-        setConfirmPassword("");
+        if (passwordRef.current) passwordRef.current.value = "";
+        if (confirmPasswordRef.current) confirmPasswordRef.current.value = "";
       }, 3000);
     } catch (err) {
       console.error(err);
@@ -204,27 +209,38 @@ export default function HomePage() {
                   
                   <div className={isLogin ? "mb-4" : "mb-2"}>
                     <label className="form-label text-dark">Password</label>
-                    <input
-                      type="password"
-                      className="form-control text-dark"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (!isLogin) setPasswordStrength(checkPasswordStrength(e.target.value));
-                      }}
-                      autoComplete="current-password"
-                      required
-                      suppressHydrationWarning
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '8px'
-                      }}
-                      onFocus={(e) => e.target.placeholder = ''}
-                      onBlur={(e) => e.target.placeholder = 'Enter your password'}
-                    />
-                    {!isLogin && password && (
+                    <div className="position-relative">
+                      <input
+                        ref={passwordRef}
+                        type={showPassword ? "text" : "password"}
+                        className="form-control text-dark"
+                        placeholder="Enter your password"
+                        onChange={(e) => {
+                          if (!isLogin) setPasswordStrength(checkPasswordStrength(e.target.value));
+                        }}
+                        autoComplete="off"
+                        required
+                        suppressHydrationWarning
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          borderRadius: '8px',
+                          paddingRight: '40px'
+                        }}
+                        onFocus={(e) => e.target.placeholder = ''}
+                        onBlur={(e) => e.target.placeholder = 'Enter your password'}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-link position-absolute end-0 top-50 translate-middle-y text-dark"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ textDecoration: 'none', padding: '0 10px' }}
+                        suppressHydrationWarning
+                      >
+                        <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                      </button>
+                    </div>
+                    {!isLogin && passwordStrength.score > 0 && (
                       <div className="mt-2">
                         <div className="d-flex align-items-center gap-2">
                           <div className="flex-grow-1" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -240,23 +256,34 @@ export default function HomePage() {
                   {!isLogin && (
                     <div className="mb-4">
                       <label className="form-label text-dark">Confirm Password</label>
-                      <input
-                        type="password"
-                        className="form-control text-dark"
-                        placeholder="Confirm your password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        autoComplete="new-password"
-                        required
-                        suppressHydrationWarning
-                        style={{
-                          backgroundColor: 'rgba(255,255,255,0.1)',
-                          border: '1px solid rgba(255,255,255,0.2)',
-                          borderRadius: '8px'
-                        }}
-                        onFocus={(e) => e.target.placeholder = ''}
-                        onBlur={(e) => e.target.placeholder = 'Confirm your password'}
-                      />
+                      <div className="position-relative">
+                        <input
+                          ref={confirmPasswordRef}
+                          type={showConfirmPassword ? "text" : "password"}
+                          className="form-control text-dark"
+                          placeholder="Confirm your password"
+                          autoComplete="off"
+                          required
+                          suppressHydrationWarning
+                          style={{
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '8px',
+                            paddingRight: '40px'
+                          }}
+                          onFocus={(e) => e.target.placeholder = ''}
+                          onBlur={(e) => e.target.placeholder = 'Confirm your password'}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-link position-absolute end-0 top-50 translate-middle-y text-dark"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          style={{ textDecoration: 'none', padding: '0 10px' }}
+                          suppressHydrationWarning
+                        >
+                          <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -289,10 +316,12 @@ export default function HomePage() {
                     onClick={() => {
                       setIsLogin(!isLogin);
                       setEmail("");
-                      setPassword("");
-                      setConfirmPassword("");
+                      if (passwordRef.current) passwordRef.current.value = "";
+                      if (confirmPasswordRef.current) confirmPasswordRef.current.value = "";
                       setPasswordStrength({ score: 0, text: '', color: '' });
                       setError("");
+                      setShowPassword(false);
+                      setShowConfirmPassword(false);
                     }}
                     suppressHydrationWarning
                     style={{opacity: 0.8, textDecoration: 'none'}}

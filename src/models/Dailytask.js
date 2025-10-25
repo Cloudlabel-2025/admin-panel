@@ -11,7 +11,7 @@ const DailyTaskSchema = new mongoose.Schema({
       details: { type: String, default: "" },
       startTime: { type: String, default: "" },
       endTime: { type: String, default: "" },
-      status: { type: String, enum: ["Completed", "Pending", "In Progress"], default: "In Progress" },
+      status: { type: String, enum: ["Completed", "Pending", "In Progress", "On Hold", "Blocked"], default: "In Progress" },
       remarks: { type: String, default: "" },
       link: { type: String, default: "" },
       feedback: { type: String, default: "" },

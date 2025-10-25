@@ -9,9 +9,14 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
   const router = useRouter();
 
   useEffect(() => {
@@ -78,6 +83,21 @@ export default function ProfilePage() {
       });
   }, [router]);
 
+  const checkPasswordStrength = (pwd) => {
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+
+    if (score === 0) return { score: 0, text: '', color: '' };
+    if (score <= 2) return { score: 1, text: 'Weak', color: '#dc3545' };
+    if (score === 3) return { score: 2, text: 'Fair', color: '#ffc107' };
+    if (score === 4) return { score: 3, text: 'Good', color: '#17a2b8' };
+    return { score: 4, text: 'Strong', color: '#28a745' };
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     router.push("/");
@@ -87,8 +107,27 @@ export default function ProfilePage() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!currentPassword || !newPassword) {
-      setSuccessMessage("Enter current and new password");
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setSuccessMessage("All password fields are required");
+      setShowSuccess(true);
+      return;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9])/.test(newPassword)) {
+      setSuccessMessage("Password must contain uppercase, lowercase, number and special character");
+      setShowSuccess(true);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setSuccessMessage("Password must be at least 8 characters long");
+      setShowSuccess(true);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setSuccessMessage("New password and confirm password do not match");
       setShowSuccess(true);
       return;
     }
@@ -116,6 +155,8 @@ export default function ProfilePage() {
       setShowSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
+      setConfirmPassword("");
+      setPasswordStrength({ score: 0, text: '', color: '' });
     } catch (err) {
       console.error(err);
       setSuccessMessage("Error updating password");
@@ -180,7 +221,7 @@ export default function ProfilePage() {
         />
       )}
       <div className="d-flex justify-content-between align-items-center">
-        <h2>{localStorage.getItem("userRole") === "super-admin" ? "Admin Profile" : "Employee Profile"}</h2>
+        <h2>{user.firstName && user.lastName ? `${user.firstName} ${user.lastName}'s Profile` : (localStorage.getItem("userRole") === "super-admin" ? "Admin Profile" : "Employee Profile")}</h2>
         <div className="d-flex gap-2">
           <button className="btn btn-primary" onClick={() => window.print()}>
             📄 View
@@ -324,25 +365,88 @@ export default function ProfilePage() {
 
         <h5>Change Password</h5>
         <form onSubmit={handleChangePassword} className="mb-3">
-          <div className="mb-2">
-            <input
-              type="password"
-              placeholder="Current Password"
-              className="form-control"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-            />
+          <div className="mb-3">
+            <label className="form-label">Current Password</label>
+            <div className="position-relative">
+              <input
+                type={showCurrentPassword ? "text" : "password"}
+                placeholder="Enter current password"
+                className="form-control"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                style={{ paddingRight: '40px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-link position-absolute end-0 top-50 translate-middle-y"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                style={{ textDecoration: 'none', padding: '0 10px' }}
+              >
+                <i className={`bi ${showCurrentPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
+            </div>
           </div>
-          <div className="mb-2">
-            <input
-              type="password"
-              placeholder="New Password"
-              className="form-control"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
+          <div className="mb-3">
+            <label className="form-label">New Password</label>
+            <div className="position-relative">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                placeholder="Enter new password"
+                className="form-control"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setPasswordStrength(checkPasswordStrength(e.target.value));
+                }}
+                required
+                style={{ paddingRight: '40px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-link position-absolute end-0 top-50 translate-middle-y"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                style={{ textDecoration: 'none', padding: '0 10px' }}
+              >
+                <i className={`bi ${showNewPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
+            </div>
+            {newPassword && (
+              <div className="mt-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="flex-grow-1" style={{ height: '4px', backgroundColor: '#e9ecef', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${(passwordStrength.score / 4) * 100}%`, height: '100%', backgroundColor: passwordStrength.color, transition: 'all 0.3s' }}></div>
+                  </div>
+                  <small style={{ color: passwordStrength.color, fontWeight: 'bold', minWidth: '60px' }}>{passwordStrength.text}</small>
+                </div>
+                <small className="text-muted" style={{ fontSize: '0.75rem' }}>Must contain: uppercase, lowercase, number & special character (min 8 chars)</small>
+              </div>
+            )}
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Confirm New Password</label>
+            <div className="position-relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm new password"
+                className="form-control"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                style={{ paddingRight: '40px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-link position-absolute end-0 top-50 translate-middle-y"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{ textDecoration: 'none', padding: '0 10px' }}
+              >
+                <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
+            </div>
+            {confirmPassword && newPassword && confirmPassword !== newPassword && (
+              <small className="text-danger">Passwords do not match</small>
+            )}
           </div>
           <button className="btn btn-warning" type="submit" disabled={loading}>
             {loading ? "Updating..." : "Update Password"}

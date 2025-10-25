@@ -5,6 +5,23 @@ import * as XLSX from "xlsx";
 import Layout from "../components/Layout";
 import SuccessMessage from "../components/SuccessMessage";
 
+const STATUS_OPTIONS = ["In Progress", "Completed", "Pending", "On Hold", "Blocked"];
+const STATUS_COLORS = {
+  "In Progress": "primary",
+  "Completed": "success",
+  "Pending": "warning",
+  "On Hold": "secondary",
+  "Blocked": "danger"
+};
+
+const STATUS_ICONS = {
+  "In Progress": "hourglass-split",
+  "Completed": "check-circle-fill",
+  "Pending": "clock",
+  "On Hold": "pause-circle",
+  "Blocked": "x-circle-fill"
+};
+
 export default function DailyTaskComponent() {
   const [dailyTasks, setDailyTasks] = useState([]);
   const [timecard, setTimecard] = useState({
@@ -16,6 +33,8 @@ export default function DailyTaskComponent() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [validationErrors, setValidationErrors] = useState({});
   const router = useRouter();
 
   // Fetch Timecard and DailyTask
@@ -54,6 +73,7 @@ export default function DailyTaskComponent() {
       }
     } catch (err) {
       console.error(err);
+      setError("Failed to load tasks. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -63,8 +83,8 @@ export default function DailyTaskComponent() {
     const userRole = localStorage.getItem("userRole");
     const employeeId = localStorage.getItem("employeeId");
     
-    // Allow all employee roles to access daily tasks, except super-admin
-    if (!userRole || !employeeId || userRole === "super-admin" || userRole === "Super-admin") {
+    // Block super-admin and developer from accessing daily tasks
+    if (!userRole || !employeeId || userRole === "super-admin" || userRole === "Super-admin" || userRole === "developer") {
       router.push("/");
       return;
     }
@@ -129,6 +149,24 @@ export default function DailyTaskComponent() {
     );
   }, [timecard]);
 
+  // Validate task before saving
+  const validateTask = (task, index) => {
+    const errors = {};
+    if (!task.details || task.details.trim() === "") {
+      errors[`details_${index}`] = "Task details are required";
+    }
+    if (!task.startTime) {
+      errors[`startTime_${index}`] = "Start time is required";
+    }
+    if (!task.endTime) {
+      errors[`endTime_${index}`] = "End time is required";
+    }
+    if (task.startTime && task.endTime && task.startTime >= task.endTime) {
+      errors[`endTime_${index}`] = "End time must be after start time";
+    }
+    return errors;
+  };
+
   // Add new task
   const addTask = () => {
     const currentTime = new Date().toLocaleTimeString('en-GB', { 
@@ -137,12 +175,21 @@ export default function DailyTaskComponent() {
       minute: '2-digit' 
     });
     
-    // Get previous task's end time or current time
-    const lastTask = dailyTasks[dailyTasks.length - 1];
+    // Update previous task's end time if it's empty
+    const updatedTasks = [...dailyTasks];
+    if (updatedTasks.length > 0) {
+      const lastIndex = updatedTasks.length - 1;
+      if (!updatedTasks[lastIndex].endTime && !updatedTasks[lastIndex].isSaved) {
+        updatedTasks[lastIndex].endTime = currentTime;
+      }
+    }
+    
+    // Get previous task's end time or current time for new task start time
+    const lastTask = updatedTasks[updatedTasks.length - 1];
     const startTime = lastTask?.endTime || currentTime;
     
     const newTask = {
-      Serialno: dailyTasks.length + 1,
+      Serialno: updatedTasks.length + 1,
       details: "",
       startTime: startTime,
       endTime: "",
@@ -155,13 +202,15 @@ export default function DailyTaskComponent() {
       createdAt: new Date().toISOString()
     };
     
-    setDailyTasks([...dailyTasks, newTask]);
+    setDailyTasks([...updatedTasks, newTask]);
+    setValidationErrors({});
   };
 
   // Update task (push to database)
   const updateTask = async () => {
     if (!user || dailyTasks.length === 0) {
-      alert('No tasks to update');
+      setError('No tasks to update');
+      setTimeout(() => setError(''), 3000);
       return;
     }
 
@@ -192,13 +241,16 @@ export default function DailyTaskComponent() {
       if (response.ok) {
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
+        setError('');
       } else {
         const errorData = await response.json();
-        alert('Update failed: ' + (errorData.error || 'Unknown error'));
+        setError('Update failed: ' + (errorData.error || 'Unknown error'));
+        setTimeout(() => setError(''), 3000);
       }
     } catch (err) {
       console.error('Update failed:', err);
-      alert('Error updating tasks');
+      setError('Error updating tasks');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -209,26 +261,87 @@ export default function DailyTaskComponent() {
     
     // Prevent editing saved tasks except status
     if (task.isSaved && field !== 'status') {
-      alert('Saved tasks can only have their status updated.');
+      setError('Saved tasks can only have their status updated.');
+      setTimeout(() => setError(''), 3000);
       return;
     }
     
     // Prevent editing start time (system controlled)
     if (field === 'startTime') {
-      alert('Start time is automatically set and cannot be edited.');
+      setError('Start time is automatically set and cannot be edited.');
+      setTimeout(() => setError(''), 3000);
       return;
     }
     
-    updated[index][field] = value;
+    // When end time is changed, update next task's start time
+    if (field === 'endTime' && value) {
+      updated[index][field] = value;
+      // Update next task's start time if it exists and is not saved
+      if (index < updated.length - 1 && !updated[index + 1].isSaved) {
+        updated[index + 1].startTime = value;
+      }
+    } else {
+      updated[index][field] = value;
+    }
+    
     setDailyTasks(updated);
+    
+    // Clear validation error for this field
+    const errorKey = `${field}_${index}`;
+    if (validationErrors[errorKey]) {
+      const newErrors = { ...validationErrors };
+      delete newErrors[errorKey];
+      setValidationErrors(newErrors);
+    }
   };
 
 
 
+  // Delete task
+  const deleteTask = (index) => {
+    const task = dailyTasks[index];
+    if (task.isSaved) {
+      setError('Cannot delete saved tasks');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    const updated = [...dailyTasks];
+    // If deleting a task that has a next task, update next task's start time
+    if (index < updated.length - 1 && !updated[index + 1].isSaved) {
+      const prevTask = index > 0 ? updated[index - 1] : null;
+      updated[index + 1].startTime = prevTask?.endTime || updated[index].startTime;
+    }
+    
+    // Remove the task
+    const filtered = updated.filter((_, i) => i !== index);
+    // Renumber tasks
+    const renumbered = filtered.map((t, i) => ({ ...t, Serialno: i + 1 }));
+    setDailyTasks(renumbered);
+  };
+
   // Save tasks (mark as final)
   const saveTasks = async () => {
     try {
-      if (!dailyTasks.length) return alert("No tasks to save");
+      if (!dailyTasks.length) {
+        setError("No tasks to save");
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      
+      // Validate all tasks
+      let allErrors = {};
+      dailyTasks.forEach((task, index) => {
+        const errors = validateTask(task, index);
+        allErrors = { ...allErrors, ...errors };
+      });
+      
+      if (Object.keys(allErrors).length > 0) {
+        setValidationErrors(allErrors);
+        setError('Please fix validation errors before saving');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
       
       // Set end time for unsaved tasks
       const currentTime = new Date().toLocaleTimeString('en-GB', { 
@@ -270,56 +383,188 @@ export default function DailyTaskComponent() {
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
         setDailyTasks(tasksToSave);
+        setValidationErrors({});
+        setError('');
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to save tasks");
+        setError(data.error || "Failed to save tasks");
+        setTimeout(() => setError(''), 3000);
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving tasks");
+      setError("Error saving tasks");
+      setTimeout(() => setError(''), 3000);
     }
+  };
+
+  // Calculate task duration
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return "--";
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    const diff = endMinutes - startMinutes;
+    if (diff < 0) return "Invalid";
+    const hours = Math.floor(diff / 60);
+    const minutes = diff % 60;
+    return `${hours}h ${minutes}m`;
   };
 
   // Generate Monthly Excel Report
   const generateMonthlyReport = async () => {
-    const month = new Date().getMonth() + 1;
-    const year = new Date().getFullYear();
-    const res = await fetch(`/api/daily-task?month=${month}&year=${year}`);
-    const data = await res.json();
+    try {
+      const month = new Date().getMonth() + 1;
+      const year = new Date().getFullYear();
+      const res = await fetch(`/api/daily-task?employeeId=${user.employeeId}&month=${month}&year=${year}`);
+      
+      if (!res.ok) {
+        setError('Failed to generate report');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      
+      const data = await res.json();
 
-    const wsData = [];
-    data.forEach((dt) => {
-      dt.tasks.forEach((t) => {
-        wsData.push({
-          Date: new Date(dt.date).toLocaleDateString(),
-          EmployeeId: user.employeeId,
-          EmployeeName: user.name,
-          Designation: user.designation,
-          Serialno: t.Serialno,
-          Details: t.details,
-          StartTime: t.startTime,
-          EndTime: t.endTime,
-          LunchOut: timecard.lunchOut,
-          LunchIn: timecard.lunchIn,
-          Status: t.status,
-          Remarks: t.remarks,
-          Link: t.link,
-          Feedback: t.feedback,
+      if (!data.length) {
+        setError('No tasks found for this month');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+
+      const wsData = [];
+      data.forEach((dt) => {
+        dt.tasks.forEach((t) => {
+          wsData.push({
+            Date: new Date(dt.date).toLocaleDateString(),
+            EmployeeId: user.employeeId,
+            EmployeeName: user.name,
+            Designation: user.designation,
+            Serialno: t.Serialno,
+            Details: t.details,
+            StartTime: t.startTime,
+            EndTime: t.endTime,
+            Duration: calculateDuration(t.startTime, t.endTime),
+            Status: t.status,
+            Remarks: t.remarks,
+            Link: t.link,
+            Feedback: t.feedback,
+          });
         });
       });
-    });
 
-    const ws = XLSX.utils.json_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "MonthlyTasks");
-    XLSX.writeFile(wb, `MonthlyTasks_${month}_${year}.xlsx`);
+      const ws = XLSX.utils.json_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "MonthlyTasks");
+      XLSX.writeFile(wb, `MonthlyTasks_${user.employeeId}_${month}_${year}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      setError('Error generating report');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  // Calculate time gaps between tasks (potential idle time)
+  const calculateTimeGaps = () => {
+    const gaps = [];
+    for (let i = 0; i < dailyTasks.length - 1; i++) {
+      const currentTask = dailyTasks[i];
+      const nextTask = dailyTasks[i + 1];
+      
+      if (currentTask.endTime && nextTask.startTime) {
+        const [endHour, endMin] = currentTask.endTime.split(':').map(Number);
+        const [startHour, startMin] = nextTask.startTime.split(':').map(Number);
+        const endMinutes = endHour * 60 + endMin;
+        const startMinutes = startHour * 60 + startMin;
+        const gapMinutes = startMinutes - endMinutes;
+        
+        if (gapMinutes > 0) {
+          gaps.push({
+            afterTask: i + 1,
+            beforeTask: i + 2,
+            gapMinutes: gapMinutes,
+            gapTime: `${Math.floor(gapMinutes / 60)}h ${gapMinutes % 60}m`
+          });
+        }
+      }
+    }
+    return gaps;
+  };
+
+  // Calculate productivity metrics
+  const calculateProductivityMetrics = () => {
+    if (!timecard.logIn || dailyTasks.length === 0) return null;
+    
+    const [loginHour, loginMin] = timecard.logIn.split(':').map(Number);
+    const loginMinutes = loginHour * 60 + loginMin;
+    
+    const currentTime = new Date();
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    
+    const logoutMinutes = timecard.logOut ? 
+      (() => {
+        const [h, m] = timecard.logOut.split(':').map(Number);
+        return h * 60 + m;
+      })() : currentMinutes;
+    
+    const totalWorkMinutes = logoutMinutes - loginMinutes;
+    
+    // Calculate lunch duration
+    let lunchMinutes = 0;
+    if (timecard.lunchOut && timecard.lunchIn) {
+      const [lunchOutH, lunchOutM] = timecard.lunchOut.split(':').map(Number);
+      const [lunchInH, lunchInM] = timecard.lunchIn.split(':').map(Number);
+      lunchMinutes = (lunchInH * 60 + lunchInM) - (lunchOutH * 60 + lunchOutM);
+    }
+    
+    // Calculate total task time
+    let totalTaskMinutes = 0;
+    dailyTasks.forEach(task => {
+      if (task.startTime && task.endTime) {
+        const [startH, startM] = task.startTime.split(':').map(Number);
+        const [endH, endM] = task.endTime.split(':').map(Number);
+        const duration = (endH * 60 + endM) - (startH * 60 + startM);
+        if (duration > 0) totalTaskMinutes += duration;
+      }
+    });
+    
+    const gaps = calculateTimeGaps();
+    const totalGapMinutes = gaps.reduce((sum, gap) => sum + gap.gapMinutes, 0);
+    
+    const effectiveWorkMinutes = totalWorkMinutes - lunchMinutes;
+    const accountedMinutes = totalTaskMinutes + totalGapMinutes;
+    const unaccountedMinutes = effectiveWorkMinutes - accountedMinutes;
+    
+    const productivityRate = effectiveWorkMinutes > 0 ? 
+      ((totalTaskMinutes / effectiveWorkMinutes) * 100).toFixed(1) : 0;
+    
+    return {
+      totalWorkMinutes,
+      lunchMinutes,
+      effectiveWorkMinutes,
+      totalTaskMinutes,
+      totalGapMinutes,
+      unaccountedMinutes,
+      productivityRate,
+      gaps
+    };
+  };
+
+  // Calculate task statistics
+  const getTaskStats = () => {
+    const total = dailyTasks.length;
+    const completed = dailyTasks.filter(t => t.status === "Completed").length;
+    const inProgress = dailyTasks.filter(t => t.status === "In Progress").length;
+    const pending = dailyTasks.filter(t => t.status === "Pending").length;
+    const saved = dailyTasks.filter(t => t.isSaved).length;
+    return { total, completed, inProgress, pending, saved };
   };
 
   if (loading || !user) return (
     <Layout>
       <div className="d-flex justify-content-center align-items-center" style={{height: "50vh"}}>
         <div className="text-center">
-          <div className="spinner-border" role="status">
+          <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
           <p className="mt-2">Loading daily tasks...</p>
@@ -328,173 +573,421 @@ export default function DailyTaskComponent() {
     </Layout>
   );
 
+  const stats = getTaskStats();
+  const productivity = calculateProductivityMetrics();
+  const timeGaps = calculateTimeGaps();
+
+  const formatMinutes = (minutes) => {
+    if (minutes < 0) return '0h 0m';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
   return (
    <Layout>
-     <div className="container-fluid mt-4">
-      <div className="row mb-3 align-items-center">
-        <div className="col-12 col-md-6 mb-2">
-          <h2 className="mb-0">Daily Task Management</h2>
-        </div>
-        <div className="col-12 col-md-6 text-md-end">
-          <div>
-            <strong>Date:</strong> {new Date().toLocaleDateString()}
+     <div className="container-fluid mt-3 px-2 px-md-4" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+      {/* Header Section */}
+      <div className="row mb-3 mb-md-4">
+        <div className="col-12">
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-3">
+              <div className="row align-items-center">
+                <div className="col-12 col-lg-6 mb-3 mb-lg-0">
+                  <h2 className="mb-1 fs-4 fs-md-3"><i className="bi bi-clipboard-check me-2"></i>Daily Task Management</h2>
+                  <p className="text-muted mb-0 small">Track your daily work progress</p>
+                </div>
+                <div className="col-12 col-lg-6 text-lg-end">
+                  <div className="mb-2">
+                    <span className="badge bg-dark d-inline-block" style={{ fontSize: '0.75rem' }}>
+                      <i className="bi bi-calendar3 me-1"></i>
+                      <span className="d-none d-sm-inline">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      <span className="d-inline d-sm-none">{new Date().toLocaleDateString()}</span>
+                    </span>
+                  </div>
+                  <div className="small">
+                    <div className="d-block d-sm-inline"><strong>ID:</strong> {user?.employeeId}</div>
+                    <span className="d-none d-sm-inline"> | </span>
+                    <div className="d-block d-sm-inline"><strong>Name:</strong> {user?.name}</div>
+                    <span className="d-none d-sm-inline"> | </span>
+                    <div className="d-block d-sm-inline"><strong>Role:</strong> {user?.designation}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <strong>ID:</strong> {user?.employeeId || 'Loading...'} &nbsp;&nbsp;
-            <strong>Name:</strong> {user?.name || 'Loading...'} &nbsp;&nbsp;
-            <strong>Designation:</strong> {user?.designation || 'Loading...'}
+        </div>
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>{error}
+          <button type="button" className="btn-close" onClick={() => setError('')}></button>
+        </div>
+      )}
+
+      {/* Statistics Cards */}
+      <div className="row mb-3 mb-md-4 g-2 g-md-3">
+        <div className="col-6 col-lg-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center p-2 p-md-3">
+              <i className="bi bi-list-task fs-3 fs-md-1 text-primary"></i>
+              <h3 className="mt-1 mt-md-2 mb-0 fs-5 fs-md-3">{stats.total}</h3>
+              <p className="text-muted mb-0 small">Total Tasks</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-lg-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center p-2 p-md-3">
+              <i className="bi bi-check-circle fs-3 fs-md-1 text-success"></i>
+              <h3 className="mt-1 mt-md-2 mb-0 fs-5 fs-md-3">{stats.completed}</h3>
+              <p className="text-muted mb-0 small">Completed</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-lg-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center p-2 p-md-3">
+              <i className="bi bi-hourglass-split fs-3 fs-md-1 text-warning"></i>
+              <h3 className="mt-1 mt-md-2 mb-0 fs-5 fs-md-3">{stats.inProgress}</h3>
+              <p className="text-muted mb-0 small">In Progress</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-lg-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center p-2 p-md-3">
+              <i className="bi bi-save fs-3 fs-md-1 text-info"></i>
+              <h3 className="mt-1 mt-md-2 mb-0 fs-5 fs-md-3">{stats.saved}</h3>
+              <p className="text-muted mb-0 small">Saved Tasks</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Timecard Info */}
       <div className="row mb-3">
-        <div className="col-12 d-flex flex-wrap gap-2">
-          <span className="badge bg-primary">
-            Log In: {timecard.logIn || "--:--"}
-          </span>
-          <span className="badge bg-success">
-            Log Out: {timecard.logOut || "--:--"}
-          </span>
-          <span className="badge bg-warning text-dark">
-            Lunch Out: {timecard.lunchOut || "--:--"}
-          </span>
-          <span className="badge bg-info text-dark">
-            Lunch In: {timecard.lunchIn || "--:--"}
-          </span>
+        <div className="col-12">
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-3">
+              <h6 className="mb-3 fs-6"><i className="bi bi-clock-history me-2"></i>Today's Timecard</h6>
+              <div className="d-flex flex-wrap gap-2">
+                <span className="badge bg-primary p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
+                  <i className="bi bi-box-arrow-in-right me-1"></i>Log In: {timecard.logIn || "--:--"}
+                </span>
+                <span className="badge bg-success p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
+                  <i className="bi bi-box-arrow-right me-1"></i>Log Out: {timecard.logOut || "--:--"}
+                </span>
+                <span className="badge bg-warning text-dark p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
+                  <i className="bi bi-cup-hot me-1"></i>Lunch Out: {timecard.lunchOut || "--:--"}
+                </span>
+                <span className="badge bg-info text-dark p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
+                  <i className="bi bi-cup-hot-fill me-1"></i>Lunch In: {timecard.lunchIn || "--:--"}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Productivity Metrics */}
+      {productivity && (
+        <div className="row mb-3">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm">
+              <div className="card-body p-3">
+                <h6 className="mb-3 fs-6"><i className="bi bi-graph-up me-2"></i>Productivity Analysis</h6>
+                <div className="row g-2">
+                  <div className="col-6 col-md-3">
+                    <div className="text-center p-2 bg-light rounded">
+                      <div className="fs-5 fw-bold text-primary">{formatMinutes(productivity.effectiveWorkMinutes)}</div>
+                      <small className="text-muted">Work Time</small>
+                    </div>
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <div className="text-center p-2 bg-light rounded">
+                      <div className="fs-5 fw-bold text-success">{formatMinutes(productivity.totalTaskMinutes)}</div>
+                      <small className="text-muted">Task Time</small>
+                    </div>
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <div className="text-center p-2 bg-light rounded">
+                      <div className="fs-5 fw-bold text-warning">{formatMinutes(productivity.totalGapMinutes)}</div>
+                      <small className="text-muted">Gaps</small>
+                    </div>
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <div className="text-center p-2 bg-light rounded">
+                      <div className="fs-5 fw-bold text-danger">{formatMinutes(productivity.unaccountedMinutes)}</div>
+                      <small className="text-muted">Unaccounted</small>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="small">Productivity Rate</span>
+                    <span className="badge bg-primary">{productivity.productivityRate}%</span>
+                  </div>
+                  <div className="progress" style={{ height: '20px' }}>
+                    <div 
+                      className={`progress-bar ${productivity.productivityRate >= 80 ? 'bg-success' : productivity.productivityRate >= 60 ? 'bg-warning' : 'bg-danger'}`}
+                      style={{ width: `${productivity.productivityRate}%` }}
+                    >
+                      {productivity.productivityRate}%
+                    </div>
+                  </div>
+                </div>
+                {productivity.unaccountedMinutes > 15 && (
+                  <div className="alert alert-warning mt-3 mb-0 py-2" role="alert">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    <small>You have {formatMinutes(productivity.unaccountedMinutes)} of unaccounted time. Please add tasks to track your work.</small>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Time Gaps Alert */}
+      {timeGaps.length > 0 && (
+        <div className="row mb-3">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm border-start border-warning border-4">
+              <div className="card-body p-3">
+                <h6 className="mb-2 fs-6 text-warning"><i className="bi bi-clock me-2"></i>Time Gaps Detected</h6>
+                <small className="text-muted d-block mb-2">Gaps between tasks may indicate idle time or breaks</small>
+                <div className="d-flex flex-wrap gap-2">
+                  {timeGaps.map((gap, idx) => (
+                    <span key={idx} className="badge bg-warning text-dark p-2" style={{ fontSize: '0.8rem' }}>
+                      Between Task {gap.afterTask} & {gap.beforeTask}: {gap.gapTime}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Task Table */}
-      <div className="table-responsive">
-        <table className="table table-bordered table-hover align-middle">
-          <thead className="table-dark text-center">
-            <tr>
-              <th scope="col">Serial No</th>
-              <th scope="col">Details</th>
-              <th scope="col">Start Time</th>
-              <th scope="col">End Time</th>
-              <th scope="col">Status</th>
-              <th scope="col">Remarks</th>
-              <th scope="col">Link</th>
-              <th scope="col">Feedback</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dailyTasks.map((task, idx) => (
-              <tr key={idx}>
-                <td className="text-center">{task.Serialno}</td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.details}
-                    onChange={(e) =>
-                      handleChange(idx, "details", e.target.value)
-                    }
-                    disabled={task.isSaved}
-                    placeholder={task.isSaved ? "Task details locked" : "Enter task details"}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    className="form-control form-control-sm"
-                    value={task.startTime}
-                    disabled
-                    title="Start time is automatically set"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    className="form-control form-control-sm"
-                    value={task.endTime}
-                    onChange={(e) =>
-                      handleChange(idx, "endTime", e.target.value)
-                    }
-                    disabled={task.isSaved}
-                    title={task.isSaved ? "End time cannot be changed after saving" : ""}
-                  />
-                </td>
-                <td>
-                  <select
-                    className="form-select form-select-sm"
-                    value={task.status}
-                    onChange={(e) =>
-                      handleChange(idx, "status", e.target.value)
-                    }
-                  >
-                    <option>In Progress</option>
-                    <option>Completed</option>
-                    <option>Pending</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.remarks}
-                    onChange={(e) =>
-                      handleChange(idx, "remarks", e.target.value)
-                    }
-                    disabled={task.isSaved}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.link}
-                    onChange={(e) => handleChange(idx, "link", e.target.value)}
-                    disabled={task.isSaved}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="form-control form-control-sm"
-                    value={task.feedback}
-                    onChange={(e) =>
-                      handleChange(idx, "feedback", e.target.value)
-                    }
-                    disabled={task.isSaved}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="row mb-3">
+        <div className="col-12">
+          <div className="card border-0 shadow-sm">
+            <div className="card-header bg-white p-3">
+              <h5 className="mb-0 fs-6 fs-md-5"><i className="bi bi-table me-2"></i>Task List</h5>
+            </div>
+            <div className="card-body p-0">
+              <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                <table className="table table-hover align-middle mb-0" style={{ minWidth: '1200px' }}>
+                  <thead className="table-dark text-center">
+                    <tr>
+                      <th scope="col" style={{ minWidth: '60px' }}>#</th>
+                      <th scope="col" style={{ minWidth: '250px' }}>Task Details *</th>
+                      <th scope="col" style={{ minWidth: '120px' }}>Start Time *</th>
+                      <th scope="col" style={{ minWidth: '120px' }}>End Time *</th>
+                      <th scope="col" style={{ minWidth: '100px' }}>Duration</th>
+                      <th scope="col" style={{ minWidth: '150px' }}>Status</th>
+                      <th scope="col" style={{ minWidth: '200px' }}>Remarks</th>
+                      <th scope="col" style={{ minWidth: '200px' }}>Link</th>
+                      <th scope="col" style={{ minWidth: '200px' }}>Feedback</th>
+                      <th scope="col" style={{ minWidth: '80px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dailyTasks.length === 0 ? (
+                      <tr>
+                        <td colSpan="10" className="text-center py-4">
+                          <i className="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                          <p className="text-muted mb-0">No tasks added yet. Click "Add Task" to get started.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      dailyTasks.map((task, idx) => (
+                        <tr key={idx} className={task.isSaved ? 'table-light' : ''}>
+                          <td className="text-center">
+                            <span className="badge bg-secondary">{task.Serialno}</span>
+                          </td>
+                          <td>
+                            <textarea
+                              className={`form-control form-control-sm ${validationErrors[`details_${idx}`] ? 'is-invalid' : ''}`}
+                              value={task.details}
+                              onChange={(e) => handleChange(idx, "details", e.target.value)}
+                              disabled={task.isSaved}
+                              placeholder={task.isSaved ? "Task details locked" : "Enter task details"}
+                              rows="2"
+                            />
+                            {validationErrors[`details_${idx}`] && (
+                              <div className="invalid-feedback">{validationErrors[`details_${idx}`]}</div>
+                            )}
+                          </td>
+                          <td>
+                            <input
+                              type="time"
+                              className={`form-control form-control-sm ${validationErrors[`startTime_${idx}`] ? 'is-invalid' : ''}`}
+                              value={task.startTime}
+                              disabled
+                              title="Start time is automatically set"
+                            />
+                            {validationErrors[`startTime_${idx}`] && (
+                              <div className="invalid-feedback">{validationErrors[`startTime_${idx}`]}</div>
+                            )}
+                          </td>
+                          <td>
+                            <input
+                              type="time"
+                              className={`form-control form-control-sm ${validationErrors[`endTime_${idx}`] ? 'is-invalid' : ''}`}
+                              value={task.endTime}
+                              onChange={(e) => handleChange(idx, "endTime", e.target.value)}
+                              disabled={task.isSaved}
+                              title={task.isSaved ? "End time cannot be changed after saving" : ""}
+                            />
+                            {validationErrors[`endTime_${idx}`] && (
+                              <div className="invalid-feedback">{validationErrors[`endTime_${idx}`]}</div>
+                            )}
+                          </td>
+                          <td className="text-center">
+                            <span className="badge bg-info text-dark">
+                              {calculateDuration(task.startTime, task.endTime)}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              className="form-select form-select-sm"
+                              value={task.status}
+                              onChange={(e) => handleChange(idx, "status", e.target.value)}
+                            >
+                              {STATUS_OPTIONS.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                              ))}
+                            </select>
+                            <span className={`badge bg-${STATUS_COLORS[task.status]} mt-1 w-100`}>
+                              {task.status}
+                            </span>
+                          </td>
+                          <td>
+                            <textarea
+                              className="form-control form-control-sm"
+                              value={task.remarks}
+                              onChange={(e) => handleChange(idx, "remarks", e.target.value)}
+                              disabled={task.isSaved}
+                              placeholder="Add remarks"
+                              rows="2"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="form-control form-control-sm"
+                              value={task.link}
+                              onChange={(e) => handleChange(idx, "link", e.target.value)}
+                              disabled={task.isSaved}
+                              placeholder="Add link"
+                            />
+                            {task.link && (
+                              <a href={task.link} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link p-0 mt-1">
+                                <i className="bi bi-box-arrow-up-right"></i> Open
+                              </a>
+                            )}
+                          </td>
+                          <td>
+                            <textarea
+                              className="form-control form-control-sm"
+                              value={task.feedback}
+                              onChange={(e) => handleChange(idx, "feedback", e.target.value)}
+                              disabled={task.isSaved}
+                              placeholder="Add feedback"
+                              rows="2"
+                            />
+                          </td>
+                          <td className="text-center">
+                            {!task.isSaved && (
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => deleteTask(idx)}
+                                title="Delete task"
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            )}
+                            {task.isSaved && (
+                              <span className="badge bg-success">
+                                <i className="bi bi-lock-fill"></i>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Buttons */}
-      <div className="d-flex flex-wrap gap-2 mt-3">
-        <button
-          className="btn btn-primary"
-          onClick={addTask}
-        >
-          + Add Task
-        </button>
-        <button
-          className="btn btn-warning"
-          onClick={updateTask}
-        >
-          Update
-        </button>
-        <button
-          className="btn btn-success"
-          onClick={saveTasks}
-        >
-          Save
-        </button>
-        <button
-          className="btn btn-secondary"
-          onClick={generateMonthlyReport}
-        >
-          Generate Report
-        </button>
-        <SuccessMessage 
-          show={showSuccess} 
-          message="Tasks saved successfully!" 
-          onClose={() => setShowSuccess(false)} 
-        />
+      {/* Action Buttons */}
+      <div className="row mb-3">
+        <div className="col-12">
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-3">
+              <div className="d-flex flex-wrap gap-2" style={{ width: '100%' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={addTask}
+                  style={{ flex: '1 1 auto', minWidth: '100px' }}
+                >
+                  <i className="bi bi-plus-circle me-2"></i>Add Task
+                </button>
+                <button
+                  className="btn btn-warning"
+                  onClick={updateTask}
+                  disabled={dailyTasks.length === 0}
+                  style={{ flex: '1 1 auto', minWidth: '100px' }}
+                >
+                  <i className="bi bi-arrow-repeat me-2"></i>Update
+                </button>
+                <button
+                  className="btn btn-success"
+                  onClick={saveTasks}
+                  disabled={dailyTasks.length === 0}
+                  style={{ flex: '1 1 auto', minWidth: '100px' }}
+                >
+                  <i className="bi bi-save me-2"></i>Save
+                </button>
+                <button
+                  className="btn btn-info"
+                  onClick={generateMonthlyReport}
+                  style={{ flex: '1 1 auto', minWidth: '100px' }}
+                >
+                  <i className="bi bi-file-earmark-excel me-2"></i>Report
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={fetchData}
+                  style={{ flex: '1 1 auto', minWidth: '100px' }}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>Refresh
+                </button>
+              </div>
+              <div className="mt-3">
+                <small className="text-muted d-block" style={{ fontSize: '0.75rem', wordBreak: 'break-word' }}>
+                  <i className="bi bi-info-circle me-1"></i>
+                  <strong>Note:</strong> Update saves temporarily. Save locks tasks.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <SuccessMessage 
+        show={showSuccess} 
+        message="Tasks saved successfully!" 
+        onClose={() => setShowSuccess(false)} 
+      />
     </div>
    </Layout>
   );

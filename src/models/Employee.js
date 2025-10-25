@@ -25,7 +25,7 @@ const EmployeeSchema = new mongoose.Schema(
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     dob: { type: Date },
-    gender: { type: String, enum: ["Male", "Female", "Other"] },
+    gender: { type: String, enum: ["Male", "Female", "Transwomen", "Transmen", "Non-Binary", "Prefer Not to Say", "Other"] },
     email: { type: String, unique: true },
     phone: { type: String, unique: true },
     joiningDate: { type: Date, default: Date.now },
@@ -91,9 +91,9 @@ EmployeeSchema.pre("save", async function (next) {
 export function createEmployeeModel(department) {
   const collectionName = `${department.toLowerCase()}_department`;
   
-  // Return existing model if already created
+  // Delete existing model to ensure schema updates are applied
   if (mongoose.models[collectionName]) {
-    return mongoose.models[collectionName];
+    delete mongoose.models[collectionName];
   }
   
   // Create new model for the department
