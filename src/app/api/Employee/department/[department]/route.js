@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 export async function GET(req, { params }) {
   try {
     await connectMongoose();
-    const { department } = params;
+    const { department } = await params;
 
     if (!department) {
       return NextResponse.json(
@@ -17,13 +17,6 @@ export async function GET(req, { params }) {
 
     const DeptModel = createEmployeeModel(department);
     const employees = await DeptModel.find();
-
-    if (!employees.length) {
-      return NextResponse.json(
-        { message: `No employees found in ${department}` },
-        { status: 404 }
-      );
-    }
 
     return NextResponse.json(employees, { status: 200 });
   } catch (err) {

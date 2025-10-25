@@ -138,22 +138,10 @@ export default function DocumentPage() {
   // Fetch employees for selection
   async function fetchEmployees() {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
-      const res = await fetch("/api/Employee", {
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
+      const res = await fetch("/api/Employee");
       if (res.ok) {
         const data = await res.json();
         setEmployees(Array.isArray(data) ? data : []);
-      } else {
-        console.error("Failed to fetch employees:", res.status);
       }
     } catch (err) {
       console.error("Failed to fetch employees:", err);

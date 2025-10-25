@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {
@@ -13,6 +13,14 @@ export default function HomePage() {
   const [showSignupSuccess, setShowSignupSuccess] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    localStorage.clear();
+    window.history.pushState(null, '', window.location.href);
+    window.onpopstate = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+  }, []);
 
   const checkPasswordStrength = (pwd) => {
     let score = 0;

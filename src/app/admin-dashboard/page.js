@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
-import { makeAuthenticatedRequest } from "../utilis/tokenManager";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -61,7 +60,7 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       // Fetch employees data
-      const employeesRes = await makeAuthenticatedRequest('/api/Employee').catch(() => ({ json: () => [] }));
+      const employeesRes = await fetch('/api/Employee').catch(() => ({ json: () => [] }));
       const employees = await employeesRes.json();
       const totalEmployees = Array.isArray(employees) ? employees.length : 0;
       

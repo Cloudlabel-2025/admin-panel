@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
+import { setupTokenRefresh } from "../utilis/tokenManager";
 
 export default function Layout({ children }) {
   const [userRole, setUserRole] = useState("");
@@ -21,6 +22,15 @@ export default function Layout({ children }) {
     const email = localStorage.getItem("userEmail");
     const empId = localStorage.getItem("employeeId");
     const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+    
+    if (!role || !email || !token) {
+      router.replace("/");
+      return;
+    }
+    
+    // Setup automatic token refresh
+    setupTokenRefresh();
     
     setUserRole(role);
     setUserEmail(email);
@@ -117,7 +127,7 @@ export default function Layout({ children }) {
   };
 
   if (!userRole) {
-    return <div>{children}</div>;
+    return null;
   }
 
   return (
@@ -289,6 +299,11 @@ export default function Layout({ children }) {
                               onClick={() => navigate("/performance")}>
                         <span className="me-2">📈</span>
                         {!sidebarCollapsed && <span>Performance</span>}
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/admin-absence")}>
+                        <span className="me-2">🏖️</span>
+                        {!sidebarCollapsed && <span>Team Absence</span>}
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/calendar")}>
