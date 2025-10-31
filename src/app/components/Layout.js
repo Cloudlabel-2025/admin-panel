@@ -9,6 +9,7 @@ export default function Layout({ children }) {
   const [userRole, setUserRole] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
+  const [profilePicture, setProfilePicture] = useState("");
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -40,19 +41,25 @@ export default function Layout({ children }) {
       fetchUserPermissions(userId);
     }
     
-    // Fetch user name
-    if (empId && (role === "Employee" || role === "Intern" || role === "Team-Lead" || role === "Team-admin")) {
+    // Fetch user name and profile picture
+    if (empId && !empId.startsWith('ADMIN')) {
       fetch(`/api/Employee/${empId}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
-          if (data) {
+          if (data && data.firstName && data.lastName) {
             setUserName(`${data.firstName} ${data.lastName}`);
+            if (data.profilePicture) {
+              setProfilePicture(data.profilePicture);
+            }
+          } else {
+            setUserName(email ? email.split('@')[0] : 'User');
           }
         })
-        .catch(err => console.error('Error fetching user name:', err));
-    } else if (role === "admin" || role === "super-admin" || role === "Super-admin" || role === "developer") {
-      // For admin users, set a default name or extract from email
-      setUserName(email ? email.split('@')[0].toUpperCase() : 'Admin');
+        .catch(err => {
+          setUserName(email ? email.split('@')[0] : 'User');
+        });
+    } else {
+      setUserName(email ? email.split('@')[0] : 'User');
     }
   }, []);
 
@@ -68,8 +75,31 @@ export default function Layout({ children }) {
       }
     };
 
+    const handleStorageChange = (e) => {
+      if (e.key === 'profilePictureUpdated') {
+        const empId = localStorage.getItem('employeeId');
+        if (empId && !empId.startsWith('ADMIN')) {
+          fetch(`/api/Employee/${empId}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data && data.profilePicture) {
+                setProfilePicture(data.profilePicture);
+              } else {
+                setProfilePicture('');
+              }
+            })
+            .catch(err => console.error('Error refreshing profile picture:', err));
+        }
+        localStorage.removeItem('profilePictureUpdated');
+      }
+    };
+
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [showProfileDropdown, showNotifications]);
 
   const fetchUserPermissions = async (userId) => {
@@ -164,6 +194,11 @@ export default function Layout({ children }) {
         .sidebar-collapsed .nav-text {
           display: none;
         }
+        @media (max-width: 768px) {
+          .sidebar .nav-text {
+            display: inline !important;
+          }
+        }
         .dropdown-toggle::after {
           transition: transform 0.3s ease;
         }
@@ -191,6 +226,9 @@ export default function Layout({ children }) {
           .sidebar.show {
             transform: translateX(0);
           }
+          .sidebar.show .nav-text {
+            display: inline !important;
+          }
           .main-content {
             margin-left: 0 !important;
             width: 100% !important;
@@ -216,17 +254,26 @@ export default function Layout({ children }) {
         {/* Sidebar */}
         <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'show' : ''}`} 
              style={{ 
-               width: sidebarCollapsed ? "80px" : "280px", 
+               width: "280px", 
                minHeight: "100vh",
-               transition: "width 0.3s ease",
+               transition: "all 0.3s ease",
                boxShadow: "2px 0 10px rgba(0,0,0,0.1)"
              }}>
           
           {/* Header */}
           <div className="p-3 border-bottom border-secondary">
             <div className="d-flex align-items-center justify-content-between">
+              <div className="d-md-none d-block">
+                <h5 className="mb-1 text-primary">
+                  {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" : 
+                   (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
+                   userRole === "Intern" ? "Intern Portal" :
+                   "Employee Panel"}
+                </h5>
+                <small className="text-white-50">Role: {userRole}</small>
+              </div>
               {!sidebarCollapsed && (
-                <div>
+                <div className="d-none d-md-block">
                   <h5 className="mb-1 text-primary">
                     {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" : 
                      (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
@@ -237,11 +284,18 @@ export default function Layout({ children }) {
                 </div>
               )}
               <button 
-                className="btn btn-outline-light btn-sm d-md-block d-none"
+                className="btn btn-outline-light btn-sm d-none d-md-block"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               >
-                {sidebarCollapsed ? '→' : '←'}
+                <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
+              </button>
+              <button 
+                className="btn btn-outline-light btn-sm d-md-none"
+                onClick={() => setSidebarCollapsed(false)}
+                title="Close Menu"
+              >
+                <i className="bi bi-x-lg"></i>
               </button>
             </div>
           </div>
@@ -254,8 +308,8 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#superAdminManagementCollapse">
-                      <span className="me-2">👥</span>
-                      {!sidebarCollapsed && "Management"}
+                      <i className="bi bi-people-fill me-2"></i>
+                      <span className="nav-text">Management</span>
                     </button>
                   </h2>
                   <div id="superAdminManagementCollapse" className="accordion-collapse collapse show">
@@ -263,59 +317,69 @@ export default function Layout({ children }) {
                       {hasPermission('Management', 'Dashboard', 'view') && (
                         <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                                 onClick={() => navigate("/admin-dashboard")}>
-                          <span className="me-2">🏠</span>
-                          {!sidebarCollapsed && <span>Dashboard</span>}
+                          <i className="bi bi-house-fill me-2"></i>
+                          <span className="nav-text">Dashboard</span>
                         </button>
                       )}
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employees/create-emp")}>
-                        <span className="me-2">👤</span>
-                        {!sidebarCollapsed && <span>Add Employee</span>}
+                        <i className="bi bi-person-plus-fill me-2"></i>
+                        <span className="nav-text">Add Employee</span>
                       </button>
                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employees/employees-list")}>
-                        <span className="me-2">👤</span>
-                        {!sidebarCollapsed && <span>Employees List</span>}
+                        <i className="bi bi-people-fill me-2"></i>
+                        <span className="nav-text">Employees List</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/terminated-employees")}>
+                        <i className="bi bi-person-x-fill me-2"></i>
+                        <span className="nav-text">Terminated Employees</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin/monitor")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>Monitor Employees</span>}
+                        <i className="bi bi-bar-chart-fill me-2"></i>
+                        <span className="nav-text">Monitor Employees</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/documents")}>
-                        <span className="me-2">📄</span>
-                        {!sidebarCollapsed && <span>Documents</span>}
+                        <i className="bi bi-file-earmark-text-fill me-2"></i>
+                        <span className="nav-text">Documents</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/project")}>
-                        <span className="me-2">📋</span>
-                        {!sidebarCollapsed && <span>Projects</span>}
+                        <i className="bi bi-kanban-fill me-2"></i>
+                        <span className="nav-text">Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/skills")}>
-                        <span className="me-2">🎯</span>
-                        {!sidebarCollapsed && <span>Skills</span>}
+                        <i className="bi bi-award-fill me-2"></i>
+                        <span className="nav-text">Skills</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/performance")}>
-                        <span className="me-2">📈</span>
-                        {!sidebarCollapsed && <span>Performance</span>}
+                        <i className="bi bi-graph-up-arrow me-2"></i>
+                        <span className="nav-text">Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin-absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>Team Absence</span>}
+                        <i className="bi bi-calendar-x-fill me-2"></i>
+                        <span className="nav-text">Team Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/calendar")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Calendar</span>}
+                        <i className="bi bi-calendar3 me-2"></i>
+                        <span className="nav-text">Calendar</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
+                              onClick={() => navigate("/notifications")}>
+                        <i className="bi bi-bell-fill me-2"></i>
+                        <span className="nav-text">Notifications</span>
                       </button>
                     </div>
                   </div>
@@ -325,47 +389,47 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#superAdminAccountingCollapse">
-                      <span className="me-2">💼</span>
-                      {!sidebarCollapsed && "Accounting"}
+                      <i className="bi bi-calculator-fill me-2"></i>
+                      <span className="nav-text">Accounting</span>
                     </button>
                   </h2>
                   <div id="superAdminAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/transactions")}>
-                        <span className="me-2">💳</span>
-                        {!sidebarCollapsed && <span>Transactions</span>}
+                        <i className="bi bi-credit-card-fill me-2"></i>
+                        <span className="nav-text">Transactions</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/budgeting")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>Budgeting</span>}
+                        <i className="bi bi-pie-chart-fill me-2"></i>
+                        <span className="nav-text">Budgeting</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/petty-cash")}>
-                        <span className="me-2">💵</span>
-                        {!sidebarCollapsed && <span>Petty Cash</span>}
+                        <i className="bi bi-cash-stack me-2"></i>
+                        <span className="nav-text">Petty Cash</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/inventory")}>
-                        <span className="me-2">📦</span>
-                        {!sidebarCollapsed && <span>Inventory</span>}
+                        <i className="bi bi-box-seam-fill me-2"></i>
+                        <span className="nav-text">Inventory</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>Payroll</span>}
+                        <i className="bi bi-wallet2 me-2"></i>
+                        <span className="nav-text">Payroll</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/fund-transfer")}>
-                        <span className="me-2">💰</span>
-                        {!sidebarCollapsed && <span>Fund Transfer</span>}
+                        <i className="bi bi-arrow-left-right me-2"></i>
+                        <span className="nav-text">Fund Transfer</span>
                       </button>
                       {userRole === "developer" && (
                         <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                                 onClick={() => navigate("/rbac-control")}>
-                          <span className="me-2">🔐</span>
-                          {!sidebarCollapsed && <span>RBAC Control</span>}
+                          <i className="bi bi-shield-lock-fill me-2"></i>
+                          <span className="nav-text">RBAC Control</span>
                         </button>
                       )}
                     </div>
@@ -376,26 +440,26 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#superAdminSalesCollapse">
-                      <span className="me-2">🛒</span>
-                      {!sidebarCollapsed && "Sales & Purchase"}
+                      <i className="bi bi-cart-fill me-2"></i>
+                      <span className="nav-text">Sales & Purchase</span>
                     </button>
                   </h2>
                   <div id="superAdminSalesCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/invoices")}>
-                        <span className="me-2">🧾</span>
-                        {!sidebarCollapsed && <span>Invoice Management</span>}
+                        <i className="bi bi-receipt me-2"></i>
+                        <span className="nav-text">Invoice Management</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/purchasing/purchase-orders")}>
-                        <span className="me-2">📝</span>
-                        {!sidebarCollapsed && <span>Purchase Orders</span>}
+                        <i className="bi bi-clipboard-check-fill me-2"></i>
+                        <span className="nav-text">Purchase Orders</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/purchasing/purchase-invoices")}>
-                        <span className="me-2">📄</span>
-                        {!sidebarCollapsed && <span>Purchase Invoices</span>}
+                        <i className="bi bi-file-earmark-invoice me-2"></i>
+                        <span className="nav-text">Purchase Invoices</span>
                       </button>
                     </div>
                   </div>
@@ -409,61 +473,61 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminWorkCollapse">
-                      <span className="me-2">💼</span>
-                      {!sidebarCollapsed && "My Work"}
+                      <i className="bi bi-briefcase-fill me-2"></i>
+                      <span className="nav-text">My Work</span>
                     </button>
                   </h2>
                   <div id="adminWorkCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin-dashboard")}>
-                        <span className="me-2">🏠</span>
-                        {!sidebarCollapsed && <span>Dashboard</span>}
+                        <i className="bi bi-house-fill me-2"></i>
+                        <span className="nav-text">Dashboard</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/timecard-entry")}>
-                        <span className="me-2">⏰</span>
-                        {!sidebarCollapsed && <span>Timecard Entry</span>}
+                        <i className="bi bi-clock-fill me-2"></i>
+                        <span className="nav-text">Timecard Entry</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/daily-task")}>
-                        <span className="me-2">📝</span>
-                        {!sidebarCollapsed && <span>Daily Task</span>}
+                        <i className="bi bi-list-task me-2"></i>
+                        <span className="nav-text">Daily Task</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employee-attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>My Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">My Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>My Payroll</span>}
+                        <i className="bi bi-cash-stack me-2"></i>
+                        <span className="nav-text">My Payroll</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-skills")}>
-                        <span className="me-2">🎯</span>
-                        {!sidebarCollapsed && <span>My Skills</span>}
+                        <i className="bi bi-award-fill me-2"></i>
+                        <span className="nav-text">My Skills</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-performance")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>My Performance</span>}
+                        <i className="bi bi-graph-up-arrow me-2"></i>
+                        <span className="nav-text">My Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-projects")}>
-                        <span className="me-2">📂</span>
-                        {!sidebarCollapsed && <span>My Projects</span>}
+                        <i className="bi bi-folder-fill me-2"></i>
+                        <span className="nav-text">My Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>My Absence</span>}
+                        <i className="bi bi-calendar-x-fill me-2"></i>
+                        <span className="nav-text">My Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employee-calendar")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Employee Calendar</span>}
+                        <i className="bi bi-calendar3 me-2"></i>
+                        <span className="nav-text">Employee Calendar</span>
                       </button>
                     </div>
                   </div>
@@ -472,46 +536,46 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminManagementCollapse">
-                      <span className="me-2">⚙️</span>
-                      {!sidebarCollapsed && "Management"}
+                      <i className="bi bi-gear-fill me-2"></i>
+                      <span className="nav-text">Management</span>
                     </button>
                   </h2>
                   <div id="adminManagementCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employees/create-emp")}>
-                        <span className="me-2">👤</span>
-                        {!sidebarCollapsed && <span>Add Employee</span>}
+                        <i className="bi bi-person-plus-fill me-2"></i>
+                        <span className="nav-text">Add Employee</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin/monitor")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>Monitor Employees</span>}
+                        <i className="bi bi-bar-chart-fill me-2"></i>
+                        <span className="nav-text">Monitor Employees</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/project")}>
-                        <span className="me-2">📋</span>
-                        {!sidebarCollapsed && <span>Projects</span>}
+                        <i className="bi bi-kanban-fill me-2"></i>
+                        <span className="nav-text">Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/performance")}>
-                        <span className="me-2">📈</span>
-                        {!sidebarCollapsed && <span>Performance</span>}
+                        <i className="bi bi-graph-up me-2"></i>
+                        <span className="nav-text">Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin-absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>Team Absence</span>}
+                        <i className="bi bi-calendar-x me-2"></i>
+                        <span className="nav-text">Team Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/calendar")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Calendar</span>}
+                        <i className="bi bi-calendar3 me-2"></i>
+                        <span className="nav-text">Calendar</span>
                       </button>
                     </div>
                   </div>
@@ -520,36 +584,36 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminAccountsCollapse">
-                      <span className="me-2">🏦</span>
-                      {!sidebarCollapsed && "Accounts"}
+                      <i className="bi bi-bank me-2"></i>
+                      <span className="nav-text">Accounts</span>
                     </button>
                   </h2>
                   <div id="adminAccountsCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/accounts")}>
-                        <span className="me-2">🏦</span>
-                        {!sidebarCollapsed && <span>Accounts</span>}
+                        <i className="bi bi-bank me-2"></i>
+                        <span className="nav-text">Accounts</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/transactions")}>
-                        <span className="me-2">💳</span>
-                        {!sidebarCollapsed && <span>Transactions</span>}
+                        <i className="bi bi-credit-card-fill me-2"></i>
+                        <span className="nav-text">Transactions</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/budgeting")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>Budgeting</span>}
+                        <i className="bi bi-pie-chart-fill me-2"></i>
+                        <span className="nav-text">Budgeting</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/petty-cash")}>
-                        <span className="me-2">💵</span>
-                        {!sidebarCollapsed && <span>Petty Cash</span>}
+                        <i className="bi bi-cash me-2"></i>
+                        <span className="nav-text">Petty Cash</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/accounting/payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>Payroll</span>}
+                        <i className="bi bi-wallet2 me-2"></i>
+                        <span className="nav-text">Payroll</span>
                       </button>
                     </div>
                   </div>
@@ -563,51 +627,51 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadWorkCollapse">
-                      <span className="me-2">💼</span>
-                      {!sidebarCollapsed && "My Work"}
+                      <i className="bi bi-briefcase-fill me-2"></i>
+                      <span className="nav-text">My Work</span>
                     </button>
                   </h2>
                   <div id="teamLeadWorkCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/timecard-entry")}>
-                        <span className="me-2">⏰</span>
-                        {!sidebarCollapsed && <span>Timecard Entry</span>}
+                        <i className="bi bi-clock-fill me-2"></i>
+                        <span className="nav-text">Timecard Entry</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/daily-task")}>
-                        <span className="me-2">📝</span>
-                        {!sidebarCollapsed && <span>Daily Task</span>}
+                        <i className="bi bi-list-task me-2"></i>
+                        <span className="nav-text">Daily Task</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-projects")}>
-                        <span className="me-2">📂</span>
-                        {!sidebarCollapsed && <span>My Projects</span>}
+                        <i className="bi bi-folder-fill me-2"></i>
+                        <span className="nav-text">My Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-performance")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>My Performance</span>}
+                        <i className="bi bi-graph-up-arrow me-2"></i>
+                        <span className="nav-text">My Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employee-attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>My Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">My Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-skills")}>
-                        <span className="me-2">🎯</span>
-                        {!sidebarCollapsed && <span>My Skills</span>}
+                        <i className="bi bi-award-fill me-2"></i>
+                        <span className="nav-text">My Skills</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>Employee Absence</span>}
+                        <i className="bi bi-calendar-x-fill me-2"></i>
+                        <span className="nav-text">Employee Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>My Payroll</span>}
+                        <i className="bi bi-cash-stack me-2"></i>
+                        <span className="nav-text">My Payroll</span>
                       </button>
                     </div>
                   </div>
@@ -616,41 +680,41 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadManagementCollapse">
-                      <span className="me-2">👥</span>
-                      {!sidebarCollapsed && "Management"}
+                      <i className="bi bi-people-fill me-2"></i>
+                      <span className="nav-text">Management</span>
                     </button>
                   </h2>
                   <div id="teamLeadManagementCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin/monitor")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>Monitor Team</span>}
+                        <i className="bi bi-bar-chart-fill me-2"></i>
+                        <span className="nav-text">Monitor Team</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/project")}>
-                        <span className="me-2">📋</span>
-                        {!sidebarCollapsed && <span>Projects</span>}
+                        <i className="bi bi-kanban-fill me-2"></i>
+                        <span className="nav-text">Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Team Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">Team Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/performance")}>
-                        <span className="me-2">📈</span>
-                        {!sidebarCollapsed && <span>Team Performance</span>}
+                        <i className="bi bi-graph-up me-2"></i>
+                        <span className="nav-text">Team Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin-absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>Team Absence</span>}
+                        <i className="bi bi-calendar-x me-2"></i>
+                        <span className="nav-text">Team Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/skills")}>
-                        <span className="me-2">🎯</span>
-                        {!sidebarCollapsed && <span>Team Skills</span>}
+                        <i className="bi bi-award-fill me-2"></i>
+                        <span className="nav-text">Team Skills</span>
                       </button>
                     </div>
                   </div>
@@ -659,16 +723,16 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadAccountingCollapse">
-                      <span className="me-2">💰</span>
-                      {!sidebarCollapsed && "Accounting"}
+                      <i className="bi bi-cash-coin me-2"></i>
+                      <span className="nav-text">Accounting</span>
                     </button>
                   </h2>
                   <div id="teamLeadAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>My Payroll</span>}
+                        <i className="bi bi-cash-stack me-2"></i>
+                        <span className="nav-text">My Payroll</span>
                       </button>
                     </div>
                   </div>
@@ -682,51 +746,51 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminWorkCollapse">
-                      <span className="me-2">💼</span>
-                      {!sidebarCollapsed && "My Work"}
+                      <i className="bi bi-briefcase-fill me-2"></i>
+                      <span className="nav-text">My Work</span>
                     </button>
                   </h2>
                   <div id="teamAdminWorkCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/timecard-entry")}>
-                        <span className="me-2">⏰</span>
-                        {!sidebarCollapsed && <span>Timecard Entry</span>}
+                        <i className="bi bi-clock-fill me-2"></i>
+                        <span className="nav-text">Timecard Entry</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/daily-task")}>
-                        <span className="me-2">📝</span>
-                        {!sidebarCollapsed && <span>Daily Task</span>}
+                        <i className="bi bi-list-task me-2"></i>
+                        <span className="nav-text">Daily Task</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-projects")}>
-                        <span className="me-2">📂</span>
-                        {!sidebarCollapsed && <span>My Projects</span>}
+                        <i className="bi bi-folder-fill me-2"></i>
+                        <span className="nav-text">My Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-performance")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>My Performance</span>}
+                        <i className="bi bi-graph-up-arrow me-2"></i>
+                        <span className="nav-text">My Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/employee-attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>My Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">My Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-skills")}>
-                        <span className="me-2">🎯</span>
-                        {!sidebarCollapsed && <span>My Skills</span>}
+                        <i className="bi bi-award-fill me-2"></i>
+                        <span className="nav-text">My Skills</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>Employee Absence</span>}
+                        <i className="bi bi-calendar-x-fill me-2"></i>
+                        <span className="nav-text">Employee Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>My Payroll</span>}
+                        <i className="bi bi-cash-stack me-2"></i>
+                        <span className="nav-text">My Payroll</span>
                       </button>
                     </div>
                   </div>
@@ -735,46 +799,46 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminManagementCollapse">
-                      <span className="me-2">⚙️</span>
-                      {!sidebarCollapsed && "Management"}
+                      <i className="bi bi-gear-fill me-2"></i>
+                      <span className="nav-text">Management</span>
                     </button>
                   </h2>
                   <div id="teamAdminManagementCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin/monitor")}>
-                        <span className="me-2">📊</span>
-                        {!sidebarCollapsed && <span>Monitor Team</span>}
+                        <i className="bi bi-bar-chart-fill me-2"></i>
+                        <span className="nav-text">Monitor Team</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/project")}>
-                        <span className="me-2">📋</span>
-                        {!sidebarCollapsed && <span>Projects</span>}
+                        <i className="bi bi-kanban-fill me-2"></i>
+                        <span className="nav-text">Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/attendance")}>
-                        <span className="me-2">📅</span>
-                        {!sidebarCollapsed && <span>Team Attendance</span>}
+                        <i className="bi bi-calendar-check-fill me-2"></i>
+                        <span className="nav-text">Team Attendance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/performance")}>
-                        <span className="me-2">📈</span>
-                        {!sidebarCollapsed && <span>Team Performance</span>}
+                        <i className="bi bi-graph-up me-2"></i>
+                        <span className="nav-text">Team Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin-absence")}>
-                        <span className="me-2">🏖️</span>
-                        {!sidebarCollapsed && <span>Team Absence</span>}
+                        <i className="bi bi-calendar-x me-2"></i>
+                        <span className="nav-text">Team Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/documents")}>
-                        <span className="me-2">📄</span>
-                        {!sidebarCollapsed && <span>Documents</span>}
+                        <i className="bi bi-file-earmark-text-fill me-2"></i>
+                        <span className="nav-text">Documents</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/skills")}>
-                        <span className="me-2">🎯</span>
-                        {!sidebarCollapsed && <span>Team Skills</span>}
+                        <i className="bi bi-award-fill me-2"></i>
+                        <span className="nav-text">Team Skills</span>
                       </button>
                     </div>
                   </div>
@@ -783,16 +847,16 @@ export default function Layout({ children }) {
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminAccountingCollapse">
-                      <span className="me-2">💰</span>
-                      {!sidebarCollapsed && "Accounting"}
+                      <i className="bi bi-cash-coin me-2"></i>
+                      <span className="nav-text">Accounting</span>
                     </button>
                   </h2>
                   <div id="teamAdminAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/my-payroll")}>
-                        <span className="me-2">💸</span>
-                        {!sidebarCollapsed && <span>My Payroll</span>}
+                        <i className="bi bi-cash-stack me-2"></i>
+                        <span className="nav-text">My Payroll</span>
                       </button>
                     </div>
                   </div>
@@ -805,46 +869,46 @@ export default function Layout({ children }) {
               <div className="accordion-item bg-dark border-0">
                 <h2 className="accordion-header">
                   <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#internWorkCollapse">
-                    <span className="me-2">🎓</span>
-                    {!sidebarCollapsed && "My Work"}
+                    <i className="bi bi-mortarboard-fill me-2"></i>
+                    <span className="nav-text">My Work</span>
                   </button>
                 </h2>
                 <div id="internWorkCollapse" className="accordion-collapse collapse show">
                   <div className="accordion-body bg-dark p-0">
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/timecard-entry")}>
-                      <span className="me-2">⏰</span>
-                      {!sidebarCollapsed && <span>Timecard Entry</span>}
+                      <i className="bi bi-clock-fill me-2"></i>
+                      <span className="nav-text">Timecard Entry</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/daily-task")}>
-                      <span className="me-2">📝</span>
-                      {!sidebarCollapsed && <span>Daily Task</span>}
+                      <i className="bi bi-list-task me-2"></i>
+                      <span className="nav-text">Daily Task</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-projects")}>
-                      <span className="me-2">📂</span>
-                      {!sidebarCollapsed && <span>My Projects</span>}
+                      <i className="bi bi-folder-fill me-2"></i>
+                      <span className="nav-text">My Projects</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-performance")}>
-                      <span className="me-2">📊</span>
-                      {!sidebarCollapsed && <span>My Performance</span>}
+                      <i className="bi bi-graph-up-arrow me-2"></i>
+                      <span className="nav-text">My Performance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/employee-attendance")}>
-                      <span className="me-2">📅</span>
-                      {!sidebarCollapsed && <span>My Attendance</span>}
+                      <i className="bi bi-calendar-check-fill me-2"></i>
+                      <span className="nav-text">My Attendance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-skills")}>
-                      <span className="me-2">🎯</span>
-                      {!sidebarCollapsed && <span>My Skills</span>}
+                      <i className="bi bi-award-fill me-2"></i>
+                      <span className="nav-text">My Skills</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/employee-calendar")}>
-                      <span className="me-2">📅</span>
-                      {!sidebarCollapsed && <span>Employee Calendar</span>}
+                      <i className="bi bi-calendar3 me-2"></i>
+                      <span className="nav-text">Employee Calendar</span>
                     </button>
                   </div>
                 </div>
@@ -856,8 +920,8 @@ export default function Layout({ children }) {
               <div className="accordion-item bg-dark border-0">
                 <h2 className="accordion-header">
                   <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#employeeWorkCollapse">
-                    <span className="me-2">💼</span>
-                    {!sidebarCollapsed && "My Work"}
+                    <i className="bi bi-briefcase-fill me-2"></i>
+                    <span className="nav-text">My Work</span>
                   </button>
                 </h2>
                 <div id="employeeWorkCollapse" className="accordion-collapse collapse show">
@@ -865,54 +929,54 @@ export default function Layout({ children }) {
                     {hasPermission('Management', 'Dashboard', 'view') && (
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                               onClick={() => navigate("/admin-dashboard")}>
-                        <span className="me-2">🏠</span>
-                        {!sidebarCollapsed && <span>Dashboard</span>}
+                        <i className="bi bi-house-fill me-2"></i>
+                        <span className="nav-text">Dashboard</span>
                       </button>
                     )}
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/timecard-entry")}>
-                      <span className="me-2">⏰</span>
-                      {!sidebarCollapsed && <span>Timecard Entry</span>}
+                      <i className="bi bi-clock-fill me-2"></i>
+                      <span className="nav-text">Timecard Entry</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/daily-task")}>
-                      <span className="me-2">📝</span>
-                      {!sidebarCollapsed && <span>Daily Task</span>}
+                      <i className="bi bi-list-task me-2"></i>
+                      <span className="nav-text">Daily Task</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-projects")}>
-                      <span className="me-2">📂</span>
-                      {!sidebarCollapsed && <span>My Projects</span>}
+                      <i className="bi bi-folder-fill me-2"></i>
+                      <span className="nav-text">My Projects</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-performance")}>
-                      <span className="me-2">📊</span>
-                      {!sidebarCollapsed && <span>My Performance</span>}
+                      <i className="bi bi-graph-up-arrow me-2"></i>
+                      <span className="nav-text">My Performance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/employee-attendance")}>
-                      <span className="me-2">📅</span>
-                      {!sidebarCollapsed && <span>My Attendance</span>}
+                      <i className="bi bi-calendar-check-fill me-2"></i>
+                      <span className="nav-text">My Attendance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/absence")}>
-                      <span className="me-2">🏖️</span>
-                      {!sidebarCollapsed && <span>My Absence</span>}
+                      <i className="bi bi-calendar-x-fill me-2"></i>
+                      <span className="nav-text">My Absence</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-payroll")}>
-                      <span className="me-2">💸</span>
-                      {!sidebarCollapsed && <span>My Payroll</span>}
+                      <i className="bi bi-cash-stack me-2"></i>
+                      <span className="nav-text">My Payroll</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/my-skills")}>
-                      <span className="me-2">🎯</span>
-                      {!sidebarCollapsed && <span>My Skills</span>}
+                      <i className="bi bi-award-fill me-2"></i>
+                      <span className="nav-text">My Skills</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
                             onClick={() => navigate("/employee-calendar")}>
-                      <span className="me-2">📅</span>
-                      {!sidebarCollapsed && <span>Employee Calendar</span>}
+                      <i className="bi bi-calendar3 me-2"></i>
+                      <span className="nav-text">Employee Calendar</span>
                     </button>
                   </div>
                 </div>
@@ -932,7 +996,7 @@ export default function Layout({ children }) {
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   title="Toggle Menu"
                 >
-                  ☰
+                  <i className="bi bi-list fs-4"></i>
                 </button>
                 {pathname === "/admin-dashboard" ? (
                   <div className="welcome-message">
@@ -987,7 +1051,16 @@ export default function Layout({ children }) {
                     }}
                     aria-expanded={showProfileDropdown}
                   >
-                    <span className="me-2">👤</span>
+                    {profilePicture ? (
+                      <img 
+                        src={profilePicture} 
+                        alt="Profile" 
+                        className="rounded-circle me-2"
+                        style={{width: '32px', height: '32px', objectFit: 'cover'}}
+                      />
+                    ) : (
+                      <span className="me-2">👤</span>
+                    )}
                     <span className="d-none d-sm-inline">{userName || userEmail}</span>
                   </button>
                 </div>
@@ -1093,12 +1166,7 @@ export default function Layout({ children }) {
                           color: "#212529", 
                           fontSize: "14px",
                           marginBottom: "4px"
-                        }}>{userName || 'User'}</div>
-                        <div style={{ 
-                          fontSize: "12px", 
-                          color: "#6c757d",
-                          marginBottom: "2px"
-                        }}>{userEmail}</div>
+                        }}>{userName || userEmail.split('@')[0]}</div>
                         <div style={{ 
                           fontSize: "11px", 
                           color: "#0d6efd",
@@ -1127,6 +1195,30 @@ export default function Layout({ children }) {
                         onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
                       >
                         <span style={{ marginRight: "8px" }}>⚙️</span> Profile Settings
+                      </button>
+                      <button 
+                        style={{ 
+                          width: "100%", 
+                          padding: "12px 16px", 
+                          border: "none", 
+                          backgroundColor: "transparent", 
+                          textAlign: "left", 
+                          cursor: "pointer",
+                          color: "#212529",
+                          fontSize: "14px",
+                          display: "flex",
+                          alignItems: "center",
+                          transition: "background-color 0.2s ease",
+                          borderTop: "1px solid #e9ecef"
+                        }}
+                        onClick={() => {
+                          navigate("/account-settings");
+                          setShowProfileDropdown(false);
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                      >
+                        <span style={{ marginRight: "8px" }}>🔒</span> Account Settings
                       </button>
                       <button 
                         style={{ 

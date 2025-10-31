@@ -1,15 +1,17 @@
 import connectMongoose from "../../../utilis/connectMongoose";
-import mongoose from "mongoose";
+import Notification from "../../../../models/Notification";
 
-const NotificationSchema = new mongoose.Schema({
-  title: String,
-  message: String,
-  recipient: String,
-  read: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const Notification = mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);
+export async function DELETE(request, { params }) {
+  try {
+    await connectMongoose();
+    const { id } = await params;
+    
+    await Notification.findByIdAndDelete(id);
+    return Response.json({ message: "Notification deleted successfully" });
+  } catch (error) {
+    return Response.json({ error: "Failed to delete notification" }, { status: 500 });
+  }
+}
 
 export async function PATCH(request, { params }) {
   try {

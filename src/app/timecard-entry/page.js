@@ -61,13 +61,14 @@ export default function TimecardPage() {
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const empId = localStorage.getItem("employeeId");
-    // Allow all employee roles to access timecard
-    if (!role || !empId || role === "super-admin" || role === "Super-admin") {
+    if (!role || !empId) {
       router.push("/");
       return;
     }
     setEmployeeId(empId);
-    fetchEmployeeData(empId);
+    if (!empId.startsWith('ADMIN')) {
+      fetchEmployeeData(empId);
+    }
   }, [router]);
 
   const fetchEmployeeData = async (empId) => {
@@ -488,29 +489,60 @@ export default function TimecardPage() {
             onClose={() => setShowSuccess(false)} 
           />
         )}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>My Timecard</h2>
-          <button onClick={exportReport} className="btn btn-success">
-            Export Monthly Report
-          </button>
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <h3 className="mb-0" style={{ color: '#ffffff' }}>
+                <i className="bi bi-clock-history me-2" style={{ color: '#d4af37' }}></i>
+                My Timecard
+              </h3>
+              <button onClick={exportReport} className="btn btn-success">
+                <i className="bi bi-file-earmark-excel me-2"></i>Export Report
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Employee Info */}
         {employeeData && (
-          <div className="card mb-4">
-            <div className="card-body">
-              <div className="row">
+          <div className="card mb-4 shadow-sm" style={{ border: '2px solid #d4af37' }}>
+            <div className="card-body p-4">
+              <div className="row g-3">
                 <div className="col-md-3">
-                  <p><strong>Name:</strong> {employeeData.firstName} {employeeData.lastName}</p>
+                  <div className="d-flex align-items-center">
+                    <i className="bi bi-person-fill me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
+                    <div>
+                      <small className="text-muted d-block">Name</small>
+                      <strong>{employeeData.firstName} {employeeData.lastName}</strong>
+                    </div>
+                  </div>
                 </div>
                 <div className="col-md-3">
-                  <p><strong>Employee ID:</strong> {employeeData.employeeId}</p>
+                  <div className="d-flex align-items-center">
+                    <i className="bi bi-badge-tm me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
+                    <div>
+                      <small className="text-muted d-block">Employee ID</small>
+                      <strong>{employeeData.employeeId}</strong>
+                    </div>
+                  </div>
                 </div>
                 <div className="col-md-3">
-                  <p><strong>Department:</strong> {employeeData.department}</p>
+                  <div className="d-flex align-items-center">
+                    <i className="bi bi-building me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
+                    <div>
+                      <small className="text-muted d-block">Department</small>
+                      <strong>{employeeData.department}</strong>
+                    </div>
+                  </div>
                 </div>
                 <div className="col-md-3">
-                  <p><strong>Today:</strong> {formatDate(new Date().toISOString())}</p>
+                  <div className="d-flex align-items-center">
+                    <i className="bi bi-calendar-event me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
+                    <div>
+                      <small className="text-muted d-block">Today</small>
+                      <strong>{formatDate(new Date().toISOString())}</strong>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -520,18 +552,20 @@ export default function TimecardPage() {
 
 
         {/* Today's Timecard */}
-        <div className="card mb-3">
+        <div className="card mb-4 shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h5 className="mb-0"><i className="bi bi-calendar-check me-2"></i>Today&apos;s Timecard</h5>
+          </div>
           <div className="card-body p-4">
-            <h5 className="fw-bold mb-4">Today&apos;s Timecard</h5>
             {/* First Row */}
             <div className="row g-4">
               {/* 1st Column - Login/Logout */}
               <div className="col-md-6">
-                <div className="card h-100 border-primary">
+                <div className="card h-100" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', border: '2px solid #d4af37' }}>
                   <div className="card-body p-3">
                     <div className="text-center mb-3">
-                      <i className="fas fa-clock text-primary fs-4"></i>
-                      <h6 className="fw-bold text-primary mt-2">Login / Logout</h6>
+                      <i className="bi bi-box-arrow-in-right" style={{ color: '#d4af37', fontSize: '2rem' }}></i>
+                      <h6 className="fw-bold mt-2" style={{ color: '#1a1a1a' }}>Login / Logout</h6>
                     </div>
                     <div className="row g-3">
                       <div className="col-6">
@@ -552,11 +586,11 @@ export default function TimecardPage() {
               
               {/* 2nd Column - Lunch */}
               <div className="col-md-6">
-                <div className="card h-100 border-warning">
+                <div className="card h-100" style={{ background: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)', border: '2px solid #d4af37' }}>
                   <div className="card-body p-3">
                     <div className="text-center mb-3">
-                      <i className="fas fa-utensils text-warning fs-4"></i>
-                      <h6 className="fw-bold text-warning mt-2">Lunch Break</h6>
+                      <i className="bi bi-cup-hot" style={{ color: '#856404', fontSize: '2rem' }}></i>
+                      <h6 className="fw-bold mt-2" style={{ color: '#856404' }}>Lunch Break</h6>
                     </div>
                     <div className="row g-3">
                       <div className="col-6">
@@ -590,11 +624,11 @@ export default function TimecardPage() {
             <div className="row g-4 mt-3">
               {/* 1st Column - Break */}
               <div className="col-md-6">
-                <div className="card h-100 border-info">
+                <div className="card h-100" style={{ background: 'linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%)', border: '2px solid #d4af37' }}>
                   <div className="card-body p-3">
                     <div className="text-center mb-3">
-                      <i className="fas fa-coffee text-info fs-4"></i>
-                      <h6 className="fw-bold text-info mt-2">Break ({breaks.length}/3)</h6>
+                      <i className="bi bi-pause-circle" style={{ color: '#0c5460', fontSize: '2rem' }}></i>
+                      <h6 className="fw-bold mt-2" style={{ color: '#0c5460' }}>Break ({breaks.length}/3)</h6>
                     </div>
                     <div className="mb-3">
                       <label className="form-label fw-bold mb-2">Break Reason</label>
@@ -640,11 +674,11 @@ export default function TimecardPage() {
               
               {/* 2nd Column - Permission */}
               <div className="col-md-6">
-                <div className="card h-100 border-secondary">
+                <div className="card h-100" style={{ background: 'linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%)', border: '2px solid #d4af37' }}>
                   <div className="card-body p-3">
                     <div className="text-center mb-3">
-                      <i className="fas fa-user-clock text-secondary fs-4"></i>
-                      <h6 className="fw-bold text-secondary mt-2">Permission Request</h6>
+                      <i className="bi bi-clock-fill" style={{ color: '#383d41', fontSize: '2rem' }}></i>
+                      <h6 className="fw-bold mt-2" style={{ color: '#383d41' }}>Permission Request</h6>
                     </div>
                     <div className="mb-3">
                       <label className="form-label fw-bold mb-2">Hours</label>
@@ -682,10 +716,10 @@ export default function TimecardPage() {
             {/* Break Records */}
             {breaks.length > 0 && (
               <div className="mt-4">
-                <h6 className="fw-bold mb-3">Today&apos;s Breaks</h6>
+                <h6 className="fw-bold mb-3"><i className="bi bi-list-ul me-2" style={{ color: '#d4af37' }}></i>Today&apos;s Breaks</h6>
                 <div className="table-responsive">
                   <table className="table table-bordered mb-0">
-                    <thead className="table-light">
+                    <thead style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#ffffff' }}>
                       <tr>
                         <th className="fw-bold py-3">Break Out</th>
                         <th className="fw-bold py-3">Break In</th>
@@ -709,12 +743,14 @@ export default function TimecardPage() {
         </div>
 
         {/* Monthly Records */}
-        <div className="card">
+        <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h5 className="mb-0"><i className="bi bi-calendar3 me-2"></i>Monthly Timecard Records</h5>
+          </div>
           <div className="card-body">
-            <h5>Monthly Timecard Records</h5>
             <div className="table-responsive">
               <table className="table table-hover">
-                <thead className="table-dark">
+                <thead style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#ffffff' }}>
                   <tr>
                     <th>Date</th>
                     <th>Login</th>

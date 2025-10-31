@@ -40,7 +40,7 @@ const EmployeeSchema = new mongoose.Schema(
       city: { type: String },
       state: { type: String },
       zip: { type: String },
-      country: { type: String },
+      country: { type: String, enum: ["India", "United States", "United Kingdom", "Canada", "Australia", "Germany", "France", "Japan", "China", "Singapore", "UAE"] },
     },
     documents: [
       {
@@ -74,7 +74,7 @@ const EmployeeSchema = new mongoose.Schema(
       salary: { type: String },
       bonus: { type: String },
       deductions: { type: String },
-      currency: { type: String },
+      currency: { type: String, enum: ["INR", "USD", "EUR", "GBP", "AUD", "CAD", "JPY"], default: "INR" },
     },
   },
   { timestamps: true }

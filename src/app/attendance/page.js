@@ -227,30 +227,33 @@ export default function AttendancePage() {
         />
       )}
       <div className="container-fluid p-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h1 className="text-primary mb-1">
-              {isAdmin ? "📊 Attendance Management" : "📅 My Attendance"}
+        <div className="row align-items-center mb-4">
+          <div className="col-md-6 mb-3 mb-md-0">
+            <h1 className="mb-0 d-flex align-items-center" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: '700'}}>
+              <i className="bi bi-calendar-check me-2"></i>
+              {isAdmin ? "Attendance Management" : "My Attendance"}
             </h1>
-            <small className="text-muted">
+            <small style={{ color: '#d4af37' }}>
               {isAdmin ? "Monitor and manage employee attendance" : "Track your attendance records"}
             </small>
           </div>
-          <div className="d-flex gap-2">
+          <div className="col-md-6 text-md-end">
+          <div className="d-flex gap-2 justify-content-md-end">
             {isAdmin ? (
               <>
-                <button className="btn btn-success" onClick={exportToExcel}>
-                  📊 Export Excel
+                <button className="btn export-btn" onClick={exportToExcel} style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease'}}>
+                  <i className="bi bi-file-earmark-excel me-1"></i> Export Excel
                 </button>
-                <button className="btn btn-info" onClick={generateAttendance}>
-                  🔄 Generate from Timecard
+                <button className="btn generate-btn" onClick={generateAttendance} style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
+                  <i className="bi bi-arrow-repeat me-1"></i> Generate from Timecard
                 </button>
               </>
             ) : (
-              <button className="btn btn-primary" onClick={exportToExcel}>
-                📊 Export My Attendance
+              <button className="btn export-btn" onClick={exportToExcel} style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease'}}>
+                <i className="bi bi-file-earmark-excel me-1"></i> Export My Attendance
               </button>
             )}
+          </div>
           </div>
         </div>
 
@@ -262,7 +265,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-success text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>✅</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-check-circle-fill"></i></div>
                     <h4 className="mb-1">{stats.totalPresent}</h4>
                     <small>Present</small>
                   </div>
@@ -271,7 +274,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-primary text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>🏢</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-building-fill"></i></div>
                     <h4 className="mb-1">{stats.totalInOffice}</h4>
                     <small>In Office</small>
                   </div>
@@ -280,7 +283,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-warning text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>⏰</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-clock-fill"></i></div>
                     <h4 className="mb-1">{stats.totalHalfDay}</h4>
                     <small>Half Day</small>
                   </div>
@@ -289,7 +292,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-danger text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>❌</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-x-circle-fill"></i></div>
                     <h4 className="mb-1">{stats.totalAbsent}</h4>
                     <small>Absent</small>
                   </div>
@@ -298,7 +301,7 @@ export default function AttendancePage() {
               <div className="col-lg-4 col-md-8 col-sm-12 mb-3">
                 <div className="card bg-info text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>⏱️</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-stopwatch-fill"></i></div>
                     <h4 className="mb-1">{stats.avgHours.toFixed(1)}h</h4>
                     <small>Average Hours</small>
                   </div>
@@ -311,7 +314,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-primary text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>📅</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-calendar-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.totalDays}</h4>
                     <small>Total Days</small>
                   </div>
@@ -320,7 +323,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-success text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>✅</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-check-circle-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.presentDays}</h4>
                     <small>Present</small>
                   </div>
@@ -329,7 +332,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-danger text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>❌</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-x-circle-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.absentDays}</h4>
                     <small>Absent</small>
                   </div>
@@ -338,7 +341,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-warning text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>⏰</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-clock-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.halfDays}</h4>
                     <small>Half Day</small>
                   </div>
@@ -347,7 +350,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-info text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>⏱️</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-stopwatch-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.totalHours}h</h4>
                     <small>Total Hours</small>
                   </div>
@@ -356,7 +359,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-secondary text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}>📊</div>
+                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-bar-chart-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.attendancePercentage}%</h4>
                     <small>Attendance</small>
                   </div>
@@ -368,14 +371,14 @@ export default function AttendancePage() {
 
         {/* Filters */}
         {isAdmin && (
-          <div className="card shadow-sm mb-4">
-            <div className="card-header bg-light">
-              <h5 className="mb-0">🔍 Filter Options</h5>
+          <div className="card shadow-sm mb-4" style={{borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37'}}>
+            <div className="card-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
+              <h5 className="mb-0"><i className="bi bi-funnel me-2"></i>Filter Options</h5>
             </div>
             <div className="card-body">
               <div className="row g-3">
                 <div className="col-lg-2 col-md-4">
-                  <label className="form-label fw-semibold">📅 Start Date</label>
+                  <label className="form-label fw-semibold"><i className="bi bi-calendar-event me-1"></i>Start Date</label>
                   <input
                     type="date"
                     className="form-control"
@@ -384,7 +387,7 @@ export default function AttendancePage() {
                   />
                 </div>
                 <div className="col-lg-2 col-md-4">
-                  <label className="form-label fw-semibold">📅 End Date</label>
+                  <label className="form-label fw-semibold"><i className="bi bi-calendar-check me-1"></i>End Date</label>
                   <input
                     type="date"
                     className="form-control"
@@ -393,7 +396,7 @@ export default function AttendancePage() {
                   />
                 </div>
                 <div className="col-lg-3 col-md-4">
-                  <label className="form-label fw-semibold">👥 Employee</label>
+                  <label className="form-label fw-semibold"><i className="bi bi-people me-1"></i>Employee</label>
                   <select
                     className="form-select"
                     value={selectedEmployee}
@@ -408,21 +411,21 @@ export default function AttendancePage() {
                   </select>
                 </div>
                 <div className="col-lg-2 col-md-4">
-                  <label className="form-label fw-semibold">📊 Status</label>
+                  <label className="form-label fw-semibold"><i className="bi bi-bar-chart me-1"></i>Status</label>
                   <select
                     className="form-select"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
                     <option value="">All Status</option>
-                    <option value="Present">✅ Present</option>
-                    <option value="Half Day">⏰ Half Day</option>
-                    <option value="Absent">❌ Absent</option>
+                    <option value="Present">Present</option>
+                    <option value="Half Day">Half Day</option>
+                    <option value="Absent">Absent</option>
                   </select>
                 </div>
                 <div className="col-lg-3 col-md-4 d-flex align-items-end">
-                  <button className="btn btn-primary w-100" onClick={fetchAttendance}>
-                    🔍 Apply Filters
+                  <button className="btn filter-btn w-100" onClick={fetchAttendance} style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
+                    <i className="bi bi-search me-1"></i> Apply Filters
                   </button>
                 </div>
               </div>
@@ -433,11 +436,11 @@ export default function AttendancePage() {
 
 
         {/* Attendance Table */}
-        <div className="card shadow-sm">
-          <div className="card-header bg-primary text-white">
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">📋 Attendance Records</h5>
-              <div className="badge bg-light text-dark fs-6">
+        <div className="card shadow-sm" style={{borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37'}}>
+          <div className="card-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
+            <div className="d-flex justify-content-between align-items-center py-2">
+              <h5 className="mb-0"><i className="bi bi-table me-2"></i>Attendance Records</h5>
+              <div className="badge fs-6 px-3 py-2" style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600'}}>
                 {attendance.length} Records
               </div>
             </div>
@@ -453,32 +456,32 @@ export default function AttendancePage() {
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover align-middle mb-0">
-                  <thead className="table-light">
+                  <thead style={{background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)', borderBottom: '2px solid #d4af37'}}>
                     <tr>
-                      <th>📅 Date</th>
-                      <th>🆔 Employee ID</th>
-                      <th>👤 Employee Name</th>
-                      <th>🏢 Department</th>
-                      <th>📊 Status</th>
-                      <th>🕐 Login</th>
-                      <th>🕕 Logout</th>
-                      <th>⏱️ Total Hours</th>
-                      <th>🚪 Permission</th>
-                      <th>⏰ Overtime</th>
-                      <th>📝 Remarks</th>
+                      <th><i className="bi bi-calendar-event me-1"></i>Date</th>
+                      <th><i className="bi bi-person-badge me-1"></i>Employee ID</th>
+                      <th><i className="bi bi-person me-1"></i>Employee Name</th>
+                      <th><i className="bi bi-building me-1"></i>Department</th>
+                      <th><i className="bi bi-bar-chart me-1"></i>Status</th>
+                      <th><i className="bi bi-box-arrow-in-right me-1"></i>Login</th>
+                      <th><i className="bi bi-box-arrow-right me-1"></i>Logout</th>
+                      <th><i className="bi bi-clock me-1"></i>Total Hours</th>
+                      <th><i className="bi bi-door-open me-1"></i>Permission</th>
+                      <th><i className="bi bi-clock-history me-1"></i>Overtime</th>
+                      <th><i className="bi bi-chat-text me-1"></i>Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {attendance.length === 0 && (
                       <tr>
                         <td colSpan={11} className="text-center py-5">
-                          <div style={{fontSize: '3rem'}}>📋</div>
+                          <div style={{fontSize: '3rem'}}><i className="bi bi-clipboard-x text-muted"></i></div>
                           <p className="text-muted mt-2 mb-0">No attendance records found.</p>
                         </td>
                       </tr>
                     )}
                     {attendance.map((a, idx) => (
-                      <tr key={idx}>
+                      <tr key={idx} style={{transition: 'all 0.2s ease'}}>
                         <td>
                           <div className="fw-semibold">{new Date(a.date).toLocaleDateString()}</div>
                         </td>
@@ -497,9 +500,7 @@ export default function AttendancePage() {
                             a.status === 'Half Day' ? 'bg-warning text-dark' : 
                             a.status === 'In Office' ? 'bg-primary' : 'bg-danger'
                           }`}>
-                            {a.status === 'Present' ? '✅ Present' :
-                             a.status === 'Half Day' ? '⏰ Half Day' :
-                             a.status === 'In Office' ? '🏢 In Office' : '❌ Absent'}
+                            {a.status}
                           </span>
                         </td>
                         <td>
@@ -529,6 +530,27 @@ export default function AttendancePage() {
           </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        .table-hover tbody tr:hover {
+          background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(255, 255, 255, 0.05) 100%);
+          transform: scale(1.01);
+          border-left: 3px solid #d4af37;
+        }
+        .export-btn:hover, .generate-btn:hover, .filter-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
+        }
+        .export-btn:hover {
+          background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%) !important;
+          color: #d4af37 !important;
+          border: 2px solid #d4af37 !important;
+        }
+        .generate-btn:hover, .filter-btn:hover {
+          background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%) !important;
+          color: #000 !important;
+        }
+      `}</style>
     </Layout>
   );
 }

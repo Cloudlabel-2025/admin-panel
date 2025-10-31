@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 import Layout from "../../components/Layout";
 
 export default function CreateEmployeePage() {
@@ -49,6 +48,7 @@ export default function CreateEmployeePage() {
   const [emergencyCountryCode, setEmergencyCountryCode] = useState("IN");
   const [emergencyPhoneError, setEmergencyPhoneError] = useState("");
   const [age, setAge] = useState("");
+  const [displaySalary, setDisplaySalary] = useState("");
 
   const countryOptions = [
     { code: "US", dial: "+1", name: "US/CA", regex: /^[0-9]{10}$/, format: "10 digits", pattern: "[0-9]{10}" },
@@ -91,9 +91,18 @@ export default function CreateEmployeePage() {
     setValidated(true);
 
     // Validate required fields
-    if (!formData.firstName || !formData.email || !formData.phone || !formData.joiningDate || !formData.department || !formData.role || !formData.emergencyContact.contactNumber || !formData.payroll.salary) {
+    if (!formData.firstName || !formData.email || !formData.phone || !formData.joiningDate || !formData.department || !formData.role || !formData.emergencyContact.contactNumber || !formData.payroll.salary || !formData.address.city || !formData.address.state || !formData.address.zip || !formData.address.country) {
       setError("Please fill all required fields marked with *");
       setTimeout(() => setError(""), 3000);
+      return;
+    }
+
+    // Validate ZIP code is exactly 6 digits
+    if (formData.address.zip.length !== 6) {
+      setError("ZIP code must be exactly 6 digits");
+      setTimeout(() => setError(""), 3000);
+      setCurrentStep(5);
+      setHighlightErrors(true);
       return;
     }
 
@@ -194,54 +203,76 @@ export default function CreateEmployeePage() {
         </div>
       )}
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="text-primary mb-0">
-          <i className="bi bi-person-plus-fill me-2"></i>
-          Employee Registration
-        </h2>
+      <div className="card shadow-lg mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37', boxShadow: '0 8px 32px rgba(212, 175, 55, 0.2)' }}>
+        <div className="card-body p-4">
+          <h2 className="mb-0" style={{ background: 'linear-gradient(90deg, #D4AF37, #F4E5C3, #C9A961)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 'bold' }}>
+            <i className="bi bi-person-plus-fill me-2" style={{ color: '#d4af37' }}></i>
+            Employee Registration
+          </h2>
+        </div>
       </div>
 
       {/* Progress Steps */}
-      <div className="card shadow-sm mb-4">
-        <div className="card-body p-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className={`flex-fill text-center ${currentStep >= 1 ? 'text-primary fw-bold' : 'text-muted'}`}>
-              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 1 ? 'bg-primary text-white' : 'bg-light'}`} style={{ width: '40px', height: '40px' }}>1</div>
+      <div className="card shadow-lg mb-4" style={{ border: '2px solid #d4af37', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(212, 175, 55, 0.15)' }}>
+        <div className="card-body p-2 p-md-3">
+          {/* Desktop Progress */}
+          <div className="d-none d-md-flex justify-content-between align-items-center">
+            <div className={`flex-fill text-center ${currentStep >= 1 ? 'fw-bold' : 'text-muted'}`} style={{ color: currentStep >= 1 ? '#000000' : undefined }}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2`} style={{ width: '40px', height: '40px', background: currentStep >= 1 ? 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)' : '#f8f9fa', color: currentStep >= 1 ? '#d4af37' : '#6c757d', border: currentStep >= 1 ? '2px solid #d4af37' : 'none', fontWeight: 'bold' }}>1</div>
               <div className="small">Basic Info</div>
             </div>
-            <div className="flex-fill" style={{ height: '2px', backgroundColor: currentStep >= 2 ? '#0d6efd' : '#dee2e6' }}></div>
-            <div className={`flex-fill text-center ${currentStep >= 2 ? 'text-primary fw-bold' : 'text-muted'}`}>
-              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-light'}`} style={{ width: '40px', height: '40px' }}>2</div>
+            <div className="flex-fill" style={{ height: '3px', background: currentStep >= 2 ? 'linear-gradient(90deg, #d4af37 0%, #f4e5c3 100%)' : '#dee2e6' }}></div>
+            <div className={`flex-fill text-center ${currentStep >= 2 ? 'fw-bold' : 'text-muted'}`} style={{ color: currentStep >= 2 ? '#000000' : undefined }}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2`} style={{ width: '40px', height: '40px', background: currentStep >= 2 ? 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)' : '#f8f9fa', color: currentStep >= 2 ? '#d4af37' : '#6c757d', border: currentStep >= 2 ? '2px solid #d4af37' : 'none', fontWeight: 'bold' }}>2</div>
               <div className="small">Contact</div>
             </div>
-            <div className="flex-fill" style={{ height: '2px', backgroundColor: currentStep >= 3 ? '#0d6efd' : '#dee2e6' }}></div>
-            <div className={`flex-fill text-center ${currentStep >= 3 ? 'text-primary fw-bold' : 'text-muted'}`}>
-              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 3 ? 'bg-primary text-white' : 'bg-light'}`} style={{ width: '40px', height: '40px' }}>3</div>
+            <div className="flex-fill" style={{ height: '3px', background: currentStep >= 3 ? 'linear-gradient(90deg, #d4af37 0%, #f4e5c3 100%)' : '#dee2e6' }}></div>
+            <div className={`flex-fill text-center ${currentStep >= 3 ? 'fw-bold' : 'text-muted'}`} style={{ color: currentStep >= 3 ? '#000000' : undefined }}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2`} style={{ width: '40px', height: '40px', background: currentStep >= 3 ? 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)' : '#f8f9fa', color: currentStep >= 3 ? '#d4af37' : '#6c757d', border: currentStep >= 3 ? '2px solid #d4af37' : 'none', fontWeight: 'bold' }}>3</div>
               <div className="small">Work Info</div>
             </div>
-            <div className="flex-fill" style={{ height: '2px', backgroundColor: currentStep >= 4 ? '#0d6efd' : '#dee2e6' }}></div>
-            <div className={`flex-fill text-center ${currentStep >= 4 ? 'text-primary fw-bold' : 'text-muted'}`}>
-              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 4 ? 'bg-primary text-white' : 'bg-light'}`} style={{ width: '40px', height: '40px' }}>4</div>
+            <div className="flex-fill" style={{ height: '3px', background: currentStep >= 4 ? 'linear-gradient(90deg, #d4af37 0%, #f4e5c3 100%)' : '#dee2e6' }}></div>
+            <div className={`flex-fill text-center ${currentStep >= 4 ? 'fw-bold' : 'text-muted'}`} style={{ color: currentStep >= 4 ? '#000000' : undefined }}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2`} style={{ width: '40px', height: '40px', background: currentStep >= 4 ? 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)' : '#f8f9fa', color: currentStep >= 4 ? '#d4af37' : '#6c757d', border: currentStep >= 4 ? '2px solid #d4af37' : 'none', fontWeight: 'bold' }}>4</div>
               <div className="small">Emergency</div>
             </div>
-            <div className="flex-fill" style={{ height: '2px', backgroundColor: currentStep >= 5 ? '#0d6efd' : '#dee2e6' }}></div>
-            <div className={`flex-fill text-center ${currentStep >= 5 ? 'text-primary fw-bold' : 'text-muted'}`}>
-              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2 ${currentStep >= 5 ? 'bg-primary text-white' : 'bg-light'}`} style={{ width: '40px', height: '40px' }}>5</div>
-              <div className="small">Address & Payroll</div>
+            <div className="flex-fill" style={{ height: '3px', background: currentStep >= 5 ? 'linear-gradient(90deg, #d4af37 0%, #f4e5c3 100%)' : '#dee2e6' }}></div>
+            <div className={`flex-fill text-center ${currentStep >= 5 ? 'fw-bold' : 'text-muted'}`} style={{ color: currentStep >= 5 ? '#000000' : undefined }}>
+              <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-2`} style={{ width: '40px', height: '40px', background: currentStep >= 5 ? 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)' : '#f8f9fa', color: currentStep >= 5 ? '#d4af37' : '#6c757d', border: currentStep >= 5 ? '2px solid #d4af37' : 'none', fontWeight: 'bold' }}>5</div>
+              <div className="small d-none d-lg-block">Address & Payroll</div>
+              <div className="small d-lg-none">Address</div>
+            </div>
+          </div>
+          {/* Mobile Progress */}
+          <div className="d-md-none">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <span className="badge" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', padding: '8px 16px' }}>
+                Step {currentStep} of 5
+              </span>
+              <span className="small fw-bold" style={{ color: '#000000' }}>
+                {currentStep === 1 && 'Basic Info'}
+                {currentStep === 2 && 'Contact'}
+                {currentStep === 3 && 'Work Info'}
+                {currentStep === 4 && 'Emergency'}
+                {currentStep === 5 && 'Address & Payroll'}
+              </span>
+            </div>
+            <div className="progress" style={{ height: '8px', background: '#dee2e6', border: '1px solid #d4af37' }}>
+              <div className="progress-bar" style={{ width: `${(currentStep / 5) * 100}%`, background: 'linear-gradient(90deg, #d4af37 0%, #f4e5c3 100%)' }}></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card shadow-sm">
+      <div className="card shadow-lg" style={{ border: '2px solid #d4af37', background: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(212, 175, 55, 0.15)' }}>
         <div className="card-body p-4">
           <form className={`row g-3 ${validated ? 'was-validated' : ''}`} onSubmit={handleSubmit} noValidate suppressHydrationWarning>
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <>
                 <div className="col-12">
-                  <h5 className="text-secondary border-bottom pb-2 mb-3">
-                    <i className="bi bi-person-circle me-2"></i>
+                  <h5 className="pb-2 mb-3" style={{ borderBottom: '3px solid #d4af37', color: '#000000', fontWeight: 'bold' }}>
+                    <i className="bi bi-person-circle me-2" style={{ color: '#d4af37' }}></i>
                     Basic Information
                   </h5>
                 </div>
@@ -395,8 +426,8 @@ export default function CreateEmployeePage() {
             {currentStep === 2 && (
               <>
                 <div className="col-12">
-                  <h5 className="text-secondary border-bottom pb-2 mb-3">
-                    <i className="bi bi-telephone-fill me-2"></i>
+                  <h5 className="pb-2 mb-3" style={{ borderBottom: '3px solid #d4af37', color: '#000000', fontWeight: 'bold' }}>
+                    <i className="bi bi-telephone-fill me-2" style={{ color: '#d4af37' }}></i>
                     Contact Information
                   </h5>
                 </div>
@@ -492,8 +523,8 @@ export default function CreateEmployeePage() {
             {currentStep === 3 && (
               <>
                 <div className="col-12">
-                  <h5 className="text-secondary border-bottom pb-2 mb-3">
-                    <i className="bi bi-briefcase-fill me-2"></i>
+                  <h5 className="pb-2 mb-3" style={{ borderBottom: '3px solid #d4af37', color: '#000000', fontWeight: 'bold' }}>
+                    <i className="bi bi-briefcase-fill me-2" style={{ color: '#d4af37' }}></i>
                     Work Information
                   </h5>
                 </div>
@@ -550,8 +581,8 @@ export default function CreateEmployeePage() {
             {currentStep === 4 && (
               <>
                 <div className="col-12">
-                  <h5 className="text-secondary border-bottom pb-2 mb-3">
-                    <i className="bi bi-person-exclamation me-2"></i>
+                  <h5 className="pb-2 mb-3" style={{ borderBottom: '3px solid #d4af37', color: '#000000', fontWeight: 'bold' }}>
+                    <i className="bi bi-person-exclamation me-2" style={{ color: '#d4af37' }}></i>
                     Emergency Contact
                   </h5>
                 </div>
@@ -640,8 +671,8 @@ export default function CreateEmployeePage() {
             {currentStep === 5 && (
               <>
                 <div className="col-12">
-                  <h5 className="text-secondary border-bottom pb-2 mb-3">
-                    <i className="bi bi-geo-alt-fill me-2"></i>
+                  <h5 className="pb-2 mb-3" style={{ borderBottom: '3px solid #d4af37', color: '#000000', fontWeight: 'bold' }}>
+                    <i className="bi bi-geo-alt-fill me-2" style={{ color: '#d4af37' }}></i>
                     Address Information
                   </h5>
                 </div>
@@ -653,7 +684,14 @@ export default function CreateEmployeePage() {
                     name="address.street"
                     value={formData.address.street}
                     onChange={(e) => {
-                      if (e.target.value.length <= 100) {
+                      const value = e.target.value;
+                      const numberCount = (value.match(/[0-9]/g) || []).length;
+                      const slashCount = (value.match(/\//g) || []).length;
+                      const dotCount = (value.match(/\./g) || []).length;
+                      const commaCount = (value.match(/,/g) || []).length;
+                      const validChars = /^[a-zA-Z0-9\s\/.,]*$/;
+                      
+                      if (validChars.test(value) && numberCount <= 5 && slashCount <= 2 && dotCount <= 2 && commaCount <= 5 && value.length <= 100) {
                         handleChange(e);
                       }
                     }}
@@ -662,11 +700,54 @@ export default function CreateEmployeePage() {
                   />
 
                 </div>
+                <div className="col-md-2">
+                  <label className="form-label">Zip <span className="text-danger">*</span></label>
+                  <input
+                    type="text"
+                    className={`form-control ${highlightErrors && !formData.address.zip ? 'is-invalid' : ''}`}
+                    name="address.zip"
+                    value={formData.address.zip}
+                    onChange={async (e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "");
+                      if (value.length <= 6) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          address: { ...prev.address, zip: value }
+                        }));
+
+                        if (value.length === 6) {
+                          try {
+                            const response = await fetch(`https://api.postalpincode.in/pincode/${value}`);
+                            const data = await response.json();
+                            if (data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+                              const postOffice = data[0].PostOffice[0];
+                              setFormData((prev) => ({
+                                ...prev,
+                                address: {
+                                  ...prev.address,
+                                  state: postOffice.State,
+                                  country: postOffice.Country
+                                }
+                              }));
+                            }
+                          } catch (err) {
+                            console.error('Pincode API error:', err);
+                          }
+                        }
+                      }
+                    }}
+                    pattern="[0-9]{6}"
+                    maxLength="6"
+                    required
+                    placeholder="6 digits"
+                  />
+
+                </div>
                 <div className="col-md-4">
                   <label className="form-label">City <span className="text-danger">*</span></label>
                   <input
                     type="text"
-                    className="form-control"
+                    className={`form-control ${highlightErrors && !formData.address.city ? 'is-invalid' : ''}`}
                     name="address.city"
                     value={formData.address.city}
                     onChange={(e) => {
@@ -688,44 +769,12 @@ export default function CreateEmployeePage() {
                   <label className="form-label">State <span className="text-danger">*</span></label>
                   <input
                     type="text"
-                    className="form-control"
+                    className={`form-control ${highlightErrors && !formData.address.state ? 'is-invalid' : ''}`}
                     name="address.state"
                     value={formData.address.state}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
-                      if (value.length <= 30) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          address: { ...prev.address, state: value }
-                        }));
-                      }
-                    }}
-                    pattern="[a-zA-Z\s]+"
-                    maxLength="30"
+                    readOnly
+                    style={{ backgroundColor: '#f8f9fa', cursor: 'not-allowed' }}
                     required
-                  />
-
-                </div>
-                <div className="col-md-2">
-                  <label className="form-label">Zip <span className="text-danger">*</span></label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="address.zip"
-                    value={formData.address.zip}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, "");
-                      if (value.length <= 6) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          address: { ...prev.address, zip: value }
-                        }));
-                      }
-                    }}
-                    pattern="[0-9]{6}"
-                    maxLength="6"
-                    required
-                    placeholder="6 digits"
                   />
 
                 </div>
@@ -733,20 +782,11 @@ export default function CreateEmployeePage() {
                   <label className="form-label">Country <span className="text-danger">*</span></label>
                   <input
                     type="text"
-                    className="form-control"
+                    className={`form-control ${highlightErrors && !formData.address.country ? 'is-invalid' : ''}`}
                     name="address.country"
                     value={formData.address.country}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
-                      if (value.length <= 30) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          address: { ...prev.address, country: value }
-                        }));
-                      }
-                    }}
-                    pattern="[a-zA-Z\s]+"
-                    maxLength="30"
+                    readOnly
+                    style={{ backgroundColor: '#f8f9fa', cursor: 'not-allowed' }}
                     required
                   />
 
@@ -754,8 +794,8 @@ export default function CreateEmployeePage() {
 
                 {/* Payroll Information Section */}
                 <div className="col-12 mt-4">
-                  <h5 className="text-secondary border-bottom pb-2 mb-3">
-                    <i className="bi bi-currency-rupee me-2"></i>
+                  <h5 className="pb-2 mb-3" style={{ borderBottom: '3px solid #d4af37', color: '#000000', fontWeight: 'bold' }}>
+                    <i className="bi bi-currency-rupee me-2" style={{ color: '#d4af37' }}></i>
                     Payroll Information
                   </h5>
                 </div>
@@ -768,36 +808,51 @@ export default function CreateEmployeePage() {
                       onChange={(e) => {
                         setFormData((prev) => ({
                           ...prev,
-                          payroll: { ...prev.payroll, currency: e.target.value }
+                          payroll: { ...prev.payroll, currency: e.target.value, salary: "" }
                         }));
                       }}
-                      style={{ maxWidth: '100px' }}
+                      style={{ maxWidth: '130px' }}
                     >
-                      <option value="INR">INR</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                      <option value="AUD">AUD</option>
-                      <option value="CAD">CAD</option>
-                      <option value="JPY">JPY</option>
+                      <option value="INR">₹ INR</option>
+                      <option value="USD">$ USD</option>
+                      <option value="EUR">€ EUR</option>
+                      <option value="GBP">£ GBP</option>
+                      <option value="AUD">A$ AUD</option>
+                      <option value="CAD">C$ CAD</option>
+                      <option value="JPY">¥ JPY</option>
                     </select>
                     <input
                       type="text"
                       className="form-control"
                       name="payroll.salary"
-                      value={formData.payroll.salary}
+                      value={(() => {
+                        if (!formData.payroll.salary) return '';
+                        const num = formData.payroll.salary;
+                        if (formData.payroll.currency === 'INR') {
+                          // Indian numbering: 1,00,000
+                          let result = num.slice(-3);
+                          let remaining = num.slice(0, -3);
+                          while (remaining.length > 0) {
+                            result = remaining.slice(-2) + ',' + result;
+                            remaining = remaining.slice(0, -2);
+                          }
+                          return result;
+                        } else {
+                          // International: 100,000
+                          return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        }
+                      })()}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9]/g, "");
-                        if (value.length <= 7) {
+                        const maxLength = formData.payroll.currency === 'JPY' ? 9 : 7;
+                        if (value.length <= maxLength) {
                           setFormData((prev) => ({
                             ...prev,
                             payroll: { ...prev.payroll, salary: value }
                           }));
                         }
                       }}
-                      pattern="[0-9]{1,7}"
-                      maxLength="7"
-                      placeholder="Monthly salary"
+                      placeholder={formData.payroll.currency === 'JPY' ? "Monthly salary (up to 9 digits)" : "Monthly salary"}
                       required
                     />
                   </div>
@@ -806,21 +861,28 @@ export default function CreateEmployeePage() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="col-12 d-flex justify-content-between mt-5">
+            <div className="col-12 d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4 mt-md-5">
               {currentStep > 1 && (
                 <button
                   type="button"
-                  className="btn btn-secondary px-4"
+                  className="btn"
+                  style={{ background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)', color: '#ffffff', border: '2px solid #495057', fontWeight: 'bold', transition: 'all 0.3s ease', padding: '0.4rem 1.5rem', borderRadius: '8px' }}
+                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
                   onClick={() => setCurrentStep(currentStep - 1)}
                 >
                   <i className="bi bi-arrow-left me-2"></i>
-                  Previous
+                  <span className="d-none d-sm-inline">Previous</span>
+                  <span className="d-sm-none">Back</span>
                 </button>
               )}
               {currentStep < 5 ? (
                 <button
                   type="button"
-                  className="btn btn-primary px-4 ms-auto"
+                  className="btn ms-auto"
+                  style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', fontWeight: 'bold', transition: 'all 0.3s ease', padding: '0.4rem 1.5rem', borderRadius: '8px' }}
+                  onMouseEnter={(e) => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 16px rgba(212, 175, 55, 0.4)'; }}
+                  onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
                   onClick={async () => {
                     // Validate current step before moving to next
                     let hasError = false;
@@ -939,18 +1001,23 @@ export default function CreateEmployeePage() {
               ) : (
                 <button
                   type="submit"
-                  className="btn btn-success px-5 ms-auto"
+                  className="btn ms-auto"
+                  style={{ background: loading ? '#6c757d' : 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', fontWeight: 'bold', transition: 'all 0.3s ease', padding: '0.4rem 1.5rem', borderRadius: '8px' }}
+                  onMouseEnter={(e) => { if (!loading) { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 16px rgba(212, 175, 55, 0.4)'; } }}
+                  onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
                   disabled={loading}
                 >
                   {loading ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Creating...
+                      <span className="d-none d-sm-inline">Creating...</span>
+                      <span className="d-sm-none">Wait...</span>
                     </>
                   ) : (
                     <>
                       <i className="bi bi-check-circle me-2"></i>
-                      Create Employee
+                      <span className="d-none d-sm-inline">Create Employee</span>
+                      <span className="d-sm-none">Create</span>
                     </>
                   )}
                 </button>
@@ -973,13 +1040,25 @@ export default function CreateEmployeePage() {
           from { stroke-dasharray: 0 20; }
           to { stroke-dasharray: 20 20; }
         }
+        .form-control, .form-select {
+          border: 1px solid #d4af37;
+          transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+          border-color: #d4af37;
+          box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
+        }
+        .form-label {
+          color: #000000;
+          font-weight: 600;
+        }
         .form-control.is-valid, .form-select.is-valid {
-          border-color: #ced4da !important;
+          border-color: #d4af37 !important;
           background-image: none !important;
           padding-right: 0.75rem !important;
         }
         .was-validated .form-control:valid, .was-validated .form-select:valid {
-          border-color: #ced4da !important;
+          border-color: #d4af37 !important;
           background-image: none !important;
           padding-right: 0.75rem !important;
         }

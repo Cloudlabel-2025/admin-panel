@@ -159,32 +159,43 @@ export default function ProjectPage() {
     <Layout>
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
+          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out', border: '3px solid #d4af37' }}>
             <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
-              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+              <path d="M9 12L11 14L15 10" stroke="#d4af37" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#1a1a1a" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
             </svg>
           </div>
         </div>
       )}
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h1 className="text-primary mb-1">
-              📋 Project Management
+        <div className="row align-items-center mb-4">
+          <div className="col-12 col-md-6 mb-3 mb-md-0">
+            <h1 className="mb-0 d-flex align-items-center" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: '700'}}>
+              <i className="bi bi-kanban me-2"></i>
+              <span className="d-none d-sm-inline">Project Management</span>
+              <span className="d-inline d-sm-none">Projects</span>
             </h1>
-            <small className="text-muted">Manage and track all projects</small>
           </div>
-          <div className="badge bg-info fs-6">
-            {projects.length} Projects
+          <div className="col-12 col-md-6 text-md-end">
+            <div className="d-inline-flex align-items-center gap-2 flex-wrap">
+              <div className="badge fs-6 px-3 py-2" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '1px solid #d4af37'}}>
+                <i className="bi bi-folder me-1"></i>
+                {projects.length} Total
+              </div>
+              <div className="badge fs-6 px-3 py-2" style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600'}}>
+                <i className="bi bi-check-circle me-1"></i>
+                Active
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="card shadow-sm mb-4">
-          <div className="card-header bg-primary text-white">
-            <div className="d-flex justify-content-between align-items-center">
+        <div className="card shadow-sm mb-4" style={{borderRadius: '12px', overflow: 'hidden', border: '1px solid #d4af37'}}>
+          <div className="card-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
+            <div className="d-flex justify-content-between align-items-center py-2">
               <h5 className="mb-0">
-                🚀 Projects ({filteredProjects.length})
+                <i className="bi bi-kanban me-2"></i>
+                Projects <span className="badge ms-2" style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600'}}>{filteredProjects.length}</span>
               </h5>
               <div className="d-flex align-items-center gap-2">
                 <div className="d-flex align-items-center">
@@ -211,16 +222,16 @@ export default function ProjectPage() {
                     </div>
                   ) : (
                     <button 
-                      className="btn text-white" 
+                      className="btn btn-sm text-white" 
                       onClick={() => setShowSearch(true)}
-                      style={{background: 'none', border: 'none'}}
+                      style={{background: 'rgba(212, 175, 55, 0.3)', border: '1px solid rgba(212, 175, 55, 0.5)', borderRadius: '8px'}}
                     >
-                      🔍
+                      <i className="bi bi-search"></i>
                     </button>
                   )}
                 </div>
-                <button className="btn btn-light" onClick={() => openModal()}>
-                  ➕ Add Project
+                <button className="btn add-project-btn" onClick={() => openModal()} style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease'}}>
+                  <i className="bi bi-plus-circle me-1"></i> Add Project
                 </button>
               </div>
             </div>
@@ -249,17 +260,17 @@ export default function ProjectPage() {
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover align-middle mb-0">
-                  <thead className="table-light">
+                  <thead style={{background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)', borderBottom: '2px solid #d4af37'}}>
                     <tr>
-                      <th>📝 Code</th>
-                      <th>🏷️ Name</th>
-                      <th>📊 Status</th>
-                      <th>✅ Assignment</th>
-                      <th>📅 Start</th>
-                      <th>🏁 End</th>
-                      <th>👤 Assigned By</th>
-                      <th>👥 Assigned To</th>
-                      <th>⚙️ Actions</th>
+                      <th><i className="bi bi-code-square me-1"></i>Code</th>
+                      <th><i className="bi bi-tag me-1"></i>Name</th>
+                      <th><i className="bi bi-bar-chart me-1"></i>Status</th>
+                      <th><i className="bi bi-check-circle me-1"></i>Assignment</th>
+                      <th><i className="bi bi-calendar-event me-1"></i>Start</th>
+                      <th><i className="bi bi-calendar-check me-1"></i>End</th>
+                      <th><i className="bi bi-person me-1"></i>Assigned By</th>
+                      <th><i className="bi bi-people me-1"></i>Assigned To</th>
+                      <th><i className="bi bi-gear me-1"></i>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -271,7 +282,7 @@ export default function ProjectPage() {
                 };
                 
                       return (
-                        <tr key={p._id}>
+                        <tr key={p._id} style={{transition: 'all 0.2s ease'}}>
                           <td>
                             <code className="bg-light px-2 py-1 rounded">{p.projectCode}</code>
                           </td>
@@ -339,11 +350,11 @@ export default function ProjectPage() {
         {showModal && (
           <div className="modal show d-block" tabIndex="-1" role="dialog" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
             <div className="modal-dialog modal-lg">
-              <div className="modal-content shadow-lg">
+              <div className="modal-content shadow-lg" style={{borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37'}}>
                 <form onSubmit={saveProject}>
-                  <div className="modal-header bg-primary text-white">
+                  <div className="modal-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
                     <h5 className="modal-title">
-                      {editingProject ? "✏️ Edit Project" : "➕ Add New Project"}
+                      {editingProject ? <><i className="bi bi-pencil-square me-2"></i>Edit Project</> : <><i className="bi bi-plus-circle me-2"></i>Add New Project</>}
                     </h5>
                     <button
                       type="button"
@@ -354,7 +365,7 @@ export default function ProjectPage() {
                   <div className="modal-body p-4">
                     <div className="row">
                       <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">🏷️ Project Name</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-tag me-1"></i>Project Name</label>
                         <input
                           className="form-control"
                           name="projectName"
@@ -365,7 +376,7 @@ export default function ProjectPage() {
                         />
                       </div>
                       <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">📝 Project Code</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-code-square me-1"></i>Project Code</label>
                         <input
                           className="form-control"
                           name="projectCode"
@@ -377,7 +388,7 @@ export default function ProjectPage() {
                       </div>
                     </div>
                     <div className="mb-3">
-                      <label className="form-label fw-semibold">📄 Description</label>
+                      <label className="form-label fw-semibold"><i className="bi bi-file-text me-1"></i>Description</label>
                       <textarea
                         className="form-control"
                         name="description"
@@ -389,7 +400,7 @@ export default function ProjectPage() {
                     </div>
                     <div className="row">
                       <div className="col-md-4 mb-3">
-                        <label className="form-label fw-semibold">📅 Start Date</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-calendar-event me-1"></i>Start Date</label>
                         <input
                           type="date"
                           className="form-control"
@@ -399,7 +410,7 @@ export default function ProjectPage() {
                         />
                       </div>
                       <div className="col-md-4 mb-3">
-                        <label className="form-label fw-semibold">🏁 End Date</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-calendar-check me-1"></i>End Date</label>
                         <input
                           type="date"
                           className="form-control"
@@ -409,22 +420,22 @@ export default function ProjectPage() {
                         />
                       </div>
                       <div className="col-md-4 mb-3">
-                        <label className="form-label fw-semibold">📊 Status</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-bar-chart me-1"></i>Status</label>
                         <select
                           className="form-select"
                           name="status"
                           value={formData.status}
                           onChange={handleChange}
                         >
-                          <option value="Planned">📋 Planned</option>
-                          <option value="Ongoing">🚀 Ongoing</option>
-                          <option value="Completed">✅ Completed</option>
+                          <option value="Planned">Planned</option>
+                          <option value="Ongoing">Ongoing</option>
+                          <option value="Completed">Completed</option>
                         </select>
                       </div>
                     </div>
                     <div className="row">
                       <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">👤 Assigned By</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-person me-1"></i>Assigned By</label>
                         <input
                           type="text"
                           className="form-control"
@@ -435,7 +446,7 @@ export default function ProjectPage() {
                         <small className="text-muted">Automatically set to logged-in user</small>
                       </div>
                       <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold">👥 Assigned To</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-people me-1"></i>Assigned To</label>
                         <select
                           className="form-select"
                           name="assignedTo"
@@ -454,16 +465,16 @@ export default function ProjectPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="modal-footer">
+                  <div className="modal-footer" style={{borderTop: '2px solid #d4af37'}}>
                     <button
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => setShowModal(false)}
                     >
-                      ❌ Cancel
+                      <i className="bi bi-x-circle me-1"></i> Cancel
                     </button>
-                    <button type="submit" className="btn btn-primary">
-                      {editingProject ? "💾 Update Project" : "➕ Add Project"}
+                    <button type="submit" className="btn text-white submit-project-btn" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
+                      <i className="bi bi-check-circle me-1"></i> {editingProject ? "Update Project" : "Add Project"}
                     </button>
                   </div>
                 </form>
@@ -476,10 +487,10 @@ export default function ProjectPage() {
         {showViewModal && viewingProject && (
           <div className="modal show d-block" tabIndex="-1" role="dialog" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
             <div className="modal-dialog modal-lg">
-              <div className="modal-content shadow-lg">
-                <div className="modal-header bg-info text-white">
+              <div className="modal-content shadow-lg" style={{borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37'}}>
+                <div className="modal-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
                   <h5 className="modal-title">
-                    👁️ View Project Details
+                    <i className="bi bi-eye me-2"></i>View Project Details
                   </h5>
                   <button
                     type="button"
@@ -490,35 +501,35 @@ export default function ProjectPage() {
                 <div className="modal-body p-4">
                   <div className="row">
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold text-muted">🏷️ Project Name</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-tag me-1"></i>Project Name</label>
                       <p className="form-control-plaintext border rounded p-2 bg-light">{viewingProject.projectName}</p>
                     </div>
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold text-muted">📝 Project Code</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-code-square me-1"></i>Project Code</label>
                       <p className="form-control-plaintext border rounded p-2 bg-light">{viewingProject.projectCode}</p>
                     </div>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label fw-semibold text-muted">📄 Description</label>
+                    <label className="form-label fw-semibold text-muted"><i className="bi bi-file-text me-1"></i>Description</label>
                     <p className="form-control-plaintext border rounded p-2 bg-light" style={{minHeight: '80px'}}>
                       {viewingProject.description || 'No description provided'}
                     </p>
                   </div>
                   <div className="row">
                     <div className="col-md-4 mb-3">
-                      <label className="form-label fw-semibold text-muted">📅 Start Date</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-calendar-event me-1"></i>Start Date</label>
                       <p className="form-control-plaintext border rounded p-2 bg-light">
                         {viewingProject.startDate?.slice(0, 10) || '—'}
                       </p>
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label fw-semibold text-muted">🏁 End Date</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-calendar-check me-1"></i>End Date</label>
                       <p className="form-control-plaintext border rounded p-2 bg-light">
                         {viewingProject.endDate?.slice(0, 10) || '—'}
                       </p>
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label fw-semibold text-muted">📊 Project Status</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-bar-chart me-1"></i>Project Status</label>
                       <p className="form-control-plaintext">
                         <span className={`badge ${
                           viewingProject.status === 'Completed' ? 'bg-success' :
@@ -531,7 +542,7 @@ export default function ProjectPage() {
                   </div>
                   <div className="row">
                     <div className="col-md-4 mb-3">
-                      <label className="form-label fw-semibold text-muted">✅ Assignment Status</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-check-circle me-1"></i>Assignment Status</label>
                       <p className="form-control-plaintext">
                         <span className={`badge ${
                           viewingProject.assignmentStatus === 'Accepted' ? 'bg-success' :
@@ -545,26 +556,27 @@ export default function ProjectPage() {
                   </div>
                   <div className="row">
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold text-muted">👤 Assigned By</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-person me-1"></i>Assigned By</label>
                       <p className="form-control-plaintext border rounded p-2 bg-light">
                         {viewingProject.assignedBy?.name || '—'}
                       </p>
                     </div>
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold text-muted">👥 Assigned To</label>
+                      <label className="form-label fw-semibold text-muted"><i className="bi bi-people me-1"></i>Assigned To</label>
                       <p className="form-control-plaintext border rounded p-2 bg-light">
                         {viewingProject.assignedTo?.name || '—'}
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer" style={{borderTop: '2px solid #d4af37'}}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn text-white"
                     onClick={() => setShowViewModal(false)}
+                    style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37'}}
                   >
-                    ❌ Close
+                    <i className="bi bi-x-circle me-1"></i> Close
                   </button>
                 </div>
               </div>
@@ -585,6 +597,24 @@ export default function ProjectPage() {
         @keyframes drawCheck {
           from { stroke-dasharray: 0 20; }
           to { stroke-dasharray: 20 20; }
+        }
+        .table-hover tbody tr:hover {
+          background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(255, 255, 255, 0.05) 100%);
+          transform: scale(1.01);
+          border-left: 3px solid #d4af37;
+        }
+        .add-project-btn:hover {
+          background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%) !important;
+          color: #d4af37 !important;
+          border: 2px solid #d4af37 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
+        }
+        .submit-project-btn:hover {
+          background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%) !important;
+          color: #000 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
         }
       `}</style>
     </Layout>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
+import { formatDate } from "../utilis/dateFormat";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -115,7 +116,7 @@ export default function AdminDashboard() {
           recentActivities.push({
             id: `emp-${index}`,
             action: `Employee "${emp.firstName} ${emp.lastName}" joined ${emp.department || 'the team'}`,
-            time: new Date(emp.createdAt || Date.now()).toLocaleDateString(),
+            time: formatDate(emp.createdAt || Date.now()),
             type: 'success'
           });
         });
@@ -131,7 +132,7 @@ export default function AdminDashboard() {
               recentActivities.push({
                 id: `txn-${index}`,
                 action: `${txn.type || 'Transaction'}: ₹${parseFloat(txn.amount || 0).toLocaleString()}`,
-                time: new Date(txn.date || txn.createdAt || Date.now()).toLocaleDateString(),
+                time: formatDate(txn.date || txn.createdAt || Date.now()),
                 type: 'info'
               });
             });
@@ -147,13 +148,13 @@ export default function AdminDashboard() {
           {
             id: 'sys-1',
             action: 'System backup completed successfully',
-            time: new Date().toLocaleDateString(),
+            time: formatDate(new Date()),
             type: 'info'
           },
           {
             id: 'sys-2', 
             action: 'Monthly attendance report generated',
-            time: new Date(Date.now() - 86400000).toLocaleDateString(),
+            time: formatDate(Date.now() - 86400000),
             type: 'success'
           }
         );
@@ -416,7 +417,7 @@ export default function AdminDashboard() {
                           <strong className="small">{notification.title}</strong>
                           <p className="mb-1 small">{notification.message}</p>
                           <small className="text-muted">
-                            {new Date(notification.createdAt).toLocaleDateString('en-IN')}
+                            {formatDate(notification.createdAt)}
                           </small>
                         </div>
                         {!notification.read && (
