@@ -24,6 +24,12 @@ export async function PUT(req,context) {
     await connectMongoose();
     const {id} = await context.params;
     const body = await req.json();
+    
+    // If proficiency is being updated, clear verified evaluation to allow new self-evaluation
+    if (body.proficiencyLevels || body.proficiencyHistory) {
+      body.verifiedEvaluation = null;
+    }
+    
     const skill = await Skill.findByIdAndUpdate(id, body, { new: true });
     return NextResponse.json(skill, { status: 200 });
   } catch (err) {

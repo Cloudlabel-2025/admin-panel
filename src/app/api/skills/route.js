@@ -6,19 +6,25 @@ export async function POST(req) {
     try{
         await connectMongoose();
         const body = await req.json();
-        const skill = await Skill.create(body);
+        const createdByUserId = req.headers.get('x-user-id');
+        const skillData = { ...body, createdBy: createdByUserId };
+        const skill = await Skill.create(skillData);
         
         // Create notification for the employee
         try {
-          const Notification = (await import('../../../models/Notification')).default;
-          await Notification.create({
-            employeeId: body.employeeId,
-            title: "New Skill Added",
-            message: `A new skill "${body.skillName}" has been added to your profile with ${body.proficiencyLevels?.[0] || 'Beginner'} proficiency level.`,
-            type: "skill",
-            status: "unread",
-            createdAt: new Date()
-          });
+          const User = (await import('../../../models/User')).default;
+          const user = await User.findById(body.employeeId);
+          if (user) {
+            const Notification = (await import('../../../models/Notification')).default;
+            await Notification.create({
+              employeeId: user.employeeId,
+              title: "New Skill Added",
+              message: `A new skill "${body.skillName}" has been added to your profile with ${body.proficiencyLevels?.[0] || 'Beginner'} proficiency level.`,
+              type: "info",
+              isRead: false,
+              createdAt: new Date()
+            });
+          }
         } catch (notifErr) {
           console.error('Error creating notification:', notifErr);
         }
@@ -33,12 +39,25 @@ export async function POST(req) {
 export async function GET() {
     try{
       await connectMongoose();
-      const skills = await Skill.find()
-      .populate("employeeId","name")
-      .sort({createdAt:-1});
+      let skills = await Skill.find().sort({createdAt:-1}).lean();
+      
+      // Manually populate employeeId
+      const User = (await import('../../../models/User')).default;
+      for (let skill of skills) {
+        if (skill.employeeId) {
+          try {
+            const user = await User.findById(skill.employeeId).select('name employeeId email').lean();
+            skill.employeeId = user;
+          } catch (e) {
+            console.error('Error populating user:', e);
+          }
+        }
+      }
+      
       return NextResponse.json(skills,{status:200});
     }
     catch(err){
-    return NextResponse.json({error:err.message},{status:500});
+      console.error('Error in GET /api/skills:', err);
+      return NextResponse.json({error:err.message},{status:500});
     }
 }

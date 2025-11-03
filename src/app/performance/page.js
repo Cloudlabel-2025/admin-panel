@@ -28,7 +28,6 @@ export default function PerformancePage() {
         
         if (role) params.append("userRole", role);
         
-        // For team roles, add department filter
         if ((role === "Team-Lead" || role === "Team-admin") && empId) {
           const userRes = await fetch(`/api/Employee/${empId}`);
           if (userRes.ok) {
@@ -43,38 +42,29 @@ export default function PerformancePage() {
         
         const res = await fetch(url);
         const data = await res.json();
-        console.log('Performance data received:', data);
         
-        // Fetch employees list for name lookup
         try {
           const empRes = await fetch("/api/Employee");
           if (empRes.ok) {
             const employees = await empRes.json();
-            console.log('Employees fetched:', employees);
             setEmployeesList(Array.isArray(employees) ? employees : []);
-          } else {
-            console.log('Employee API failed:', empRes.status);
           }
         } catch (err) {
           console.log('Failed to fetch employees list:', err);
         }
         
-        // Add employee names using employees list
         const reviewsWithNames = data.map(review => {
           if (review.employeeId && !review.employeeName) {
-            // Try to find employee in the employees list
             const employee = employeesList.find(emp => emp._id === review.employeeId);
             if (employee) {
               review.employeeName = employee.name || `${employee.firstName} ${employee.lastName}`.trim();
             } else {
-              // Fallback: use employee ID as display name
               review.employeeName = `Employee ${review.employeeId.slice(-4)}`;
             }
           }
           return review;
         });
         
-        console.log('Final reviews with names:', reviewsWithNames);
         setReviews(reviewsWithNames);
       } catch (err) {
         console.error('Error fetching performance data:', err);
@@ -131,104 +121,137 @@ export default function PerformancePage() {
       )}
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
+          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out', border: '3px solid #d4af37' }}>
             <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
-              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+              <path d="M9 12L11 14L15 10" stroke="#d4af37" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#1a1a1a" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
             </svg>
           </div>
         </div>
       )}
       
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h1 className="text-primary mb-1">
-              📊 Performance Management
-            </h1>
-            <small className="text-muted">Track and manage employee performance reviews</small>
-          </div>
-          <div className="badge bg-info fs-6">
-            {Array.isArray(reviews) ? reviews.length : 0} Reviews
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h1 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+                  <i className="bi bi-graph-up-arrow me-2"></i>Performance Management
+                </h1>
+                <small style={{ color: '#f4e5c3' }}>Track and manage employee performance reviews</small>
+              </div>
+              <div className="badge fs-6" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#1a1a1a' }}>
+                {Array.isArray(reviews) ? reviews.length : 0} Reviews
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="row mb-4">
-          <div className="col-md-3">
-            <div className="card bg-primary text-white">
-              <div className="card-body text-center">
-                <h3 className="mb-1">{Array.isArray(reviews) ? reviews.length : 0}</h3>
-                <small>📊 Total Reviews</small>
+        <div className="row g-3 mb-4">
+          <div className="col-md-3 col-sm-6">
+            <div className="card h-100 shadow-sm" style={{ border: '2px solid #d4af37', borderRadius: '12px' }}>
+              <div className="card-body text-center p-4">
+                <div className="mb-2" style={{ fontSize: '2.5rem', color: '#d4af37' }}>
+                  <i className="bi bi-clipboard-data"></i>
+                </div>
+                <h6 className="text-muted text-uppercase mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Total Reviews</h6>
+                <h4 className="mb-0 fw-bold" style={{ color: '#d4af37' }}>{Array.isArray(reviews) ? reviews.length : 0}</h4>
               </div>
             </div>
           </div>
-          <div className="col-md-3">
-            <div className="card bg-success text-white">
-              <div className="card-body text-center">
-                <h3 className="mb-1">{Array.isArray(reviews) ? reviews.filter(r => r.overall >= 4).length : 0}</h3>
-                <small>⭐ Excellent</small>
+          <div className="col-md-3 col-sm-6">
+            <div className="card h-100 shadow-sm" style={{ border: '2px solid #28a745', borderRadius: '12px' }}>
+              <div className="card-body text-center p-4">
+                <div className="mb-2" style={{ fontSize: '2.5rem', color: '#28a745' }}>
+                  <i className="bi bi-star-fill"></i>
+                </div>
+                <h6 className="text-muted text-uppercase mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Excellent</h6>
+                <h4 className="mb-0 fw-bold" style={{ color: '#28a745' }}>{Array.isArray(reviews) ? reviews.filter(r => r.overall >= 4).length : 0}</h4>
               </div>
             </div>
           </div>
-          <div className="col-md-3">
-            <div className="card bg-warning text-white">
-              <div className="card-body text-center">
-                <h3 className="mb-1">{Array.isArray(reviews) ? reviews.filter(r => r.overall >= 3 && r.overall < 4).length : 0}</h3>
-                <small>👍 Good</small>
+          <div className="col-md-3 col-sm-6">
+            <div className="card h-100 shadow-sm" style={{ border: '2px solid #ffc107', borderRadius: '12px' }}>
+              <div className="card-body text-center p-4">
+                <div className="mb-2" style={{ fontSize: '2.5rem', color: '#ffc107' }}>
+                  <i className="bi bi-hand-thumbs-up-fill"></i>
+                </div>
+                <h6 className="text-muted text-uppercase mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Good</h6>
+                <h4 className="mb-0 fw-bold" style={{ color: '#ffc107' }}>{Array.isArray(reviews) ? reviews.filter(r => r.overall >= 3 && r.overall < 4).length : 0}</h4>
               </div>
             </div>
           </div>
-          <div className="col-md-3">
-            <div className="card bg-info text-white">
-              <div className="card-body text-center">
-                <h3 className="mb-1">{periods.length}</h3>
-                <small>📅 Periods</small>
+          <div className="col-md-3 col-sm-6">
+            <div className="card h-100 shadow-sm" style={{ border: '2px solid #6c757d', borderRadius: '12px' }}>
+              <div className="card-body text-center p-4">
+                <div className="mb-2" style={{ fontSize: '2.5rem', color: '#6c757d' }}>
+                  <i className="bi bi-calendar-range"></i>
+                </div>
+                <h6 className="text-muted text-uppercase mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Periods</h6>
+                <h4 className="mb-0 fw-bold" style={{ color: '#6c757d' }}>{periods.length}</h4>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters and Search */}
-        <div className="card shadow-sm mb-4">
-          <div className="card-header bg-light">
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">🔍 Filter & Search</h5>
-              <Link href="/performance/create" className="btn btn-primary">
-                ➕ Add Review
+        <div className="card shadow-sm mb-4" style={{ border: '2px solid #d4af37', borderRadius: '12px' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37', borderRadius: '10px 10px 0 0' }}>
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-funnel-fill me-2"></i>Filter & Search</h5>
+              <Link href="/performance/create" className="btn" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600', boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)' }}>
+                <i className="bi bi-plus-circle-fill me-2"></i>Add Review
               </Link>
             </div>
           </div>
-          <div className="card-body">
+          <div className="card-body p-4">
             <div className="row g-3">
-              <div className="col-md-4">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="🔍 Search by employee, reviewer, or period..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <div className="col-lg-4">
+                <label className="form-label fw-semibold small text-uppercase mb-2" style={{ color: '#6c757d', letterSpacing: '0.5px' }}>
+                  <i className="bi bi-search me-2" style={{ color: '#d4af37' }}></i>Search
+                </label>
+                <div className="input-group input-group-lg">
+                  <span className="input-group-text" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', borderTop: '2px solid #d4af37', borderBottom: '2px solid #d4af37', borderLeft: '2px solid #d4af37', borderRight: 'none' }}>
+                    <i className="bi bi-search" style={{ color: '#d4af37' }}></i>
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by employee, reviewer..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ borderTop: '2px solid #d4af37', borderBottom: '2px solid #d4af37', borderRight: '2px solid #d4af37', borderLeft: 'none', fontSize: '1rem' }}
+                  />
+                </div>
               </div>
-              <div className="col-md-4">
+              <div className="col-lg-4">
+                <label className="form-label fw-semibold small text-uppercase mb-2" style={{ color: '#6c757d', letterSpacing: '0.5px' }}>
+                  <i className="bi bi-calendar-range me-2" style={{ color: '#d4af37' }}></i>Period
+                </label>
                 <select
-                  className="form-select"
+                  className="form-select form-select-lg"
                   value={periodFilter}
                   onChange={(e) => setPeriodFilter(e.target.value)}
+                  style={{ border: '2px solid #d4af37', fontSize: '1rem' }}
                 >
-                  <option value="">📅 All Periods</option>
+                  <option value="">All Periods ({periods.length})</option>
                   {periods.map(period => (
                     <option key={period} value={period}>{period}</option>
                   ))}
                 </select>
               </div>
-              <div className="col-md-4">
+              <div className="col-lg-4">
+                <label className="form-label fw-semibold small text-uppercase mb-2" style={{ color: '#6c757d', letterSpacing: '0.5px' }}>
+                  <i className="bi bi-star-fill me-2" style={{ color: '#d4af37' }}></i>Rating
+                </label>
                 <select
-                  className="form-select"
+                  className="form-select form-select-lg"
                   value={ratingFilter}
                   onChange={(e) => setRatingFilter(e.target.value)}
+                  style={{ border: '2px solid #d4af37', fontSize: '1rem' }}
                 >
-                  <option value="">⭐ All Ratings</option>
+                  <option value="">All Ratings ({ratings.length})</option>
                   {ratings.map(rating => (
                     <option key={rating} value={rating}>{rating}</option>
                   ))}
@@ -239,11 +262,11 @@ export default function PerformancePage() {
         </div>
 
         {/* Performance Reviews Content */}
-        <div className="card shadow-sm">
-          <div className="card-header bg-primary text-white">
+        <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
             <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">📊 Performance Reviews</h5>
-              <div className="badge bg-light text-dark fs-6">
+              <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-list-stars me-2"></i>Performance Reviews</h5>
+              <div className="badge fs-6" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#1a1a1a' }}>
                 {filteredReviews.length} Results
               </div>
             </div>
@@ -258,13 +281,13 @@ export default function PerformancePage() {
               </div>
             ) : filteredReviews.length === 0 ? (
               <div className="text-center py-5">
-                <div style={{fontSize: '3rem'}}>📊</div>
+                <i className="bi bi-clipboard-data" style={{fontSize: '3rem', color: '#d4af37'}}></i>
                 <p className="text-muted mt-2 mb-0">
                   {searchTerm || periodFilter || ratingFilter ? `No reviews found matching your criteria` : 'No performance reviews found. Add your first review!'}
                 </p>
                 {!searchTerm && !periodFilter && !ratingFilter && (
-                  <Link href="/performance/create" className="btn btn-primary mt-3">
-                    ➕ Add First Review
+                  <Link href="/performance/create" className="btn mt-3" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}>
+                    <i className="bi bi-plus-circle me-2"></i>Add First Review
                   </Link>
                 )}
               </div>
@@ -273,12 +296,12 @@ export default function PerformancePage() {
                 <table className="table table-hover align-middle mb-0">
                   <thead className="table-light">
                     <tr>
-                      <th>👤 Employee</th>
-                      <th>📅 Period</th>
-                      <th>👨‍💼 Reviewer</th>
-                      <th>⭐ Overall Rating</th>
-                      <th>📅 Review Date</th>
-                      <th>⚙️ Actions</th>
+                      <th><i className="bi bi-person-fill me-2"></i>Employee</th>
+                      <th><i className="bi bi-calendar-range me-2"></i>Period</th>
+                      <th><i className="bi bi-person-badge me-2"></i>Reviewer</th>
+                      <th><i className="bi bi-star-fill me-2"></i>Overall Rating</th>
+                      <th><i className="bi bi-calendar-check me-2"></i>Review Date</th>
+                      <th><i className="bi bi-gear-fill me-2"></i>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -304,21 +327,21 @@ export default function PerformancePage() {
                           </small>
                         </td>
                         <td>
-                          <div className="d-flex gap-1">
+                          <div className="d-flex gap-2">
                             <Link
                               href={`/performance/${r._id}/edit`}
-                              className="btn btn-sm btn-outline-primary"
-                              title="Edit Review"
+                              className="btn btn-sm"
+                              style={{ background: '#d4af37', color: '#1a1a1a', border: 'none' }}
                             >
-                              ✏️ Edit
+                              <i className="bi bi-pencil me-1"></i>Edit
                             </Link>
                             {userRole === "developer" && (
                               <button
                                 onClick={() => handleDelete(r._id)}
-                                className="btn btn-sm btn-outline-danger"
-                                title="Delete Review"
+                                className="btn btn-sm"
+                                style={{ background: '#dc3545', color: '#fff', border: 'none' }}
                               >
-                                🗑️ Delete
+                                <i className="bi bi-trash me-1"></i>Delete
                               </button>
                             )}
                           </div>

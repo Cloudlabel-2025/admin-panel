@@ -19,9 +19,31 @@ export default function MySkillsPage() {
   const fetchMySkills = async (empId) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/skills?employeeId=${empId}`);
+      const res = await fetch(`/api/skills`);
+      if (!res.ok) {
+        console.error('API error:', res.status, res.statusText);
+        setSkills([]);
+        return;
+      }
       const data = await res.json();
-      setSkills(Array.isArray(data) ? data.filter(skill => skill.employeeId === empId) : []);
+      console.log('All skills:', data);
+      console.log('Current employeeId:', empId);
+      if (data.error) {
+        console.error('API returned error:', data.error);
+        setSkills([]);
+        return;
+      }
+      // Filter skills where employeeId matches the User's employeeId field
+      const filteredSkills = Array.isArray(data) ? data.filter(skill => {
+        console.log('Checking skill:', skill.skillName, 'employeeId:', skill.employeeId);
+        // Check if employeeId is populated (object) or just an ID
+        if (typeof skill.employeeId === 'object' && skill.employeeId !== null) {
+          return skill.employeeId.employeeId === empId;
+        }
+        return false;
+      }) : [];
+      console.log('Filtered skills:', filteredSkills);
+      setSkills(filteredSkills);
     } catch (err) {
       console.error("Error fetching skills:", err);
       setSkills([]);
@@ -86,7 +108,7 @@ export default function MySkillsPage() {
                   </thead>
                   <tbody>
                     {skills.map((skill) => (
-                      <tr key={skill._id}>
+                      <tr key={skill._id} style={{cursor: 'pointer'}} onClick={() => window.location.href = `/my-skills/${skill._id}`}>
                         <td>
                           <div className="fw-semibold text-primary">{skill.skillName}</div>
                         </td>

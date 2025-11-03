@@ -77,95 +77,141 @@ export default function SkillList() {
       )}
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
+          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out', border: '3px solid #d4af37' }}>
             <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
-              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+              <path d="M9 12L11 14L15 10" stroke="#d4af37" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#1a1a1a" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
             </svg>
           </div>
         </div>
       )}
       
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h1 className="text-primary mb-1">
-              🎯 Skills Management
-            </h1>
-            <small className="text-muted">Manage employee skills and proficiency levels</small>
-          </div>
-          <div className="badge bg-info fs-6">
-            {skills.length} Skills
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h1 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+                  <i className="bi bi-trophy-fill me-2"></i>Skills Management
+                </h1>
+                <small style={{ color: '#f4e5c3' }}>Manage employee skills and proficiency levels</small>
+              </div>
+              <div className="badge fs-6" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#1a1a1a' }}>
+                {skills.length} Skills
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Filters and Search */}
-        <div className="card shadow-sm mb-4">
-          <div className="card-header bg-light">
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">🔍 Filter & Search</h5>
-              <Link href="/skills/create" className="btn btn-primary">
-                ➕ Add Skill
+        <div className="card shadow-sm mb-4" style={{ border: '2px solid #d4af37', borderRadius: '12px' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37', borderRadius: '10px 10px 0 0' }}>
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-funnel-fill me-2"></i>Filter & Search</h5>
+              <Link href="/skills/create" className="btn" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600', boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)' }}>
+                <i className="bi bi-plus-circle-fill me-2"></i>Add Skill
               </Link>
             </div>
           </div>
-          <div className="card-body">
+          <div className="card-body p-4">
             <div className="row g-3">
-              <div className="col-md-6">
-                <div className="d-flex align-items-center">
-                  {showSearch ? (
-                    <div className="input-group" style={{transition: 'all 0.3s ease'}}>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Search by skill name, employee, or category..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onBlur={() => !searchTerm && setShowSearch(false)}
-                        autoFocus
-                      />
-                      <button 
-                        className="btn btn-outline-secondary" 
-                        onClick={() => {
-                          setSearchTerm('');
-                          setShowSearch(false);
-                        }}
-                      >
-                        ❌
-                      </button>
-                    </div>
-                  ) : (
+              <div className="col-lg-8">
+                <label className="form-label fw-semibold small text-uppercase mb-2" style={{ color: '#6c757d', letterSpacing: '0.5px' }}>
+                  <i className="bi bi-search me-2" style={{ color: '#d4af37' }}></i>Search
+                </label>
+                <div className="input-group input-group-lg">
+                  <span className="input-group-text" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', border: '2px solid #d4af37', borderRight: 'none' }}>
+                    <i className="bi bi-search" style={{ color: '#d4af37' }}></i>
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by skill name, employee, or category..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ border: '2px solid #d4af37', borderLeft: 'none', fontSize: '1rem' }}
+                  />
+                  {searchTerm && (
                     <button 
-                      className="btn btn-outline-primary" 
-                      onClick={() => setShowSearch(true)}
+                      className="btn" 
+                      onClick={() => setSearchTerm('')}
+                      style={{ background: 'linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%)', border: '2px solid #dc3545', color: '#fff' }}
+                      title="Clear search"
                     >
-                      🔍 Search Skills
+                      <i className="bi bi-x-lg"></i>
                     </button>
                   )}
                 </div>
+                {searchTerm && (
+                  <small className="text-muted mt-1 d-block">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Found {filteredSkills.length} result{filteredSkills.length !== 1 ? 's' : ''}
+                  </small>
+                )}
               </div>
-              <div className="col-md-6">
+              <div className="col-lg-4">
+                <label className="form-label fw-semibold small text-uppercase mb-2" style={{ color: '#6c757d', letterSpacing: '0.5px' }}>
+                  <i className="bi bi-folder-fill me-2" style={{ color: '#d4af37' }}></i>Category
+                </label>
                 <select
-                  className="form-select"
+                  className="form-select form-select-lg"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
+                  style={{ border: '2px solid #d4af37', fontSize: '1rem' }}
                 >
-                  <option value="">📂 All Categories</option>
+                  <option value="">All Categories ({categories.length})</option>
                   {categories.map(category => (
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
+                {categoryFilter && (
+                  <button 
+                    className="btn btn-sm mt-2 w-100" 
+                    onClick={() => setCategoryFilter('')}
+                    style={{ border: '1px solid #6c757d', color: '#6c757d', background: 'transparent' }}
+                  >
+                    <i className="bi bi-x-circle me-1"></i>Clear Filter
+                  </button>
+                )}
               </div>
             </div>
+            {(searchTerm || categoryFilter) && (
+              <div className="mt-3 p-3 rounded" style={{ background: 'linear-gradient(135deg, #d4af3715 0%, #d4af3705 100%)', border: '1px solid #d4af37' }}>
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div className="d-flex gap-2 flex-wrap">
+                    <span className="badge px-3 py-2" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#1a1a1a', fontSize: '0.9rem' }}>
+                      <i className="bi bi-funnel-fill me-2"></i>Active Filters
+                    </span>
+                    {searchTerm && (
+                      <span className="badge bg-info px-3 py-2" style={{ fontSize: '0.85rem' }}>
+                        <i className="bi bi-search me-1"></i>Search: "{searchTerm}"
+                      </span>
+                    )}
+                    {categoryFilter && (
+                      <span className="badge bg-secondary px-3 py-2" style={{ fontSize: '0.85rem' }}>
+                        <i className="bi bi-folder-fill me-1"></i>Category: {categoryFilter}
+                      </span>
+                    )}
+                  </div>
+                  <button 
+                    className="btn btn-sm" 
+                    onClick={() => { setSearchTerm(''); setCategoryFilter(''); }}
+                    style={{ background: 'linear-gradient(135deg, #6c757d 0%, #5a6268 100%)', border: 'none', color: '#fff', fontWeight: '600' }}
+                  >
+                    <i className="bi bi-arrow-clockwise me-1"></i>Reset All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Skills Content */}
-        <div className="card shadow-sm">
-          <div className="card-header bg-primary text-white">
+        <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
             <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">🎯 Skills Overview</h5>
-              <div className="badge bg-light text-dark fs-6">
+              <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-list-stars me-2"></i>Skills Overview</h5>
+              <div className="badge fs-6" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#1a1a1a' }}>
                 {filteredSkills.length} Results
               </div>
             </div>
@@ -180,13 +226,13 @@ export default function SkillList() {
               </div>
             ) : filteredSkills.length === 0 ? (
               <div className="text-center py-5">
-                <div style={{fontSize: '3rem'}}>🎯</div>
+                <i className="bi bi-trophy" style={{fontSize: '3rem', color: '#d4af37'}}></i>
                 <p className="text-muted mt-2 mb-0">
                   {searchTerm || categoryFilter ? `No skills found matching your criteria` : 'No skills found. Add your first skill!'}
                 </p>
                 {!searchTerm && !categoryFilter && (
-                  <Link href="/skills/create" className="btn btn-primary mt-3">
-                    ➕ Add First Skill
+                  <Link href="/skills/create" className="btn mt-3" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}>
+                    <i className="bi bi-plus-circle me-2"></i>Add First Skill
                   </Link>
                 )}
               </div>
@@ -195,12 +241,12 @@ export default function SkillList() {
                 <table className="table table-hover align-middle mb-0">
                   <thead className="table-light">
                     <tr>
-                      <th>👤 Employee</th>
-                      <th>🎯 Skill Name</th>
-                      <th>📂 Category</th>
-                      <th>📝 Description</th>
-                      <th>📊 Proficiency</th>
-                      <th>⚙️ Actions</th>
+                      <th><i className="bi bi-person-fill me-2"></i>Employee</th>
+                      <th><i className="bi bi-star-fill me-2"></i>Skill Name</th>
+                      <th><i className="bi bi-folder-fill me-2"></i>Category</th>
+                      <th><i className="bi bi-pencil-fill me-2"></i>Description</th>
+                      <th><i className="bi bi-bar-chart-fill me-2"></i>Proficiency</th>
+                      <th><i className="bi bi-gear-fill me-2"></i>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -232,28 +278,28 @@ export default function SkillList() {
                           )}
                         </td>
                         <td>
-                          <div className="d-flex gap-1">
+                          <div className="d-flex gap-2 flex-wrap">
                             <Link
                               href={`/skills/${s._id}`}
-                              className="btn btn-sm btn-outline-info"
-                              title="View Skill"
+                              className="btn btn-sm"
+                              style={{ background: '#0dcaf0', color: '#fff', border: 'none' }}
                             >
-                              👁️ View
+                              <i className="bi bi-eye me-1"></i>View
                             </Link>
                             <Link
-                              href={`/skills/${s._id}/edit`}
-                              className="btn btn-sm btn-outline-primary"
-                              title="Edit Skill"
+                              href={`/skills/${s._id}/update`}
+                              className="btn btn-sm"
+                              style={{ background: '#ffc107', color: '#000', border: 'none' }}
                             >
-                              ✏️ Edit
+                              <i className="bi bi-arrow-up-circle me-1"></i>Update
                             </Link>
                             {userRole === "developer" && (
                               <button
                                 onClick={() => handleDelete(s._id)}
-                                className="btn btn-sm btn-outline-danger"
-                                title="Delete Skill"
+                                className="btn btn-sm"
+                                style={{ background: '#dc3545', color: '#fff', border: 'none' }}
                               >
-                                🗑️ Delete
+                                <i className="bi bi-trash me-1"></i>Delete
                               </button>
                             )}
                           </div>

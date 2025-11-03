@@ -25,10 +25,13 @@ export default function ProjectPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingProject, setViewingProject] = useState(null);
   const [userRole, setUserRole] = useState("");
+  const [todayDate, setTodayDate] = useState("");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     setUserRole(role);
+    const today = new Date().toISOString().split('T')[0];
+    setTodayDate(today);
     fetchProjects();
     fetchUsers();
   }, []);
@@ -70,8 +73,48 @@ export default function ProjectPage() {
     }
   }
 
+  function generateProjectCode(projectName) {
+    const words = projectName.trim().split(/\s+/);
+    const initials = words.map(w => w[0]?.toUpperCase() || '').join('').slice(0, 3);
+    const date = new Date();
+    const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    return `${initials}-${dateStr}`;
+  }
+
+  function getMaxEndDate(startDate) {
+    if (!startDate) return '';
+    const start = new Date(startDate);
+    const maxEnd = new Date(start);
+    maxEnd.setFullYear(maxEnd.getFullYear() + 1);
+    return maxEnd.toISOString().split('T')[0];
+  }
+
   function handleChange(e) {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let newValue = value;
+    let updates = {};
+    
+    if (name === 'projectName') {
+      // Project Name: max 30 chars, text only
+      newValue = value.replace(/[^a-zA-Z\s]/g, '').slice(0, 30);
+      // Auto-generate project code when project name changes
+      if (newValue.trim()) {
+        updates.projectCode = generateProjectCode(newValue);
+      }
+    } else if (name === 'description') {
+      // Description: max 50 chars
+      newValue = value.slice(0, 50);
+    } else if (name === 'startDate') {
+      // Reset end date if it exceeds 1 year from new start date
+      if (formData.endDate) {
+        const maxEnd = getMaxEndDate(value);
+        if (formData.endDate > maxEnd) {
+          updates.endDate = '';
+        }
+      }
+    }
+    
+    setFormData({ ...formData, [name]: newValue, ...updates });
   }
 
   function openModal(project = null) {
@@ -108,6 +151,16 @@ export default function ProjectPage() {
   async function saveProject(e) {
     e.preventDefault();
     setError("");
+    
+    // Validate description - max 10 numbers
+    if (formData.description) {
+      const numCount = (formData.description.match(/\d/g) || []).length;
+      if (numCount > 10) {
+        setError('Description can contain maximum 10 numbers');
+        return;
+      }
+    }
+    
     try {
       const method = editingProject ? "PUT" : "POST";
       const url = editingProject
@@ -365,7 +418,7 @@ export default function ProjectPage() {
                   <div className="modal-body p-4">
                     <div className="row">
                       <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold"><i className="bi bi-tag me-1"></i>Project Name</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-tag me-1"></i>Project Name <span className="text-danger">*</span></label>
                         <input
                           className="form-control"
                           name="projectName"
@@ -373,18 +426,22 @@ export default function ProjectPage() {
                           onChange={handleChange}
                           placeholder="Enter project name"
                           required
+                          maxLength={30}
                         />
+                        <small className="text-muted">Max 30 characters, text only</small>
                       </div>
                       <div className="col-md-6 mb-3">
-                        <label className="form-label fw-semibold"><i className="bi bi-code-square me-1"></i>Project Code</label>
+                        <label className="form-label fw-semibold"><i className="bi bi-code-square me-1"></i>Project Code <span className="text-danger">*</span></label>
                         <input
-                          className="form-control"
+                          className="form-control bg-light"
                           name="projectCode"
                           value={formData.projectCode}
-                          onChange={handleChange}
-                          placeholder="Enter project code"
+                          readOnly
+                          placeholder="Auto-generated"
                           required
+                          style={{ cursor: 'not-allowed' }}
                         />
+                        <small className="text-muted">Auto-generated from project name and date</small>
                       </div>
                     </div>
                     <div className="mb-3">
@@ -396,7 +453,9 @@ export default function ProjectPage() {
                         onChange={handleChange}
                         rows="3"
                         placeholder="Enter project description"
+                        maxLength={50}
                       />
+                      <small className="text-muted">Max 50 characters, max 10 numbers allowed ({formData.description.length}/50 chars, {(formData.description.match(/\d/g) || []).length}/10 numbers)</small>
                     </div>
                     <div className="row">
                       <div className="col-md-4 mb-3">
@@ -407,7 +466,9 @@ export default function ProjectPage() {
                           name="startDate"
                           value={formData.startDate}
                           onChange={handleChange}
+                          min={todayDate}
                         />
+                        <small className="text-muted">Cannot be in the past</small>
                       </div>
                       <div className="col-md-4 mb-3">
                         <label className="form-label fw-semibold"><i className="bi bi-calendar-check me-1"></i>End Date</label>
@@ -417,7 +478,10 @@ export default function ProjectPage() {
                           name="endDate"
                           value={formData.endDate}
                           onChange={handleChange}
+                          min={formData.startDate}
+                          max={getMaxEndDate(formData.startDate)}
                         />
+                        <small className="text-muted">Max 1 year from start date</small>
                       </div>
                       <div className="col-md-4 mb-3">
                         <label className="form-label fw-semibold"><i className="bi bi-bar-chart me-1"></i>Status</label>

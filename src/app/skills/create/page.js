@@ -19,23 +19,23 @@ export default function CreateSkill() {
   });
 
   const levelOptions = [
-    { value: "Beginner", icon: "🌱", color: "info" },
-    { value: "Intermediate", icon: "🌿", color: "warning" },
-    { value: "Advanced", icon: "🌳", color: "success" },
-    { value: "Expert", icon: "🏆", color: "primary" }
+    { value: "Beginner", icon: "bi-1-circle", color: "info" },
+    { value: "Intermediate", icon: "bi-2-circle", color: "warning" },
+    { value: "Advanced", icon: "bi-3-circle", color: "success" },
+    { value: "Expert", icon: "bi-trophy", color: "primary" }
   ];
 
   const categoryOptions = [
-    { value: "Technical", icon: "💻" },
-    { value: "Communication", icon: "💬" },
-    { value: "Leadership", icon: "👑" },
-    { value: "Creative", icon: "🎨" },
-    { value: "Analytical", icon: "📊" },
-    { value: "General", icon: "📋" }
+    { value: "Technical", icon: "bi-laptop" },
+    { value: "Communication", icon: "bi-chat-dots" },
+    { value: "Leadership", icon: "bi-award" },
+    { value: "Creative", icon: "bi-palette" },
+    { value: "Analytical", icon: "bi-graph-up" },
+    { value: "General", icon: "bi-list-ul" }
   ];
 
   useEffect(() => {
-    fetch("/api/User")
+    fetch("/api/Employee")
       .then((res) => res.json())
       .then((data) => {
         setEmployees(Array.isArray(data) ? data : []);
@@ -52,17 +52,59 @@ export default function CreateSkill() {
     setError("");
 
     try {
+      const userRes = await fetch("/api/User");
+      if (!userRes.ok) {
+        setError("Failed to fetch users");
+        setLoading(false);
+        return;
+      }
+      const users = await userRes.json();
+      let user = Array.isArray(users) ? users.find(u => u.employeeId === form.employeeId) : null;
+      
+      if (!user) {
+        const employee = employees.find(emp => emp.employeeId === form.employeeId);
+        if (!employee) {
+          setError("Employee not found");
+          setLoading(false);
+          return;
+        }
+        
+        const createUserRes = await fetch("/api/User", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: employee.email,
+            password: "TempPass@123"
+          })
+        });
+        
+        if (!createUserRes.ok) {
+          const errorData = await createUserRes.json().catch(() => ({ error: "Failed to create user account" }));
+          setError(errorData.error || "Failed to create user account");
+          setLoading(false);
+          return;
+        }
+        
+        const userData = await createUserRes.json();
+        user = userData.user;
+      }
+
       const payload = {
-        employeeId: form.employeeId,
+        employeeId: user._id,
         skillName: form.skillName,
         category: form.category,
         description: form.description,
-        proficiencyLevels: [form.proficiencyLevel], 
+        proficiencyLevels: [form.proficiencyLevel],
+        proficiencyHistory: [{ level: form.proficiencyLevel, date: new Date() }]
       };
 
+      const currentUserId = localStorage.getItem("userId");
       const res = await fetch("/api/skills", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-id": currentUserId
+        },
         body: JSON.stringify(payload),
       });
 
@@ -86,10 +128,10 @@ export default function CreateSkill() {
     <Layout>
       {showSuccess && (
         <div className="position-fixed top-50 start-50 translate-middle" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out' }}>
+          <div className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-lg" style={{ width: '120px', height: '120px', animation: 'fadeIn 0.5s ease-in-out', border: '3px solid #d4af37' }}>
             <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12L11 14L15 10" stroke="#28a745" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
-              <circle cx="12" cy="12" r="10" stroke="#28a745" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
+              <path d="M9 12L11 14L15 10" stroke="#d4af37" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'drawCheck 1s ease-in-out 0.5s both' }}/>
+              <circle cx="12" cy="12" r="10" stroke="#1a1a1a" strokeWidth="2" fill="none" style={{ animation: 'drawCircle 0.5s ease-in-out both' }}/>
             </svg>
           </div>
         </div>
@@ -98,19 +140,24 @@ export default function CreateSkill() {
       <div className="container py-4">
         <div className="row justify-content-center">
           <div className="col-lg-8 col-md-10">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <div>
-                <h1 className="text-primary mb-1">
-                  🎯 Add New Skill
-                </h1>
-                <small className="text-muted">Create a new skill record for an employee</small>
+            <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h1 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+                      <i className="bi bi-trophy-fill me-2"></i>Add New Skill
+                    </h1>
+                    <small style={{ color: '#f4e5c3' }}>Create a new skill record for an employee</small>
+                  </div>
+                  <button 
+                    className="btn"
+                    onClick={() => router.push('/skills')}
+                    style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}
+                  >
+                    ← Back
+                  </button>
+                </div>
               </div>
-              <button 
-                className="btn btn-outline-secondary"
-                onClick={() => router.push('/skills')}
-              >
-                ← Back to Skills
-              </button>
             </div>
 
             {error && (
@@ -120,16 +167,16 @@ export default function CreateSkill() {
               </div>
             )}
 
-            <div className="card shadow-sm">
-              <div className="card-header bg-primary text-white">
-                <h5 className="mb-0">🎯 Skill Information</h5>
+            <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+              <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+                <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-info-circle-fill me-2"></i>Skill Information</h5>
               </div>
               <div className="card-body p-4">
                 <form onSubmit={handleSubmit}>
                   <div className="row">
                     {/* Employee Selection */}
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold">👤 Employee <span className="text-danger">*</span></label>
+                      <label className="form-label fw-semibold"><i className="bi bi-person-fill me-2"></i>Employee <span className="text-danger">*</span></label>
                       <select
                         className="form-select"
                         value={form.employeeId}
@@ -139,8 +186,8 @@ export default function CreateSkill() {
                       >
                         <option value="">Select Employee</option>
                         {employees.map((emp) => (
-                          <option key={emp._id} value={emp._id}>
-                            {emp.name} ({emp.employeeId})
+                          <option key={emp._id} value={emp.employeeId}>
+                            {emp.firstName} {emp.lastName} ({emp.employeeId})
                           </option>
                         ))}
                       </select>
@@ -148,7 +195,7 @@ export default function CreateSkill() {
 
                     {/* Skill Name */}
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold">🎯 Skill Name <span className="text-danger">*</span></label>
+                      <label className="form-label fw-semibold"><i className="bi bi-star-fill me-2"></i>Skill Name <span className="text-danger">*</span></label>
                       <input
                         type="text"
                         className="form-control"
@@ -163,7 +210,7 @@ export default function CreateSkill() {
                   <div className="row">
                     {/* Category */}
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold">📂 Category</label>
+                      <label className="form-label fw-semibold"><i className="bi bi-folder-fill me-2"></i>Category</label>
                       <select
                         className="form-select"
                         value={form.category}
@@ -171,7 +218,7 @@ export default function CreateSkill() {
                       >
                         {categoryOptions.map((cat) => (
                           <option key={cat.value} value={cat.value}>
-                            {cat.icon} {cat.value}
+                            {cat.value}
                           </option>
                         ))}
                       </select>
@@ -179,7 +226,7 @@ export default function CreateSkill() {
 
                     {/* Proficiency Level */}
                     <div className="col-md-6 mb-3">
-                      <label className="form-label fw-semibold">📊 Proficiency Level</label>
+                      <label className="form-label fw-semibold"><i className="bi bi-bar-chart-fill me-2"></i>Proficiency Level</label>
                       <select
                         className="form-select"
                         value={form.proficiencyLevel}
@@ -187,13 +234,13 @@ export default function CreateSkill() {
                       >
                         {levelOptions.map((lvl) => (
                           <option key={lvl.value} value={lvl.value}>
-                            {lvl.icon} {lvl.value}
+                            {lvl.value}
                           </option>
                         ))}
                       </select>
                       <div className="mt-2">
                         <span className={`badge bg-${levelOptions.find(l => l.value === form.proficiencyLevel)?.color || 'secondary'}`}>
-                          {levelOptions.find(l => l.value === form.proficiencyLevel)?.icon} {form.proficiencyLevel}
+                          <i className={`${levelOptions.find(l => l.value === form.proficiencyLevel)?.icon} me-1`}></i>{form.proficiencyLevel}
                         </span>
                       </div>
                     </div>
@@ -201,7 +248,7 @@ export default function CreateSkill() {
 
                   {/* Description */}
                   <div className="mb-4">
-                    <label className="form-label fw-semibold">📝 Description</label>
+                    <label className="form-label fw-semibold"><i className="bi bi-pencil-fill me-2"></i>Description</label>
                     <textarea
                       className="form-control"
                       rows="4"
@@ -216,16 +263,18 @@ export default function CreateSkill() {
                   <div className="d-flex gap-2 justify-content-end">
                     <button 
                       type="button" 
-                      className="btn btn-outline-secondary"
+                      className="btn"
                       onClick={() => router.push('/skills')}
                       disabled={loading}
+                      style={{ border: '2px solid #d4af37', color: '#d4af37', background: 'transparent' }}
                     >
-                      ❌ Cancel
+                      <i className="bi bi-x-circle me-2"></i>Cancel
                     </button>
                     <button 
                       type="submit" 
-                      className="btn btn-primary px-4"
+                      className="btn px-4"
                       disabled={loading}
+                      style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}
                     >
                       {loading ? (
                         <>
@@ -234,7 +283,7 @@ export default function CreateSkill() {
                         </>
                       ) : (
                         <>
-                          💾 Save Skill
+                          <i className="bi bi-save me-2"></i>Save Skill
                         </>
                       )}
                     </button>

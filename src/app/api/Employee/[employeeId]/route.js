@@ -6,6 +6,9 @@ import { requireAuth, requireRole } from "../../../utilis/authMiddleware";
 
 // Helper to find employee across all department collections
 async function findEmployeeInDepartments(employeeId) {
+  if (!mongoose.connection.db) {
+    throw new Error("Database connection not established");
+  }
   const db = mongoose.connection.db;
   const collections = await db.listCollections().toArray();
   const departmentCollections = collections

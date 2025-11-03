@@ -304,6 +304,7 @@ export default function HomePage() {
                         onChange={(e) => {
                           if (!isLogin) setPasswordStrength(checkPasswordStrength(e.target.value));
                         }}
+                        onPaste={(e) => e.preventDefault()}
                         autoComplete="off"
                         required
                         suppressHydrationWarning
@@ -364,6 +365,7 @@ export default function HomePage() {
                           type={showConfirmPassword ? "text" : "password"}
                           className="form-control"
                           placeholder="Confirm your password"
+                          onPaste={(e) => e.preventDefault()}
                           autoComplete="off"
                           required
                           suppressHydrationWarning
