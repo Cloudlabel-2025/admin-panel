@@ -368,7 +368,7 @@ export default function ViewSkill() {
                       {skill.selfEvaluation.comments && (
                         <div className="mt-2">
                           <small className="text-muted d-block mb-1">Comments:</small>
-                          <p className="mb-0 small" style={{ fontStyle: 'italic' }}>"{skill.selfEvaluation.comments}"</p>
+                          <p className="mb-0 small" style={{ fontStyle: 'italic' }}>&quot;{skill.selfEvaluation.comments}&quot;</p>
                         </div>
                       )}
                       {skill.selfEvaluation.lastUpdated && (
@@ -403,7 +403,7 @@ export default function ViewSkill() {
                       {skill.verifiedEvaluation.feedback && (
                         <div className="mt-2">
                           <small className="text-muted d-block mb-1">Admin Feedback:</small>
-                          <p className="mb-0 small" style={{ fontStyle: 'italic' }}>"{skill.verifiedEvaluation.feedback}"</p>
+                          <p className="mb-0 small" style={{ fontStyle: 'italic' }}>&quot;{skill.verifiedEvaluation.feedback}&quot;</p>
                         </div>
                       )}
                       {skill.verifiedEvaluation.verifiedAt && (

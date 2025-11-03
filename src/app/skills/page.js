@@ -184,7 +184,7 @@ export default function SkillList() {
                     </span>
                     {searchTerm && (
                       <span className="badge bg-info px-3 py-2" style={{ fontSize: '0.85rem' }}>
-                        <i className="bi bi-search me-1"></i>Search: "{searchTerm}"
+                        <i className="bi bi-search me-1"></i>Search: &quot;{searchTerm}&quot;
                       </span>
                     )}
                     {categoryFilter && (
