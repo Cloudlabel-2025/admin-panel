@@ -54,6 +54,7 @@ export default function EditItem() {
                 className="form-control"
                 value={form.itemName}
                 onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+                required
               />
             </div>
           </div>

@@ -200,11 +200,11 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="row mb-4">
         <div className="col-12">
-          <div className="bg-white rounded shadow-sm p-4">
-            <h2 className="text-primary mb-1">
-              📊 {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Dashboard" : "Team Management Dashboard"}
+          <div className="rounded shadow-sm p-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+            <h2 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+              <i className="bi bi-speedometer2 me-2"></i>{(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Dashboard" : "Team Management Dashboard"}
             </h2>
-            <p className="text-muted mb-0">
+            <p className="mb-0" style={{ color: '#f4e5c3' }}>
               {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ?
                 "Overview of your organization's key metrics and activities" :
                 "Monitor your team's performance and activities"}
@@ -217,15 +217,15 @@ export default function AdminDashboard() {
       <div className="row mb-4">
         <div className="col-lg-3 col-md-6 mb-3">
           <Link href="/employees/employees-list" style={{ textDecoration: 'none' }}>
-            <div className="card bg-primary text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+            <div className="card h-100" style={{ cursor: 'pointer', transition: 'all 0.3s', background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(212, 175, 55, 0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="card-title mb-1">👥 Employees</h6>
-                    <h2 className="mb-0">{dashboardData.employees}</h2>
-                    <small className="opacity-75">Total registered</small>
+                    <h6 className="card-title mb-1" style={{ color: '#d4af37' }}><i className="bi bi-people-fill me-2"></i>Employees</h6>
+                    <h2 className="mb-0" style={{ color: '#f4e5c3' }}>{dashboardData.employees}</h2>
+                    <small style={{ color: '#C9A961' }}>Total registered</small>
                   </div>
-                  <div className="fs-1 opacity-30">👥</div>
+                  <div className="fs-1" style={{ color: 'rgba(212, 175, 55, 0.8)' }}><i className="bi bi-people-fill"></i></div>
                 </div>
               </div>
             </div>
@@ -234,21 +234,23 @@ export default function AdminDashboard() {
         
         <div className="col-lg-3 col-md-6 mb-3">
           <Link href="/accounting/transactions" style={{ textDecoration: 'none' }}>
-            <div className="card bg-success text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+            <div className="card h-100 position-relative" style={{ cursor: 'pointer', transition: 'all 0.3s', background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(212, 175, 55, 0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="card-title mb-1">💰 Revenue</h6>
-                    <h2 className="mb-0">₹{(() => {
+                    <h6 className="card-title mb-1" style={{ color: '#d4af37' }}><i className="bi bi-currency-rupee me-2"></i>Revenue</h6>
+                    <h2 className="mb-0" style={{ color: '#f4e5c3' }} title={`₹${dashboardData.totalRevenue.toLocaleString('en-IN')}`}>₹{(() => {
                       const amount = dashboardData.totalRevenue;
-                      if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
-                      if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
-                      if (amount >= 1000) return (amount / 1000).toFixed(2) + 'K';
-                      return amount.toLocaleString();
+                      const str = amount.toString();
+                      if (str.length > 6) {
+                        if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
+                        if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+                      }
+                      return amount.toLocaleString('en-IN');
                     })()}</h2>
-                    <small className="opacity-75">Total transactions</small>
+                    <small style={{ color: '#C9A961' }}>Total transactions</small>
                   </div>
-                  <div className="fs-1 opacity-30">💰</div>
+                  <div className="fs-1" style={{ color: 'rgba(212, 175, 55, 0.8)' }}><i className="bi bi-currency-rupee"></i></div>
                 </div>
               </div>
             </div>
@@ -257,15 +259,15 @@ export default function AdminDashboard() {
         
         <div className="col-lg-3 col-md-6 mb-3">
           <Link href="/attendance" style={{ textDecoration: 'none' }}>
-            <div className="card bg-info text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+            <div className="card h-100" style={{ cursor: 'pointer', transition: 'all 0.3s', background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(212, 175, 55, 0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="card-title mb-1">📅 Attendance</h6>
-                    <h2 className="mb-0">{dashboardData.attendanceRate}%</h2>
-                    <small className="opacity-75">This month</small>
+                    <h6 className="card-title mb-1" style={{ color: '#d4af37' }}><i className="bi bi-calendar-check me-2"></i>Attendance</h6>
+                    <h2 className="mb-0" style={{ color: '#f4e5c3' }}>{dashboardData.attendanceRate}%</h2>
+                    <small style={{ color: '#C9A961' }}>This month</small>
                   </div>
-                  <div className="fs-1 opacity-30">📅</div>
+                  <div className="fs-1" style={{ color: 'rgba(212, 175, 55, 0.8)' }}><i className="bi bi-calendar-check"></i></div>
                 </div>
               </div>
             </div>
@@ -274,15 +276,15 @@ export default function AdminDashboard() {
         
         <div className="col-lg-3 col-md-6 mb-3">
           <Link href="/project" style={{ textDecoration: 'none' }}>
-            <div className="card bg-warning text-white h-100" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+            <div className="card h-100" style={{ cursor: 'pointer', transition: 'all 0.3s', background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(212, 175, 55, 0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="card-title mb-1">📋 Projects</h6>
-                    <h2 className="mb-0">{dashboardData.activeProjects}</h2>
-                    <small className="opacity-75">Active projects</small>
+                    <h6 className="card-title mb-1" style={{ color: '#d4af37' }}><i className="bi bi-kanban me-2"></i>Projects</h6>
+                    <h2 className="mb-0" style={{ color: '#f4e5c3' }}>{dashboardData.activeProjects}</h2>
+                    <small style={{ color: '#C9A961' }}>Active projects</small>
                   </div>
-                  <div className="fs-1 opacity-30">📋</div>
+                  <div className="fs-1" style={{ color: 'rgba(212, 175, 55, 0.8)' }}><i className="bi bi-kanban"></i></div>
                 </div>
               </div>
             </div>
@@ -294,9 +296,9 @@ export default function AdminDashboard() {
       <div className="row">
         {/* Chart Section */}
         <div className="col-lg-8 mb-4">
-          <div className="card h-100">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">📈 Performance Overview</h5>
+          <div className="card h-100" style={{ border: '2px solid #d4af37' }}>
+            <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+              <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-graph-up me-2"></i>Performance Overview</h5>
             </div>
             <div className="card-body">
               {/* Monthly Performance Chart */}
@@ -305,32 +307,32 @@ export default function AdminDashboard() {
                 <div className="row text-center">
                   <div className="col-3">
                     <div className="mb-2">
-                      <div className="bg-primary" style={{height: '85px', width: '100%', borderRadius: '4px', position: 'relative'}}>
-                        <div className="position-absolute bottom-0 start-50 translate-middle-x text-white fw-bold pb-1 small">85%</div>
+                      <div style={{height: '85px', width: '100%', borderRadius: '8px', position: 'relative', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}>
+                        <div className="position-absolute bottom-0 start-50 translate-middle-x fw-bold pb-1 small" style={{ color: '#1a1a1a' }}>85%</div>
                       </div>
                     </div>
                     <small className="text-muted">Jan</small>
                   </div>
                   <div className="col-3">
                     <div className="mb-2">
-                      <div className="bg-success" style={{height: '92px', width: '100%', borderRadius: '4px', position: 'relative'}}>
-                        <div className="position-absolute bottom-0 start-50 translate-middle-x text-white fw-bold pb-1 small">92%</div>
+                      <div style={{height: '92px', width: '100%', borderRadius: '8px', position: 'relative', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}>
+                        <div className="position-absolute bottom-0 start-50 translate-middle-x fw-bold pb-1 small" style={{ color: '#1a1a1a' }}>92%</div>
                       </div>
                     </div>
                     <small className="text-muted">Feb</small>
                   </div>
                   <div className="col-3">
                     <div className="mb-2">
-                      <div className="bg-info" style={{height: '78px', width: '100%', borderRadius: '4px', position: 'relative'}}>
-                        <div className="position-absolute bottom-0 start-50 translate-middle-x text-white fw-bold pb-1 small">78%</div>
+                      <div style={{height: '78px', width: '100%', borderRadius: '8px', position: 'relative', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}>
+                        <div className="position-absolute bottom-0 start-50 translate-middle-x fw-bold pb-1 small" style={{ color: '#1a1a1a' }}>78%</div>
                       </div>
                     </div>
                     <small className="text-muted">Mar</small>
                   </div>
                   <div className="col-3">
                     <div className="mb-2">
-                      <div className="bg-warning" style={{height: `${dashboardData.attendanceRate}px`, width: '100%', borderRadius: '4px', position: 'relative'}}>
-                        <div className="position-absolute bottom-0 start-50 translate-middle-x text-white fw-bold pb-1 small">{dashboardData.attendanceRate}%</div>
+                      <div style={{height: `${dashboardData.attendanceRate}px`, width: '100%', borderRadius: '8px', position: 'relative', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}>
+                        <div className="position-absolute bottom-0 start-50 translate-middle-x fw-bold pb-1 small" style={{ color: '#1a1a1a' }}>{dashboardData.attendanceRate}%</div>
                       </div>
                     </div>
                     <small className="text-muted">Apr</small>
@@ -344,28 +346,28 @@ export default function AdminDashboard() {
                 <div className="mb-3">
                   <div className="d-flex justify-content-between mb-1">
                     <span>Employee Attendance</span>
-                    <span>{dashboardData.attendanceRate}%</span>
+                    <span className="fw-bold" style={{ color: '#d4af37' }}>{dashboardData.attendanceRate}%</span>
                   </div>
-                  <div className="progress">
-                    <div className="progress-bar bg-success" style={{width: `${dashboardData.attendanceRate}%`}}></div>
+                  <div className="progress" style={{ height: '10px', backgroundColor: '#e0e0e0' }}>
+                    <div className="progress-bar" style={{width: `${dashboardData.attendanceRate}%`, background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}></div>
                   </div>
                 </div>
                 <div className="mb-3">
                   <div className="d-flex justify-content-between mb-1">
                     <span>Project Completion</span>
-                    <span>75%</span>
+                    <span className="fw-bold" style={{ color: '#d4af37' }}>75%</span>
                   </div>
-                  <div className="progress">
-                    <div className="progress-bar bg-info" style={{width: '75%'}}></div>
+                  <div className="progress" style={{ height: '10px', backgroundColor: '#e0e0e0' }}>
+                    <div className="progress-bar" style={{width: '75%', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}></div>
                   </div>
                 </div>
                 <div className="mb-3">
                   <div className="d-flex justify-content-between mb-1">
                     <span>Revenue Target</span>
-                    <span>68%</span>
+                    <span className="fw-bold" style={{ color: '#d4af37' }}>68%</span>
                   </div>
-                  <div className="progress">
-                    <div className="progress-bar bg-primary" style={{width: '68%'}}></div>
+                  <div className="progress" style={{ height: '10px', backgroundColor: '#e0e0e0' }}>
+                    <div className="progress-bar" style={{width: '68%', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}></div>
                   </div>
                 </div>
               </div>
@@ -376,15 +378,15 @@ export default function AdminDashboard() {
         {/* Activities and Notifications */}
         <div className="col-lg-4">
           {/* Recent Activities */}
-          <div className="card mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">🕒 Recent Activities</h5>
+          <div className="card mb-4" style={{ border: '2px solid #d4af37' }}>
+            <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+              <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-clock-history me-2"></i>Recent Activities</h5>
             </div>
             <div className="card-body" style={{ maxHeight: '300px', overflowY: 'auto' }}>
               {dashboardData.recentActivities && dashboardData.recentActivities.length > 0 ? dashboardData.recentActivities.map((activity) => (
-                <div key={activity.id} className="d-flex align-items-start mb-3">
-                  <div className={`badge ${activity.type === 'success' ? 'bg-success' : 'bg-info'} me-3 mt-1`}>
-                    {activity.type === 'success' ? '✓' : 'ℹ'}
+                <div key={activity.id} className="d-flex align-items-start mb-3 p-2 rounded" style={{ background: 'rgba(212, 175, 55, 0.05)', border: '1px solid rgba(212, 175, 55, 0.2)' }}>
+                  <div className="me-3 mt-1" style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: activity.type === 'success' ? 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)' : 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)', color: activity.type === 'success' ? '#1a1a1a' : '#d4af37' }}>
+                    <i className={`bi ${activity.type === 'success' ? 'bi-check-lg' : 'bi-info-lg'}`}></i>
                   </div>
                   <div className="flex-grow-1">
                     <div className="fw-bold">{activity.action}</div>
@@ -402,9 +404,9 @@ export default function AdminDashboard() {
           
           {/* Notifications Panel for Admin */}
           {userRole === "admin" && (
-            <div className="card">
-              <div className="card-header bg-white">
-                <h5 className="mb-0">🔔 Notifications</h5>
+            <div className="card" style={{ border: '2px solid #d4af37' }}>
+              <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+                <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-bell me-2"></i>Notifications</h5>
               </div>
               <div className="card-body" style={{ maxHeight: "300px", overflowY: "auto" }}>
                 {notifications.length === 0 ? (

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+delete mongoose.connection.models['User'];
+
 const UserSchema = new mongoose.Schema({
   employeeId: { type: String, required: true },
   name: { type: String, required: true },
@@ -7,6 +9,12 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, default: "Employee" },
   isTerminated: { type: Boolean, default: false },
-});
+  resetOTP: { type: String },
+  resetOTPExpiry: { type: Date },
+}, { strict: false });
 
-export default mongoose.models.User || mongoose.model("User", UserSchema);
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
+export default mongoose.model("User", UserSchema);

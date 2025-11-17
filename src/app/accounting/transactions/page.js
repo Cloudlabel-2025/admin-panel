@@ -165,34 +165,40 @@ export default function TransactionsPage() {
     <Layout>
       <div className="container-fluid">
         {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h2 className="mb-1">💸 Transaction Management</h2>
-            <p className="text-muted mb-0">Track and manage all financial transactions</p>
-          </div>
-          <div>
-            <button className="btn btn-outline-success me-2" onClick={() => exportToCSV()}>
-              <i className="bi bi-download"></i> Export CSV
-            </button>
-            <button className="btn btn-outline-danger me-2" onClick={() => exportToPDF()}>
-              <i className="bi bi-file-pdf"></i> Export PDF
-            </button>
-            <Link href="/accounting/transactions/create" className="btn btn-primary">
-              <i className="bi bi-plus-circle"></i> New Transaction
-            </Link>
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h2 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+                  <i className="bi bi-cash-stack me-2"></i>Transaction Management
+                </h2>
+                <p className="mb-0" style={{ color: '#f4e5c3' }}>Track and manage all financial transactions</p>
+              </div>
+              <div>
+                <button className="btn me-2" onClick={() => exportToCSV()} style={{ background: 'transparent', border: '2px solid #d4af37', color: '#d4af37' }}>
+                  <i className="bi bi-download"></i> CSV
+                </button>
+                <button className="btn me-2" onClick={() => exportToPDF()} style={{ background: 'transparent', border: '2px solid #d4af37', color: '#d4af37' }}>
+                  <i className="bi bi-file-pdf"></i> PDF
+                </button>
+                <Link href="/accounting/transactions/create" className="btn" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}>
+                  <i className="bi bi-plus-circle"></i> New Transaction
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="row mb-4">
           <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
+            <div className="card h-100" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }}>
               <div className="card-body text-center">
-                <div className="text-success mb-2">
+                <div className="mb-2" style={{ color: '#d4af37' }}>
                   <i className="bi bi-arrow-up-circle" style={{fontSize: '2rem'}}></i>
                 </div>
-                <h5 className="card-title text-success">Total Credit</h5>
-                <h3 className="mb-0" title={`₹${stats.totalCredit.toLocaleString()}`} style={{cursor: 'help'}}>₹{(() => {
+                <h5 className="card-title" style={{ color: '#d4af37' }}>Total Credit</h5>
+                <h3 className="mb-0" title={`₹${stats.totalCredit.toLocaleString()}`} style={{cursor: 'help', color: '#f4e5c3'}}>₹{(() => {
                   const amount = stats.totalCredit;
                   if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
                   if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
@@ -203,13 +209,13 @@ export default function TransactionsPage() {
             </div>
           </div>
           <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
+            <div className="card h-100" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }}>
               <div className="card-body text-center">
-                <div className="text-danger mb-2">
+                <div className="mb-2" style={{ color: '#d4af37' }}>
                   <i className="bi bi-arrow-down-circle" style={{fontSize: '2rem'}}></i>
                 </div>
-                <h5 className="card-title text-danger">Total Debit</h5>
-                <h3 className="mb-0" title={`₹${stats.totalDebit.toLocaleString()}`} style={{cursor: 'help'}}>₹{(() => {
+                <h5 className="card-title" style={{ color: '#d4af37' }}>Total Debit</h5>
+                <h3 className="mb-0" title={`₹${stats.totalDebit.toLocaleString()}`} style={{cursor: 'help', color: '#f4e5c3'}}>₹{(() => {
                   const amount = stats.totalDebit;
                   if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
                   if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
@@ -220,13 +226,13 @@ export default function TransactionsPage() {
             </div>
           </div>
           <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
+            <div className="card h-100" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }}>
               <div className="card-body text-center">
-                <div className={`mb-2 ${stats.balance >= 0 ? 'text-success' : 'text-danger'}`}>
+                <div className="mb-2" style={{ color: '#d4af37' }}>
                   <i className="bi bi-wallet2" style={{fontSize: '2rem'}}></i>
                 </div>
-                <h5 className="card-title">Net Balance</h5>
-                <h3 className={`mb-0 ${stats.balance >= 0 ? 'text-success' : 'text-danger'}`} title={`₹${Math.abs(stats.balance).toLocaleString()}`} style={{cursor: 'help'}}>
+                <h5 className="card-title" style={{ color: '#d4af37' }}>Net Balance</h5>
+                <h3 className="mb-0" title={`₹${Math.abs(stats.balance).toLocaleString()}`} style={{cursor: 'help', color: '#f4e5c3'}}>
                   ₹{(() => {
                     const amount = Math.abs(stats.balance);
                     if (amount >= 10000000) return (amount / 10000000).toFixed(2) + 'Cr';
@@ -239,55 +245,75 @@ export default function TransactionsPage() {
             </div>
           </div>
           <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
+            <div className="card h-100" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', border: '2px solid #d4af37', backdropFilter: 'blur(10px)' }}>
               <div className="card-body text-center">
-                <div className="text-primary mb-2">
+                <div className="mb-2" style={{ color: '#d4af37' }}>
                   <i className="bi bi-receipt" style={{fontSize: '2rem'}}></i>
                 </div>
-                <h5 className="card-title text-primary">Total Transactions</h5>
-                <h3 className="mb-0">{stats.totalTransactions}</h3>
+                <h5 className="card-title" style={{ color: '#d4af37' }}>Total Transactions</h5>
+                <h3 className="mb-0" style={{ color: '#f4e5c3' }}>{stats.totalTransactions}</h3>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="card border-0 shadow-sm mb-4">
+        <div className="card shadow-sm mb-4" style={{ border: '2px solid #d4af37', background: '#ffffff' }}>
           <div className="card-body p-0">
-            <ul className="nav nav-pills nav-fill">
-              <li className="nav-item">
-                <button className={`nav-link ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>
-                  <i className="bi bi-list-ul me-2"></i>All Transactions
-                </button>
-              </li>
-              <li className="nav-item">
-                <button className={`nav-link ${activeTab === 'petty-cash' ? 'active' : ''}`} onClick={() => setActiveTab('petty-cash')}>
-                  <i className="bi bi-cash-coin me-2"></i>Petty Cash
-                </button>
-              </li>
-              <li className="nav-item">
-                <button className={`nav-link ${activeTab === 'external' ? 'active' : ''}`} onClick={() => setActiveTab('external')}>
-                  <i className="bi bi-arrow-left-right me-2"></i>External
-                </button>
-              </li>
-              <li className="nav-item">
-                <button className={`nav-link ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}>
-                  <i className="bi bi-cart-check me-2"></i>Sales
-                </button>
-              </li>
-              <li className="nav-item">
-                <button className={`nav-link ${activeTab === 'purchases' ? 'active' : ''}`} onClick={() => setActiveTab('purchases')}>
-                  <i className="bi bi-bag me-2"></i>Purchases
-                </button>
-              </li>
-            </ul>
+            <div className="d-flex justify-content-around align-items-stretch">
+              <button 
+                className={`flex-fill btn ${activeTab === 'all' ? 'active' : ''}`} 
+                onClick={() => setActiveTab('all')} 
+                style={activeTab === 'all' ? 
+                  { background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000000', fontWeight: '700', border: 'none', borderRadius: '0', padding: '15px' } : 
+                  { background: 'transparent', color: '#1a1a1a', fontWeight: '500', border: 'none', borderRadius: '0', padding: '15px' }}
+              >
+                <i className="bi bi-list-ul me-2"></i>All Transactions
+              </button>
+              <button 
+                className={`flex-fill btn ${activeTab === 'petty-cash' ? 'active' : ''}`} 
+                onClick={() => setActiveTab('petty-cash')} 
+                style={activeTab === 'petty-cash' ? 
+                  { background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000000', fontWeight: '700', border: 'none', borderRadius: '0', padding: '15px' } : 
+                  { background: 'transparent', color: '#1a1a1a', fontWeight: '500', border: 'none', borderRadius: '0', padding: '15px' }}
+              >
+                <i className="bi bi-cash-coin me-2"></i>Petty Cash
+              </button>
+              <button 
+                className={`flex-fill btn ${activeTab === 'external' ? 'active' : ''}`} 
+                onClick={() => setActiveTab('external')} 
+                style={activeTab === 'external' ? 
+                  { background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000000', fontWeight: '700', border: 'none', borderRadius: '0', padding: '15px' } : 
+                  { background: 'transparent', color: '#1a1a1a', fontWeight: '500', border: 'none', borderRadius: '0', padding: '15px' }}
+              >
+                <i className="bi bi-arrow-left-right me-2"></i>External
+              </button>
+              <button 
+                className={`flex-fill btn ${activeTab === 'sales' ? 'active' : ''}`} 
+                onClick={() => setActiveTab('sales')} 
+                style={activeTab === 'sales' ? 
+                  { background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000000', fontWeight: '700', border: 'none', borderRadius: '0', padding: '15px' } : 
+                  { background: 'transparent', color: '#1a1a1a', fontWeight: '500', border: 'none', borderRadius: '0', padding: '15px' }}
+              >
+                <i className="bi bi-cart-check me-2"></i>Sales
+              </button>
+              <button 
+                className={`flex-fill btn ${activeTab === 'purchases' ? 'active' : ''}`} 
+                onClick={() => setActiveTab('purchases')} 
+                style={activeTab === 'purchases' ? 
+                  { background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000000', fontWeight: '700', border: 'none', borderRadius: '0', padding: '15px' } : 
+                  { background: 'transparent', color: '#1a1a1a', fontWeight: '500', border: 'none', borderRadius: '0', padding: '15px' }}
+              >
+                <i className="bi bi-bag me-2"></i>Purchases
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-header bg-white border-0">
-            <h6 className="mb-0"><i className="bi bi-funnel me-2"></i>Search & Filters</h6>
+        <div className="card shadow-sm mb-4" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h6 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-funnel me-2"></i>Search & Filters</h6>
           </div>
           <div className="card-body">
             <div className="row g-3">
@@ -339,10 +365,10 @@ export default function TransactionsPage() {
         </div>
 
         {/* Transactions Table */}
-        <div className="card border-0 shadow-sm">
-          <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-            <h6 className="mb-0"><i className="bi bi-table me-2"></i>Transactions ({filteredTransactions.length})</h6>
-            <small className="text-muted">Showing {filteredTransactions.length} of {transactions.length} transactions</small>
+        <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header d-flex justify-content-between align-items-center" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h6 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-table me-2"></i>Transactions ({filteredTransactions.length})</h6>
+            <small style={{ color: '#C9A961' }}>Showing {filteredTransactions.length} of {transactions.length} transactions</small>
           </div>
           <div className="card-body p-0">
             {transactions.length === 0 ? (
@@ -373,7 +399,7 @@ export default function TransactionsPage() {
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover mb-0">
-                  <thead className="table-light">
+                  <thead style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)', borderBottom: '2px solid #d4af37' }}>
                     <tr>
                       <th className="border-0 fw-semibold" style={{cursor: 'pointer'}} onClick={() => handleSort('date')}>
                         <i className="bi bi-calendar3 me-2"></i>Date
@@ -440,8 +466,9 @@ export default function TransactionsPage() {
                         <td>
                           <Link 
                             href={`/accounting/transactions/${transaction._id}/edit`} 
-                            className="btn btn-sm btn-outline-primary"
+                            className="btn btn-sm"
                             title="Edit Transaction"
+                            style={{ background: 'transparent', border: '1px solid #d4af37', color: '#d4af37' }}
                           >
                             <i className="bi bi-pencil"></i>
                           </Link>

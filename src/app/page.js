@@ -12,6 +12,11 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const passwordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
   const router = useRouter();
@@ -29,7 +34,7 @@ export default function HomePage() {
     
     const protectInput = (input, expectedType) => {
       if (!input) return;
-      
+    
       const observer = new MutationObserver(() => {
         if (input.getAttribute('type') !== expectedType) {
           input.setAttribute('type', expectedType);
@@ -151,6 +156,76 @@ export default function HomePage() {
       console.error(err);
       setError("Signup failed");
       setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/User/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error);
+        setTimeout(() => setError(""), 3000);
+        return;
+      }
+      setOtpSent(true);
+      setError("");
+    } catch (err) {
+      setError("Failed to send OTP");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!otp || !newPassword) {
+      setError("Please fill all fields");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9])/.test(newPassword)) {
+      setError("Password must contain uppercase, lowercase, number and special character");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/User/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error);
+        setTimeout(() => setError(""), 3000);
+        return;
+      }
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setShowForgotPassword(false);
+        setOtpSent(false);
+        setOtp("");
+        setNewPassword("");
+        setEmail("");
+      }, 2000);
+    } catch (err) {
+      setError("Failed to reset password");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -428,6 +503,28 @@ export default function HomePage() {
                   </button>
                 </form>
 
+                {isLogin && (
+                  <div className="text-center mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-link p-0"
+                      onClick={() => setShowForgotPassword(true)}
+                      suppressHydrationWarning
+                      style={{
+                        backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        textDecoration: 'none',
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+
                 <div className="text-center mt-3">
                   <button
                     className="btn btn-link p-0"
@@ -459,6 +556,124 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="card border-0" style={{
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: '20px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(212, 175, 55, 0.3)',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 style={{ color: '#d4af37', fontWeight: '700' }}>
+                  <i className="bi bi-key-fill me-2"></i>Reset Password
+                </h5>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setOtpSent(false);
+                    setOtp("");
+                    setNewPassword("");
+                    setError("");
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a' }}
+                >
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              {error && (
+                <div className="alert alert-danger" role="alert">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  {error}
+                </div>
+              )}
+
+              {!otpSent ? (
+                <>
+                  <p style={{ color: '#f4e5c3', fontSize: '14px' }}>Enter your email to receive OTP</p>
+                  <div className="mb-3">
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '10px',
+                        color: '#f4e5c3',
+                        padding: '12px 16px'
+                      }}
+                    />
+                  </div>
+                  <button
+                    className="btn w-100"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                    style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}
+                  >
+                    {loading ? 'Sending...' : 'Send OTP'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p style={{ color: '#f4e5c3', fontSize: '14px' }}>OTP sent! Check console. Enter OTP and new password.</p>
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Enter 6-digit OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      maxLength={6}
+                      style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '10px',
+                        color: '#f4e5c3',
+                        padding: '12px 16px'
+                      }}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <input
+                      type="password"
+                      className="form-control"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '10px',
+                        color: '#f4e5c3',
+                        padding: '12px 16px'
+                      }}
+                    />
+                  </div>
+                  <button
+                    className="btn w-100"
+                    onClick={handleResetPassword}
+                    disabled={loading}
+                    style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600' }}
+                  >
+                    {loading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
       <style jsx>{`
         @keyframes fadeIn {

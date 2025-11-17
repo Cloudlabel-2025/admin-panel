@@ -91,7 +91,7 @@ export default function CreateEmployeePage() {
     setValidated(true);
 
     // Validate required fields
-    if (!formData.firstName || !formData.email || !formData.phone || !formData.joiningDate || !formData.department || !formData.role || !formData.emergencyContact.contactNumber || !formData.payroll.salary || !formData.address.city || !formData.address.state || !formData.address.zip || !formData.address.country) {
+    if (!formData.firstName || !formData.email || !formData.phone || !formData.joiningDate || !formData.department || !formData.role || !formData.emergencyContact.contactNumber || !formData.payroll.salary || !formData.address.street || !formData.address.city || !formData.address.state || !formData.address.zip || !formData.address.country) {
       setError("Please fill all required fields marked with *");
       setTimeout(() => setError(""), 3000);
       return;

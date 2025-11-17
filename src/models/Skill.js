@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const SkillSchema = new mongoose.Schema(
   {
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
     skillName: { type: String, required: true },
     category: { type: String, default: "General" },
     description: { type: String, default: "" },

@@ -1,20 +1,24 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 import Skill from "@/models/Skill";
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 
 export async function POST(req) {
     try{
         await connectMongoose();
         const body = await req.json();
         const createdByUserId = req.headers.get('x-user-id');
-        const skillData = { ...body, createdBy: createdByUserId };
+        const skillData = { ...body };
+        if (createdByUserId && mongoose.Types.ObjectId.isValid(createdByUserId)) {
+            skillData.createdBy = createdByUserId;
+        }
         const skill = await Skill.create(skillData);
         
         // Create notification for the employee
         try {
           const User = (await import('../../../models/User')).default;
-          const user = await User.findById(body.employeeId);
-          if (user) {
+          const user = await User.findById(body.employeeId).select('employeeId');
+          if (user && user.employeeId) {
             const Notification = (await import('../../../models/Notification')).default;
             await Notification.create({
               employeeId: user.employeeId,
@@ -32,7 +36,8 @@ export async function POST(req) {
         return NextResponse.json(skill,{status:201});
     }
     catch(err){
-    return NextResponse.json({error:err.message},{status:500});
+        console.error('Error in POST /api/skills:', err);
+        return NextResponse.json({error:err.message},{status:500});
     }
 }
 

@@ -26,6 +26,9 @@ export async function POST(req) {
     return NextResponse.json({ token: newToken }, { status: 200 });
   } catch (error) {
     console.error('Token refresh error:', error);
-    return NextResponse.json({ error: 'Invalid or expired refresh token' }, { status: 401 });
+    if (error.name === 'TokenExpiredError') {
+      return NextResponse.json({ error: 'Refresh token expired', expired: true }, { status: 401 });
+    }
+    return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 });
   }
 }

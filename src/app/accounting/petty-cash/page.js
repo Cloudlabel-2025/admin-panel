@@ -98,89 +98,101 @@ export default function PettyCashPage() {
 
   return (
     <Layout>
-      <div className="container-fluid">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>💵 Petty Cash Management</h2>
-          <div>
-            <Link href="/accounting/petty-cash/create" className="btn btn-primary me-2">
-              ➕ Add Entry
-            </Link>
-            <button className="btn btn-success me-2" onClick={() => fetchTransactions('Credit')}>
-              📊 View Credits
-            </button>
-            <button className="btn btn-danger" onClick={() => fetchTransactions('Debit')}>
-              📊 View Debits
-            </button>
+      <div className="container-fluid py-4">
+        {/* Header */}
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h1 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+                  <i className="bi bi-cash-coin me-2"></i>Petty Cash Management
+                </h1>
+                <small style={{ color: '#f4e5c3' }}>Track and manage daily cash transactions</small>
+              </div>
+              <Link href="/accounting/petty-cash/create" className="btn" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600', boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)' }}>
+                <i className="bi bi-plus-circle-fill me-2"></i>Add Entry
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="row mb-4">
           <div className="col-md-3">
-            <div className="card bg-primary text-white">
-              <div className="card-body text-center">
-                <h4>₹{accountBalance.toFixed(2)}</h4>
-                <p>Account Balance</p>
+            <div className="card shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', backdropFilter: 'blur(10px)', border: '2px solid #d4af37' }}>
+              <div className="card-body text-center p-4">
+                <i className="bi bi-wallet2" style={{ fontSize: '2.5rem', color: '#d4af37', opacity: 0.8 }}></i>
+                <h3 className="mt-3" style={{ color: '#d4af37' }}>₹{accountBalance.toFixed(2)}</h3>
+                <p className="mb-0" style={{ color: '#f4e5c3' }}>Account Balance</p>
               </div>
             </div>
           </div>
           <div className="col-md-3">
-            <div className="card bg-success text-white">
-              <div className="card-body text-center">
-                <h4>₹{summary.totalCashIn.toFixed(2)}</h4>
-                <p>Total Cash In</p>
+            <div className="card shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', backdropFilter: 'blur(10px)', border: '2px solid #28a745' }}>
+              <div className="card-body text-center p-4">
+                <i className="bi bi-arrow-down-circle" style={{ fontSize: '2.5rem', color: '#28a745', opacity: 0.8 }}></i>
+                <h3 className="mt-3" style={{ color: '#28a745' }}>₹{summary.totalCashIn.toFixed(2)}</h3>
+                <p className="mb-0" style={{ color: '#f4e5c3' }}>Total Cash In</p>
               </div>
             </div>
           </div>
           <div className="col-md-3">
-            <div className="card bg-danger text-white">
-              <div className="card-body text-center">
-                <h4>₹{summary.totalCashOut.toFixed(2)}</h4>
-                <p>Total Cash Out</p>
+            <div className="card shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', backdropFilter: 'blur(10px)', border: '2px solid #dc3545' }}>
+              <div className="card-body text-center p-4">
+                <i className="bi bi-arrow-up-circle" style={{ fontSize: '2.5rem', color: '#dc3545', opacity: 0.8 }}></i>
+                <h3 className="mt-3" style={{ color: '#dc3545' }}>₹{summary.totalCashOut.toFixed(2)}</h3>
+                <p className="mb-0" style={{ color: '#f4e5c3' }}>Total Cash Out</p>
               </div>
             </div>
           </div>
           <div className="col-md-3">
-            <div className="card bg-info text-white">
-              <div className="card-body text-center">
-                <h4>₹{(summary.totalCashIn - summary.totalCashOut).toFixed(2)}</h4>
-                <p>Net Cash Flow</p>
+            <div className="card shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)', backdropFilter: 'blur(10px)', border: '2px solid #17a2b8' }}>
+              <div className="card-body text-center p-4">
+                <i className="bi bi-graph-up-arrow" style={{ fontSize: '2.5rem', color: '#17a2b8', opacity: 0.8 }}></i>
+                <h3 className="mt-3" style={{ color: '#17a2b8' }}>₹{(summary.totalCashIn - summary.totalCashOut).toFixed(2)}</h3>
+                <p className="mb-0" style={{ color: '#f4e5c3' }}>Net Cash Flow</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="card mb-4">
-          <div className="card-body">
+        <div className="card shadow-sm mb-4" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-funnel-fill me-2"></i>Filters</h5>
+          </div>
+          <div className="card-body p-4">
             <div className="row">
               <div className="col-md-4">
-                <label className="form-label">Filter by Date</label>
+                <label className="form-label fw-semibold" style={{ color: '#6c757d' }}><i className="bi bi-calendar-fill me-2" style={{ color: '#d4af37' }}></i>Filter by Date</label>
                 <input
                   type="date"
                   className="form-control"
                   value={filters.date}
                   onChange={(e) => setFilters({...filters, date: e.target.value})}
+                  style={{ border: '2px solid #d4af37' }}
                 />
               </div>
               <div className="col-md-4">
-                <label className="form-label">Filter by Category</label>
+                <label className="form-label fw-semibold" style={{ color: '#6c757d' }}><i className="bi bi-tag-fill me-2" style={{ color: '#d4af37' }}></i>Filter by Category</label>
                 <input
                   type="text"
                   className="form-control"
                   placeholder="Enter category"
                   value={filters.category}
                   onChange={(e) => setFilters({...filters, category: e.target.value})}
+                  style={{ border: '2px solid #d4af37' }}
                 />
               </div>
               <div className="col-md-4">
-                <label className="form-label">Filter by Handler</label>
+                <label className="form-label fw-semibold" style={{ color: '#6c757d' }}><i className="bi bi-person-fill me-2" style={{ color: '#d4af37' }}></i>Filter by Handler</label>
                 <input
                   type="text"
                   className="form-control"
                   placeholder="Enter handler name"
                   value={filters.handledBy}
                   onChange={(e) => setFilters({...filters, handledBy: e.target.value})}
+                  style={{ border: '2px solid #d4af37' }}
                 />
               </div>
             </div>
@@ -188,45 +200,49 @@ export default function PettyCashPage() {
         </div>
 
         {/* Entries Table */}
-        <div className="card">
-          <div className="card-header">
-            <h5>Daily Entries</h5>
+        <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h5 className="mb-0" style={{ color: '#d4af37' }}><i className="bi bi-list-ul me-2"></i>Daily Entries</h5>
           </div>
-          <div className="card-body">
+          <div className="card-body p-0">
             <div className="table-responsive">
-              <table className="table table-striped">
-                <thead>
+              <table className="table table-hover align-middle mb-0">
+                <thead style={{ background: '#f8f9fa' }}>
                   <tr>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                    <th>Handled By</th>
-                    <th>Approved By</th>
-                    <th>Actions</th>
+                    <th><i className="bi bi-calendar-fill me-2"></i>Date</th>
+                    <th><i className="bi bi-tag-fill me-2"></i>Category</th>
+                    <th><i className="bi bi-file-text-fill me-2"></i>Description</th>
+                    <th><i className="bi bi-arrow-left-right me-2"></i>Type</th>
+                    <th><i className="bi bi-currency-rupee me-2"></i>Amount</th>
+                    <th><i className="bi bi-person-fill me-2"></i>Handled By</th>
+                    <th><i className="bi bi-check-circle-fill me-2"></i>Approved By</th>
+                    <th><i className="bi bi-gear-fill me-2"></i>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEntries.map((entry) => (
                     <tr key={entry._id}>
                       <td>{new Date(entry.date).toLocaleDateString()}</td>
-                      <td>{entry.category}</td>
+                      <td><span className="badge" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#1a1a1a' }}>{entry.category}</span></td>
                       <td>{entry.description}</td>
                       <td>
                         <span className={`badge ${entry.type === 'in' ? 'bg-success' : 'bg-danger'}`}>
-                          {entry.type === 'in' ? 'Credit' : 'Debit'}
+                          {entry.type === 'in' ? '↓ Credit' : '↑ Debit'}
                         </span>
                       </td>
-                      <td className={entry.type === 'in' ? 'text-success' : 'text-danger'}>
+                      <td className={entry.type === 'in' ? 'text-success fw-bold' : 'text-danger fw-bold'}>
                         ₹{entry.amount.toFixed(2)}
                       </td>
                       <td>{entry.handledBy}</td>
-                      <td>{entry.approvedBy || 'Pending'}</td>
+                      <td>{entry.approvedBy || <span className="text-muted">Pending</span>}</td>
                       <td>
-                        <Link href={`/accounting/petty-cash/${entry._id}/edit`} className="btn btn-sm btn-outline-primary me-1">✏️ Edit</Link>
+                        <Link href={`/accounting/petty-cash/${entry._id}/edit`} className="btn btn-sm me-1" style={{ background: '#ffc107', color: '#000', border: 'none' }}>
+                          <i className="bi bi-pencil-fill"></i>
+                        </Link>
                         {userRole === "developer" && (
-                          <button onClick={() => deleteEntry(entry._id)} className="btn btn-sm btn-outline-danger">🗑️ Delete</button>
+                          <button onClick={() => deleteEntry(entry._id)} className="btn btn-sm" style={{ background: '#dc3545', color: '#fff', border: 'none' }}>
+                            <i className="bi bi-trash-fill"></i>
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -236,6 +252,7 @@ export default function PettyCashPage() {
             </div>
           </div>
         </div>
+
       </div>
     </Layout>
   );

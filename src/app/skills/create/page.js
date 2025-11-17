@@ -200,10 +200,16 @@ export default function CreateSkill() {
                         type="text"
                         className="form-control"
                         value={form.skillName}
-                        onChange={(e) => setForm({ ...form, skillName: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                          if (value.length <= 30) {
+                            setForm({ ...form, skillName: value });
+                          }
+                        }}
                         placeholder="e.g., JavaScript, Leadership, Data Analysis"
                         required
                       />
+                      <small className="text-muted">{form.skillName.length}/30 characters (text only)</small>
                     </div>
                   </div>
 
@@ -253,10 +259,17 @@ export default function CreateSkill() {
                       className="form-control"
                       rows="4"
                       value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const numberCount = (value.match(/\d/g) || []).length;
+                        const specialCharCount = (value.match(/[^a-zA-Z0-9\s]/g) || []).length;
+                        if (value.length <= 100 && numberCount <= 10 && specialCharCount <= 5) {
+                          setForm({ ...form, description: value });
+                        }
+                      }}
                       placeholder="Describe the skill, experience level, or specific expertise..."
                     />
-                    <small className="text-muted">Optional: Provide additional details about this skill</small>
+                    <small className="text-muted">{form.description.length}/100 characters, {(form.description.match(/\d/g) || []).length}/10 numbers, {(form.description.match(/[^a-zA-Z0-9\s]/g) || []).length}/5 special chars</small>
                   </div>
 
                   {/* Action Buttons */}

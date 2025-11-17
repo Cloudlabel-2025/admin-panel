@@ -173,17 +173,21 @@ export default function Layout({ children }) {
         }
         .nav-link {
           transition: all 0.3s ease;
-          border-radius: 6px;
-          margin: 2px 8px;
+          border-radius: 8px;
+          margin: 3px 8px;
           white-space: nowrap;
+          padding: 10px 16px !important;
         }
         .nav-link:hover {
-          background-color: rgba(255,255,255,0.1);
+          background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(244, 229, 195, 0.2) 100%);
           transform: translateX(5px);
+          border-left: 3px solid #d4af37;
         }
         .nav-link.active {
-          background-color: #0d6efd;
-          color: white !important;
+          background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%);
+          color: #1a1a1a !important;
+          font-weight: 600;
+          border-left: 3px solid #d4af37;
         }
         .sidebar-toggle {
           transition: all 0.3s ease;
@@ -239,6 +243,26 @@ export default function Layout({ children }) {
             position: relative;
           }
         }
+        .notification-dropdown::-webkit-scrollbar {
+          width: 6px;
+        }
+        .notification-dropdown::-webkit-scrollbar-track {
+          background: #f1f1f1;
+        }
+        .notification-dropdown::-webkit-scrollbar-thumb {
+          background: #d4af37;
+          border-radius: 3px;
+        }
+        .notification-dropdown::-webkit-scrollbar-thumb:hover {
+          background: #c9a961;
+        }
+        @media (max-width: 768px) {
+          .notification-dropdown {
+            right: 10px !important;
+            left: 10px !important;
+            width: calc(100vw - 20px) !important;
+          }
+        }
       `}</style>
       
       <div className="d-flex" style={{ overflowX: "hidden" }}>
@@ -252,48 +276,67 @@ export default function Layout({ children }) {
         )}
         
         {/* Sidebar */}
-        <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'show' : ''}`} 
+        <div className={`sidebar text-white ${sidebarCollapsed ? 'sidebar-collapsed show' : ''}`} 
              style={{ 
-               width: "280px", 
+               width: sidebarCollapsed ? "80px" : "280px", 
                minHeight: "100vh",
                transition: "all 0.3s ease",
-               boxShadow: "2px 0 10px rgba(0,0,0,0.1)"
+               boxShadow: "4px 0 20px rgba(0,0,0,0.3)",
+               background: "linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)"
              }}>
           
           {/* Header */}
-          <div className="p-3 border-bottom border-secondary">
+          <div className="p-3" style={{ 
+            background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
+            borderBottom: "3px solid #d4af37",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
+          }}>
             <div className="d-flex align-items-center justify-content-between">
               <div className="d-md-none d-block">
-                <h5 className="mb-1 text-primary">
+                <h5 className="mb-1" style={{ color: "#d4af37", fontWeight: "700", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
+                  <i className="bi bi-shield-fill-check me-2"></i>
                   {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" : 
                    (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
                    userRole === "Intern" ? "Intern Portal" :
                    "Employee Panel"}
                 </h5>
-                <small className="text-white-50">Role: {userRole}</small>
+                <small style={{ color: "#f4e5c3", fontWeight: "500" }}><i className="bi bi-person-badge me-1"></i>Role: {userRole}</small>
               </div>
               {!sidebarCollapsed && (
                 <div className="d-none d-md-block">
-                  <h5 className="mb-1 text-primary">
+                  <h5 className="mb-1" style={{ color: "#d4af37", fontWeight: "700", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
+                    <i className="bi bi-shield-fill-check me-2"></i>
                     {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" : 
                      (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
                      userRole === "Intern" ? "Intern Portal" :
                      "Employee Panel"}
                   </h5>
-                  <small className="text-white-50">Role: {userRole}</small>
+                  <small style={{ color: "#f4e5c3", fontWeight: "500" }}><i className="bi bi-person-badge me-1"></i>Role: {userRole}</small>
                 </div>
               )}
               <button 
-                className="btn btn-outline-light btn-sm d-none d-md-block"
+                className="btn btn-sm d-none d-md-block"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                style={{ 
+                  background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
+                  border: "none",
+                  color: "#1a1a1a",
+                  fontWeight: "600"
+                }}
               >
                 <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
               </button>
               <button 
-                className="btn btn-outline-light btn-sm d-md-none"
+                className="btn btn-sm d-md-none"
                 onClick={() => setSidebarCollapsed(false)}
                 title="Close Menu"
+                style={{ 
+                  background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
+                  border: "none",
+                  color: "#1a1a1a",
+                  fontWeight: "600"
+                }}
               >
                 <i className="bi bi-x-lg"></i>
               </button>
@@ -988,20 +1031,31 @@ export default function Layout({ children }) {
         {/* Main Content */}
         <div className="flex-grow-1 main-content" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
           {/* Top Navigation */}
-          <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-3" style={{ overflowX: "hidden" }}>
+          <nav className="navbar navbar-expand-lg navbar-light px-3" style={{ 
+            overflowX: "hidden",
+            background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
+            borderBottom: "3px solid #d4af37",
+            boxShadow: "0 4px 15px rgba(0,0,0,0.2)"
+          }}>
             <div className="d-flex justify-content-between align-items-center w-100">
               <div className="d-flex align-items-center">
                 <button 
-                  className="btn btn-outline-primary d-md-none me-3"
+                  className="btn d-md-none me-3"
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   title="Toggle Menu"
+                  style={{ 
+                    background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
+                    border: "none",
+                    color: "#1a1a1a",
+                    fontWeight: "600"
+                  }}
                 >
                   <i className="bi bi-list fs-4"></i>
                 </button>
                 {pathname === "/admin-dashboard" ? (
                   <div className="welcome-message">
-                    <h5 className="mb-0 text-primary">
-                      Welcome {(userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") 
+                    <h5 className="mb-0" style={{ color: "#d4af37", fontWeight: "700", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
+                      <i className="bi bi-house-heart-fill me-2"></i>Welcome {(userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") 
                         ? `${userRole} ${userName}` 
                         : userName || userEmail}
                     </h5>
@@ -1010,8 +1064,8 @@ export default function Layout({ children }) {
                   <div className="breadcrumb-nav">
                     <nav aria-label="breadcrumb">
                       <ol className="breadcrumb mb-0">
-                        <li className="breadcrumb-item"><a href="/admin-dashboard" className="text-decoration-none">Home</a></li>
-                        <li className="breadcrumb-item active" aria-current="page">
+                        <li className="breadcrumb-item"><a href="/admin-dashboard" className="text-decoration-none" style={{ color: "#d4af37", fontWeight: "600" }}>Home</a></li>
+                        <li className="breadcrumb-item" style={{ color: "#f4e5c3" }} aria-current="page">
                           {pathname.split('/').pop().replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </li>
                       </ol>
@@ -1023,7 +1077,7 @@ export default function Layout({ children }) {
                 {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin" || userRole === "Employee" || userRole === "employee") && (
                   <div className="position-relative notification-container">
                     <button 
-                      className="btn btn-outline-secondary position-relative"
+                      className="btn position-relative"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowNotifications(!showNotifications);
@@ -1031,10 +1085,17 @@ export default function Layout({ children }) {
                         if (!showNotifications) fetchNotifications();
                       }}
                       title="Notifications"
+                      style={{ 
+                        background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
+                        border: "none",
+                        color: "#1a1a1a",
+                        fontWeight: "600",
+                        padding: "8px 16px"
+                      }}
                     >
-                      🔔
+                      <i className="bi bi-bell-fill"></i>
                       {notifications.filter(n => !n.isRead).length > 0 && (
-                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill" style={{ background: "#dc3545" }}>
                           {notifications.filter(n => !n.isRead).length}
                         </span>
                       )}
@@ -1043,23 +1104,30 @@ export default function Layout({ children }) {
                 )}
                 <div className="position-relative dropdown-container" id="profile-dropdown-container">
                   <button 
-                    className="btn btn-outline-primary dropdown-toggle d-flex align-items-center"
+                    className="btn dropdown-toggle d-flex align-items-center"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowProfileDropdown(prev => !prev);
                       setShowNotifications(false);
                     }}
                     aria-expanded={showProfileDropdown}
+                    style={{ 
+                      background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
+                      border: "none",
+                      color: "#1a1a1a",
+                      fontWeight: "600",
+                      padding: "8px 16px"
+                    }}
                   >
                     {profilePicture ? (
                       <img 
                         src={profilePicture} 
                         alt="Profile" 
                         className="rounded-circle me-2"
-                        style={{width: '32px', height: '32px', objectFit: 'cover'}}
+                        style={{width: '32px', height: '32px', objectFit: 'cover', border: '2px solid #1a1a1a'}}
                       />
                     ) : (
-                      <span className="me-2">👤</span>
+                      <i className="bi bi-person-circle me-2"></i>
                     )}
                     <span className="d-none d-sm-inline">{userName || userEmail}</span>
                   </button>
@@ -1072,67 +1140,170 @@ export default function Layout({ children }) {
           {showNotifications && typeof window !== 'undefined' && createPortal(
             <div 
               data-dropdown="notifications"
+              className="notification-dropdown"
               style={{ 
                 position: "fixed",
                 top: "60px",
-                right: "80px", 
-                minWidth: "320px", 
-                maxHeight: "400px",
+                right: "20px", 
+                width: "min(400px, calc(100vw - 40px))",
+                maxHeight: "min(500px, calc(100vh - 100px))",
                 backgroundColor: "white", 
-                border: "1px solid #dee2e6", 
-                borderRadius: "8px", 
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                border: "2px solid #d4af37", 
+                borderRadius: "12px", 
+                boxShadow: "0 8px 24px rgba(212, 175, 55, 0.3)",
                 zIndex: 99999,
-                overflowY: "auto"
+                overflowY: "auto",
+                overflowX: "hidden"
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-3 border-bottom bg-primary text-white rounded-top">
+              <div className="p-3" style={{ 
+                background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
+                borderBottom: "2px solid #d4af37",
+                borderRadius: "10px 10px 0 0",
+                position: "sticky",
+                top: 0,
+                zIndex: 1
+              }}>
                 <div className="d-flex justify-content-between align-items-center">
-                  <strong>Notifications</strong>
+                  <div>
+                    <strong style={{ color: "#d4af37", fontSize: "16px" }}>
+                      <i className="bi bi-bell-fill me-2"></i>Notifications
+                    </strong>
+                    {notifications.filter(n => !n.isRead).length > 0 && (
+                      <span className="badge ms-2" style={{ background: "#dc3545", fontSize: "10px" }}>
+                        {notifications.filter(n => !n.isRead).length} new
+                      </span>
+                    )}
+                  </div>
                   <button 
-                    className="btn btn-sm btn-outline-light"
+                    className="btn btn-sm"
                     onClick={() => setShowNotifications(false)}
+                    style={{ 
+                      background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
+                      border: "none",
+                      color: "#1a1a1a",
+                      fontWeight: "600",
+                      padding: "4px 10px"
+                    }}
                   >
-                    ✕
+                    <i className="bi bi-x-lg"></i>
                   </button>
                 </div>
               </div>
               {notifications.length === 0 ? (
-                <div className="p-4 text-center text-muted">
-                  <div className="mb-2">🔔</div>
-                  <div>No notifications</div>
+                <div className="p-5 text-center text-muted">
+                  <i className="bi bi-bell-slash" style={{ fontSize: "48px", color: "#d4af37", opacity: 0.3 }}></i>
+                  <div className="mt-3" style={{ fontSize: "14px" }}>No notifications yet</div>
+                  <small>You're all caught up!</small>
                 </div>
               ) : (
-                notifications.map((notification) => (
-                  <div 
-                    key={notification._id} 
-                    className={`p-3 border-bottom cursor-pointer notification-item ${!notification.isRead ? 'bg-light border-start border-primary border-3' : ''}`}
-                    onClick={() => {
-                      if (notification.type === 'payroll') {
-                        navigate('/my-payroll');
-                      } else {
-                        navigate('/team-absence');
+                <div>
+                  {notifications.map((notification) => {
+                    const getNotificationIcon = (type) => {
+                      switch(type) {
+                        case 'holiday': return 'bi-calendar-event';
+                        case 'payroll': return 'bi-cash-coin';
+                        case 'success': return 'bi-check-circle';
+                        case 'warning': return 'bi-exclamation-triangle';
+                        case 'error': return 'bi-x-circle';
+                        default: return 'bi-info-circle';
                       }
-                      setShowNotifications(false);
-                      markAsRead(notification._id);
-                    }}
-                    style={{ transition: 'background-color 0.2s ease' }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = !notification.isRead ? '#f8f9fa' : 'white'}
-                  >
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div className="flex-grow-1">
-                        <div className="fw-bold text-dark mb-1">{notification.title}</div>
-                        <div className="text-muted small mb-1">{notification.message}</div>
-                        <div className="text-muted small">{new Date(notification.createdAt).toLocaleString()}</div>
+                    };
+                    
+                    const getNotificationColor = (type) => {
+                      switch(type) {
+                        case 'holiday': return '#d4af37';
+                        case 'payroll': return '#28a745';
+                        case 'success': return '#28a745';
+                        case 'warning': return '#ffc107';
+                        case 'error': return '#dc3545';
+                        default: return '#17a2b8';
+                      }
+                    };
+                    
+                    return (
+                      <div 
+                        key={notification._id} 
+                        className="notification-item"
+                        onClick={() => {
+                          if (notification.type === 'payroll') {
+                            navigate('/my-payroll');
+                          } else if (notification.type === 'holiday') {
+                            navigate('/calendar');
+                          } else {
+                            navigate('/notifications');
+                          }
+                          setShowNotifications(false);
+                          markAsRead(notification._id);
+                        }}
+                        style={{ 
+                          padding: "16px",
+                          borderBottom: "1px solid #f0f0f0",
+                          cursor: "pointer",
+                          transition: "all 0.3s ease",
+                          backgroundColor: !notification.isRead ? '#fffbf0' : 'white',
+                          borderLeft: !notification.isRead ? `4px solid ${getNotificationColor(notification.type)}` : '4px solid transparent',
+                          position: "relative"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f8f9fa';
+                          e.currentTarget.style.transform = 'translateX(-4px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = !notification.isRead ? '#fffbf0' : 'white';
+                          e.currentTarget.style.transform = 'translateX(0)';
+                        }}
+                      >
+                        <div className="d-flex align-items-start gap-3">
+                          <div 
+                            className="d-flex align-items-center justify-content-center flex-shrink-0"
+                            style={{ 
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "50%",
+                              background: `linear-gradient(135deg, ${getNotificationColor(notification.type)}20, ${getNotificationColor(notification.type)}40)`,
+                              border: `2px solid ${getNotificationColor(notification.type)}`
+                            }}
+                          >
+                            <i className={`bi ${getNotificationIcon(notification.type)}`} style={{ color: getNotificationColor(notification.type), fontSize: "18px" }}></i>
+                          </div>
+                          <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                            <div className="d-flex justify-content-between align-items-start mb-1">
+                              <div className="fw-bold text-dark" style={{ fontSize: "14px", lineHeight: "1.4" }}>
+                                {notification.title}
+                              </div>
+                              {!notification.isRead && (
+                                <span 
+                                  className="badge rounded-pill ms-2 flex-shrink-0"
+                                  style={{ 
+                                    background: getNotificationColor(notification.type),
+                                    fontSize: "9px",
+                                    padding: "3px 8px"
+                                  }}
+                                >
+                                  NEW
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-muted" style={{ fontSize: "13px", lineHeight: "1.5", wordBreak: "break-word" }}>
+                              {notification.message}
+                            </div>
+                            <div className="d-flex align-items-center mt-2" style={{ fontSize: "11px", color: "#999" }}>
+                              <i className="bi bi-clock me-1"></i>
+                              {new Date(notification.createdAt).toLocaleString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      {!notification.isRead && (
-                        <span className="badge bg-primary rounded-pill">New</span>
-                      )}
-                    </div>
-                  </div>
-                ))
+                    );
+                  })}
+                </div>
               )}
             </div>,
             document.body
