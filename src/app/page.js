@@ -270,9 +270,9 @@ export default function HomePage() {
           background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.7) 0%, rgba(45, 45, 45, 0.7) 100%)',
           pointerEvents: 'none'
         }}></div>
-      <div className="container">
+      <div className="container-fluid px-3">
         <div className="row justify-content-center">
-          <div className="col-lg-4 col-md-6 col-sm-8">
+          <div className="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-4">
             <div className="card border-0" style={{
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
@@ -282,7 +282,7 @@ export default function HomePage() {
               position: 'relative',
               zIndex: 1
             }}>
-              <div className="card-body p-4">
+              <div className="card-body p-3 p-sm-4">
                 <div className="text-center mb-4">
                   <div style={{
                     width: '60px',
@@ -297,13 +297,14 @@ export default function HomePage() {
                   }}>
                     <i className="bi bi-shield-lock" style={{ fontSize: '28px', color: '#1a1a1a' }}></i>
                   </div>
-                  <h2 className="fw-bold mb-2" style={{
+                  <h2 className="fw-bold mb-2 text-center text-sm-start" style={{
                     backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
                     letterSpacing: '1px',
-                    fontWeight: '700'
+                    fontWeight: '700',
+                    fontSize: 'clamp(1.3rem, 4vw, 1.75rem)'
                   }}>
                     {isLogin ? "Welcome Back" : "Join Our Team"}
                   </h2>

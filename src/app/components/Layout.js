@@ -225,7 +225,9 @@ export default function Layout({ children }) {
             z-index: 1050;
             transform: translateX(-100%);
             transition: transform 0.3s ease;
-            width: 280px !important;
+            width: min(280px, 85vw) !important;
+            height: 100vh;
+            overflow-y: auto;
           }
           .sidebar.show {
             transform: translateX(0);
@@ -236,6 +238,19 @@ export default function Layout({ children }) {
           .main-content {
             margin-left: 0 !important;
             width: 100% !important;
+          }
+          .navbar {
+            padding: 0.5rem 1rem !important;
+          }
+          .welcome-message h5 {
+            font-size: 1rem !important;
+          }
+          .breadcrumb {
+            font-size: 0.8rem;
+          }
+          .nav-link {
+            padding: 8px 12px !important;
+            font-size: 0.9rem;
           }
         }
         @media (min-width: 769px) {
@@ -261,6 +276,28 @@ export default function Layout({ children }) {
             right: 10px !important;
             left: 10px !important;
             width: calc(100vw - 20px) !important;
+            max-height: 70vh !important;
+          }
+          .notification-item {
+            padding: 12px !important;
+          }
+          .notification-item .fw-bold {
+            font-size: 13px !important;
+          }
+          .notification-item .text-muted {
+            font-size: 12px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .navbar .d-flex {
+            gap: 0.5rem !important;
+          }
+          .btn {
+            padding: 6px 12px !important;
+            font-size: 0.9rem !important;
+          }
+          .dropdown-toggle span {
+            display: none !important;
           }
         }
       `}</style>

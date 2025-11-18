@@ -1,4 +1,6 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
+
+export const dynamic = "force-dynamic";
 import Performance from "@/models/Performance";
 import { NextResponse } from "next/server";
 

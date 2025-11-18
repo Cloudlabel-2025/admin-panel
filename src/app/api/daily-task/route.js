@@ -1,4 +1,6 @@
 import connectMongoose from "../../utilis/connectMongoose";
+
+export const dynamic = "force-dynamic";
 import DailyTask from "../../../models/Dailytask";
 import { NextResponse } from "next/server";
 

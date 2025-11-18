@@ -1,4 +1,6 @@
 import connectMongoose from "../../../utilis/connectMongoose";
+
+export const dynamic = "force-dynamic";
 import mongoose from "mongoose";
 
 const CustomerSchema = new mongoose.Schema({

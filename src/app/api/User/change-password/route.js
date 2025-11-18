@@ -1,4 +1,6 @@
 import connectMongoose from "../../../utilis/connectMongoose";
+
+export const dynamic = "force-dynamic";
 import User from "../../../../models/User";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";

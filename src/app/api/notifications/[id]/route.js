@@ -1,4 +1,6 @@
 import connectMongoose from "../../../utilis/connectMongoose";
+
+export const dynamic = "force-dynamic";
 import Notification from "../../../../models/Notification";
 
 export async function DELETE(request, { params }) {

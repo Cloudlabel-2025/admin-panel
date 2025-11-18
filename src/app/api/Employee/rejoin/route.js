@@ -1,4 +1,6 @@
 import connectMongoose from "../../../utilis/connectMongoose";
+
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
