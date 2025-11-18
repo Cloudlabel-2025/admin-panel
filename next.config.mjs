@@ -8,9 +8,6 @@ const nextConfig = {
   },
   trailingSlash: true,
   distDir: 'out',
-  experimental: {
-    optimizeCss: true,
-  },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
