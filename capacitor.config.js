@@ -1,7 +1,7 @@
 const config = {
   appId: 'com.adminpanel.app',
   appName: 'Admin Panel',
-  webDir: "out",
+  webDir: ".next",
   server: {
     url: "https://admin-panel-umber-zeta.vercel.app/",
     cleartext: true,
