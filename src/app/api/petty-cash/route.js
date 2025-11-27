@@ -1,6 +1,6 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 
-export const dynamic = "force-dynamic";
+
 import PettyCash from "@/models/accounts/PettyCash";
 import Account from "@/models/accounts/Account";
 import Transaction from "@/models/accounts/Transaction";

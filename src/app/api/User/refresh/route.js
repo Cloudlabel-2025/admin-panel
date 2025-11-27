@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
+
 import { verifyRefreshToken, generateTokens } from "../../../utilis/authMiddleware";
 
 export async function POST(req) {

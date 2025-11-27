@@ -3,7 +3,7 @@ import User from "../../../../models/User";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
+
 
 export async function GET(req) {
   try {

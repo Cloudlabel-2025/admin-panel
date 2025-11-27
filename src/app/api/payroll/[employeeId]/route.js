@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
 import Payroll from "../../../../models/Payroll";
 import connectMongoose from "@/app/utilis/connectMongoose";
 

@@ -270,50 +270,51 @@ export default function HomePage() {
           background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.7) 0%, rgba(45, 45, 45, 0.7) 100%)',
           pointerEvents: 'none'
         }}></div>
-      <div className="container-fluid px-3">
+      <div className="container-fluid px-3 py-4">
         <div className="row justify-content-center">
-          <div className="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-4">
-            <div className="card border-0" style={{
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              backgroundColor: 'rgba(255,255,255,0.1)',
+          <div className="col-12 col-sm-9 col-md-7 col-lg-5 col-xl-4">
+            <div className="card border-0 login-card" style={{
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              backgroundColor: 'rgba(26, 26, 26, 0.4)',
               borderRadius: '20px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(212, 175, 55, 0.3)',
+              border: '1px solid rgba(212, 175, 55, 0.15)',
               position: 'relative',
-              zIndex: 1
+              zIndex: 1,
+              overflow: 'hidden'
             }}>
-              <div className="card-body p-3 p-sm-4">
+              <div className="card-body p-4">
                 <div className="text-center mb-4">
                   <div style={{
                     width: '60px',
                     height: '60px',
-                    margin: '0 auto 20px',
-                    background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)',
+                    margin: '0 auto 16px',
+                    background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 50%, #d4af37 100%)',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 15px rgba(212, 175, 55, 0.3)'
+                    boxShadow: '0 6px 20px rgba(212, 175, 55, 0.3)',
+                    animation: 'pulse 2s ease-in-out infinite'
                   }}>
-                    <i className="bi bi-shield-lock" style={{ fontSize: '28px', color: '#1a1a1a' }}></i>
+                    <i className="bi bi-shield-lock-fill" style={{ fontSize: '28px', color: '#1a1a1a' }}></i>
                   </div>
-                  <h2 className="fw-bold mb-2 text-center text-sm-start" style={{
-                    backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
+                  <h2 className="fw-bold mb-2 text-center" style={{
+                    backgroundImage: 'linear-gradient(135deg, #D4AF37 0%, #F4E5C3 50%, #FFD700 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
-                    letterSpacing: '1px',
+                    letterSpacing: '0.5px',
                     fontWeight: '700',
-                    fontSize: 'clamp(1.3rem, 4vw, 1.75rem)'
+                    fontSize: 'clamp(1.4rem, 4vw, 1.75rem)'
                   }}>
                     {isLogin ? "Welcome Back" : "Join Our Team"}
                   </h2>
-                  <p className="mb-0" style={{
-                    backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    opacity: 0.9
+                  <p className="mb-0 text-center" style={{
+                    color: '#f4e5c3',
+                    opacity: 0.7,
+                    fontSize: '0.9rem',
+                    fontWeight: '400'
                   }}>
                     {isLogin ? "Sign in to your account" : "Create your employee account"}
                   </p>
@@ -328,54 +329,60 @@ export default function HomePage() {
 
                 <form onSubmit={isLogin ? handleLogin : handleSignup}>
                   <div className="mb-3">
-                    <label className="form-label" style={{
-                      backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      fontWeight: '500'
-                    }}>Email</label>
+                    <label className="form-label mb-2" style={{
+                      color: '#d4af37',
+                      fontWeight: '600',
+                      fontSize: '0.9rem',
+                      letterSpacing: '0.3px'
+                    }}>
+                      <i className="bi bi-envelope-fill me-2"></i>Email
+                    </label>
                     <input
                       type="email"
-                      className="form-control"
+                      className="form-control custom-input"
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       suppressHydrationWarning
                       style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        border: '2px solid rgba(212, 175, 55, 0.2)',
                         borderRadius: '10px',
                         color: '#f4e5c3',
-                        padding: '12px 16px'
+                        padding: '12px 16px',
+                        fontSize: '0.95rem',
+                        transition: 'all 0.3s ease'
                       }}
                       onFocus={(e) => {
                         e.target.placeholder = '';
                         e.target.style.borderColor = '#d4af37';
-                        e.target.style.boxShadow = '0 0 0 0.2rem rgba(212, 175, 55, 0.25)';
+                        e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                        e.target.style.boxShadow = '0 0 0 4px rgba(212, 175, 55, 0.1)';
                       }}
                       onBlur={(e) => {
                         e.target.placeholder = 'Enter your email';
-                        e.target.style.borderColor = 'rgba(212, 175, 55, 0.3)';
+                        e.target.style.borderColor = 'rgba(212, 175, 55, 0.2)';
+                        e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
                   </div>
                   
-                  <div className={isLogin ? "mb-4" : "mb-2"}>
-                    <label className="form-label" style={{
-                      backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      fontWeight: '500'
-                    }}>Password</label>
+                  <div className={isLogin ? "mb-3" : "mb-3"}>
+                    <label className="form-label mb-2" style={{
+                      color: '#d4af37',
+                      fontWeight: '600',
+                      fontSize: '0.9rem',
+                      letterSpacing: '0.3px'
+                    }}>
+                      <i className="bi bi-lock-fill me-2"></i>Password
+                    </label>
                     <div className="position-relative">
                       <input
                         ref={passwordRef}
                         type={showPassword ? "text" : "password"}
-                        className="form-control"
+                        className="form-control custom-input"
                         placeholder="Enter your password"
                         onChange={(e) => {
                           if (!isLogin) setPasswordStrength(checkPasswordStrength(e.target.value));
@@ -385,21 +392,25 @@ export default function HomePage() {
                         required
                         suppressHydrationWarning
                         style={{
-                          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(212, 175, 55, 0.3)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '2px solid rgba(212, 175, 55, 0.2)',
                           borderRadius: '10px',
                           color: '#f4e5c3',
                           padding: '12px 16px',
-                          paddingRight: '45px'
+                          paddingRight: '45px',
+                          fontSize: '0.95rem',
+                          transition: 'all 0.3s ease'
                         }}
                         onFocus={(e) => {
                           e.target.placeholder = '';
                           e.target.style.borderColor = '#d4af37';
-                          e.target.style.boxShadow = '0 0 0 0.2rem rgba(212, 175, 55, 0.25)';
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                          e.target.style.boxShadow = '0 0 0 4px rgba(212, 175, 55, 0.1)';
                         }}
                         onBlur={(e) => {
                           e.target.placeholder = 'Enter your password';
-                          e.target.style.borderColor = 'rgba(212, 175, 55, 0.3)';
+                          e.target.style.borderColor = 'rgba(212, 175, 55, 0.2)';
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                           e.target.style.boxShadow = 'none';
                         }}
                       />
@@ -407,10 +418,10 @@ export default function HomePage() {
                         type="button"
                         className="btn btn-link position-absolute end-0 top-50 translate-middle-y"
                         onClick={() => setShowPassword(!showPassword)}
-                        style={{ textDecoration: 'none', padding: '0 12px', color: '#d4af37' }}
+                        style={{ textDecoration: 'none', padding: '0 14px', color: '#d4af37', fontSize: '1.1rem' }}
                         suppressHydrationWarning
                       >
-                        <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                        <i className={`bi ${showPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'}`}></i>
                       </button>
                     </div>
                     {!isLogin && passwordStrength.score > 0 && (
@@ -477,48 +488,45 @@ export default function HomePage() {
                     </div>
                   )}
 
-                  <button 
-                    type="submit" 
-                    className="btn w-100 py-3 fw-semibold" 
-                    suppressHydrationWarning
-                    style={{
-                      background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)',
-                      border: 'none',
-                      borderRadius: '10px',
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 15px rgba(212, 175, 55, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 6px 20px rgba(212, 175, 55, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 4px 15px rgba(212, 175, 55, 0.3)';
-                    }}
-                  >
-                    {isLogin ? "Sign In" : "Create Account"}
-                  </button>
+                  <div className="d-flex justify-content-center mt-3">
+                    <button 
+                      type="submit" 
+                      className="btn py-2 fw-semibold submit-btn" 
+                      suppressHydrationWarning
+                      style={{
+                        background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 50%, #d4af37 100%)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: '#1a1a1a',
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 6px 20px rgba(212, 175, 55, 0.4)',
+                        width: '100%',
+                        maxWidth: '280px',
+                        transition: 'all 0.3s ease',
+                        textTransform: 'uppercase',
+                        padding: '12px'
+                      }}
+                    >
+                      <i className={`bi ${isLogin ? 'bi-box-arrow-in-right' : 'bi-person-plus-fill'} me-2`}></i>
+                      {isLogin ? "Sign In" : "Create Account"}
+                    </button>
+                  </div>
                 </form>
 
                 {isLogin && (
-                  <div className="text-center mt-2">
+                  <div className="text-center mt-3">
                     <button
                       type="button"
                       className="btn btn-link p-0"
                       onClick={() => setShowForgotPassword(true)}
                       suppressHydrationWarning
                       style={{
-                        backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
+                        color: '#d4af37',
                         textDecoration: 'none',
                         fontWeight: '500',
-                        fontSize: '14px'
+                        fontSize: '0.9rem'
                       }}
                     >
                       Forgot Password?
@@ -526,7 +534,7 @@ export default function HomePage() {
                   </div>
                 )}
 
-                <div className="text-center mt-3">
+                <div className="text-center mt-2">
                   <button
                     className="btn btn-link p-0"
                     onClick={() => {
@@ -541,12 +549,11 @@ export default function HomePage() {
                     }}
                     suppressHydrationWarning
                     style={{
-                      backgroundImage: 'linear-gradient(90deg, #D4AF37 0%, #F4E5C3 50%, #C9A961 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
+                      color: '#f4e5c3',
                       textDecoration: 'none',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      fontSize: '0.9rem',
+                      opacity: 0.9
                     }}
                   >
                     {isLogin ? "New employee? Create account" : "Already have an account? Sign in"}
@@ -688,6 +695,183 @@ export default function HomePage() {
         @keyframes drawCheck {
           from { stroke-dasharray: 0 20; }
           to { stroke-dasharray: 20 20; }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4), 0 0 0 4px rgba(212, 175, 55, 0.1); }
+          50% { transform: scale(1.05); box-shadow: 0 12px 32px rgba(212, 175, 55, 0.6), 0 0 0 6px rgba(212, 175, 55, 0.2); }
+        }
+        .login-card {
+          animation: slideUp 0.6s ease-out;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .custom-input::placeholder {
+          color: rgba(244, 229, 195, 0.4);
+        }
+        .custom-input {
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .login-card {
+          max-width: 420px;
+          margin: 0 auto;
+        }
+        
+        /* Extra Small Mobile (< 412px) */
+        @media (max-width: 411px) {
+          .login-card {
+            border-radius: 16px !important;
+            background-color: rgba(26, 26, 26, 0.5) !important;
+            max-width: 100% !important;
+          }
+          .login-card .card-body {
+            padding: 1.5rem !important;
+          }
+          .submit-btn {
+            max-width: 100% !important;
+            font-size: 0.9rem !important;
+            padding: 10px !important;
+          }
+          .custom-input {
+            padding: 10px 14px !important;
+            font-size: 0.9rem !important;
+          }
+          .form-label {
+            font-size: 0.85rem !important;
+          }
+        }
+        
+        /* 6.72 inch Display (412px - 575px) - Large phones like Samsung Galaxy S21+, Pixel 6 Pro */
+        @media (min-width: 412px) and (max-width: 575px) {
+          .login-card {
+            border-radius: 18px !important;
+            background-color: rgba(26, 26, 26, 0.48) !important;
+            max-width: 95% !important;
+          }
+          .login-card .card-body {
+            padding: 1.75rem !important;
+          }
+          .submit-btn {
+            max-width: 100% !important;
+            font-size: 0.95rem !important;
+            padding: 11px !important;
+          }
+          .custom-input {
+            padding: 11px 15px !important;
+            font-size: 0.95rem !important;
+          }
+          .form-label {
+            font-size: 0.9rem !important;
+          }
+        }
+        
+        /* Large Mobile & Small Tablets (Samsung Galaxy A51/71, 576px - 767px) */
+        @media (min-width: 576px) and (max-width: 767px) {
+          .login-card {
+            border-radius: 18px !important;
+            background-color: rgba(26, 26, 26, 0.48) !important;
+            max-width: 480px !important;
+          }
+          .login-card .card-body {
+            padding: 1.75rem 2rem !important;
+          }
+          .submit-btn {
+            max-width: 100% !important;
+            font-size: 0.95rem !important;
+            padding: 11px !important;
+          }
+          .custom-input {
+            padding: 11px 15px !important;
+            font-size: 0.95rem !important;
+          }
+          .form-label {
+            font-size: 0.9rem !important;
+          }
+        }
+        
+        /* iPad Mini Portrait & Small Tablets (768px - 820px) */
+        @media (min-width: 768px) and (max-width: 820px) {
+          .login-card {
+            border-radius: 20px !important;
+            background-color: rgba(26, 26, 26, 0.45) !important;
+            max-width: 90% !important;
+          }
+          .login-card .card-body {
+            padding: 2rem 2rem !important;
+          }
+          .submit-btn {
+            max-width: 100% !important;
+            font-size: 1rem !important;
+            padding: 13px !important;
+          }
+          .custom-input {
+            padding: 13px 17px !important;
+            font-size: 1rem !important;
+          }
+          .form-label {
+            font-size: 0.95rem !important;
+          }
+        }
+        
+        /* Larger Tablets (821px - 991px) */
+        @media (min-width: 821px) and (max-width: 991px) {
+          .login-card {
+            border-radius: 20px !important;
+            background-color: rgba(26, 26, 26, 0.45) !important;
+            max-width: 540px !important;
+          }
+          .login-card .card-body {
+            padding: 2rem 2.5rem !important;
+          }
+          .submit-btn {
+            max-width: 100% !important;
+            font-size: 1rem !important;
+            padding: 13px !important;
+          }
+          .custom-input {
+            padding: 13px 17px !important;
+            font-size: 1rem !important;
+          }
+          .form-label {
+            font-size: 0.95rem !important;
+          }
+        }
+        
+        /* Tablet Landscape & Small Desktop */
+        @media (min-width: 992px) and (max-width: 1199px) {
+          .login-card {
+            border-radius: 20px !important;
+            background-color: rgba(26, 26, 26, 0.42) !important;
+            max-width: 450px !important;
+          }
+          .login-card .card-body {
+            padding: 2rem !important;
+          }
+          .submit-btn:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 10px 28px rgba(212, 175, 55, 0.5) !important;
+          }
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 1200px) {
+          .login-card {
+            border-radius: 20px !important;
+            background-color: rgba(26, 26, 26, 0.4) !important;
+            max-width: 420px !important;
+          }
+          .login-card .card-body {
+            padding: 2rem !important;
+          }
+          .submit-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 32px rgba(212, 175, 55, 0.6), 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+          }
+          .submit-btn:active {
+            transform: translateY(-1px) scale(0.98);
+          }
         }
       `}</style>
     </>

@@ -1,6 +1,6 @@
 import connectMongoose from "../../../utilis/connectMongoose";
 
-export const dynamic = "force-dynamic";
+
 import PurchaseInvoice from "../../../../models/PurchaseInvoice";
 import { NextResponse } from "next/server";
 import { requireRole } from "../../../utilis/authMiddleware";

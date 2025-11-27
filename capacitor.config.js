@@ -1,10 +1,9 @@
 const config = {
   appId: 'com.adminpanel.app',
   appName: 'Admin Panel',
-  webDir: ".next",
   server: {
-    url: "https://admin-panel-umber-zeta.vercel.app/",
-    cleartext: true,
+    url: "https://admin-panel-umber-zeta.vercel.app",
+    cleartext: true
   },
   plugins: {
     SplashScreen: {

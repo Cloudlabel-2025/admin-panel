@@ -1,7 +1,7 @@
 // /api/attendance/route.js
 import connectMongoose from "@/app/utilis/connectMongoose";
 
-export const dynamic = "force-dynamic";
+
 import Timecard from "@/models/Timecard";
 import Attendance from "@/models/Attendance";
 import mongoose from "mongoose";

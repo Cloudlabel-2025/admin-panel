@@ -1,6 +1,6 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 
-export const dynamic = "force-dynamic";
+
 import Timecard from "@/models/Timecard";
 import { createEmployeeModel } from "@/models/Employee";
 import { NextResponse } from "next/server";

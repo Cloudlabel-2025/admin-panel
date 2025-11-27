@@ -1,6 +1,5 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
 
-export const dynamic = "force-dynamic";
 import Vendor from "@/models/purchasing/Vendor";
 import { NextResponse } from "next/server";
 

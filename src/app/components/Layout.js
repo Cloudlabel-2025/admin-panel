@@ -24,23 +24,23 @@ export default function Layout({ children }) {
     const empId = localStorage.getItem("employeeId");
     const userId = localStorage.getItem("userId");
     const token = localStorage.getItem("token");
-    
+
     if (!role || !email || !token) {
       router.replace("/");
       return;
     }
-    
+
     // Setup automatic token refresh
     setupTokenRefresh();
-    
+
     setUserRole(role);
     setUserEmail(email);
-    
+
     // Fetch user permissions for RBAC
     if (userId) {
       fetchUserPermissions(userId);
     }
-    
+
     // Fetch user name and profile picture
     if (empId && !empId.startsWith('ADMIN')) {
       fetch(`/api/Employee/${empId}`)
@@ -65,12 +65,12 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!event.target.closest('.dropdown-container') && 
-          !event.target.closest('[data-dropdown="profile"]')) {
+      if (!event.target.closest('.dropdown-container') &&
+        !event.target.closest('[data-dropdown="profile"]')) {
         setShowProfileDropdown(false);
       }
-      if (!event.target.closest('.notification-container') && 
-          !event.target.closest('[data-dropdown="notifications"]')) {
+      if (!event.target.closest('.notification-container') &&
+        !event.target.closest('[data-dropdown="notifications"]')) {
         setShowNotifications(false);
       }
     };
@@ -148,7 +148,7 @@ export default function Layout({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _id: id, isRead: true })
       });
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n._id === id ? { ...n, isRead: true } : n)
       );
     } catch (error) {
@@ -301,29 +301,29 @@ export default function Layout({ children }) {
           }
         }
       `}</style>
-      
+
       <div className="d-flex" style={{ overflowX: "hidden" }}>
         {/* Mobile Overlay */}
         {sidebarCollapsed && (
-          <div 
-            className="position-fixed w-100 h-100 bg-dark bg-opacity-50 d-md-none" 
+          <div
+            className="position-fixed w-100 h-100 bg-dark bg-opacity-50 d-md-none"
             style={{ zIndex: 1040 }}
             onClick={() => setSidebarCollapsed(false)}
           />
         )}
-        
+
         {/* Sidebar */}
-        <div className={`sidebar text-white ${sidebarCollapsed ? 'sidebar-collapsed show' : ''}`} 
-             style={{ 
-               width: sidebarCollapsed ? "80px" : "280px", 
-               minHeight: "100vh",
-               transition: "all 0.3s ease",
-               boxShadow: "4px 0 20px rgba(0,0,0,0.3)",
-               background: "linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)"
-             }}>
-          
+        <div className={`sidebar text-white ${sidebarCollapsed ? 'sidebar-collapsed show' : ''}`}
+          style={{
+            width: sidebarCollapsed ? "80px" : "280px",
+            minHeight: "100vh",
+            transition: "all 0.3s ease",
+            boxShadow: "4px 0 20px rgba(0,0,0,0.3)",
+            background: "linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)"
+          }}>
+
           {/* Header */}
-          <div className="p-3" style={{ 
+          <div className="p-3" style={{
             background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
             borderBottom: "3px solid #d4af37",
             boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
@@ -332,10 +332,10 @@ export default function Layout({ children }) {
               <div className="d-md-none d-block">
                 <h5 className="mb-1" style={{ color: "#d4af37", fontWeight: "700", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
                   <i className="bi bi-shield-fill-check me-2"></i>
-                  {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" : 
-                   (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
-                   userRole === "Intern" ? "Intern Portal" :
-                   "Employee Panel"}
+                  {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" :
+                    (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" :
+                      userRole === "Intern" ? "Intern Portal" :
+                        "Employee Panel"}
                 </h5>
                 <small style={{ color: "#f4e5c3", fontWeight: "500" }}><i className="bi bi-person-badge me-1"></i>Role: {userRole}</small>
               </div>
@@ -343,19 +343,19 @@ export default function Layout({ children }) {
                 <div className="d-none d-md-block">
                   <h5 className="mb-1" style={{ color: "#d4af37", fontWeight: "700", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
                     <i className="bi bi-shield-fill-check me-2"></i>
-                    {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" : 
-                     (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" : 
-                     userRole === "Intern" ? "Intern Portal" :
-                     "Employee Panel"}
+                    {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "developer") ? "Admin Panel" :
+                      (userRole === "Team-Lead" || userRole === "Team-admin") ? "Team Management" :
+                        userRole === "Intern" ? "Intern Portal" :
+                          "Employee Panel"}
                   </h5>
                   <small style={{ color: "#f4e5c3", fontWeight: "500" }}><i className="bi bi-person-badge me-1"></i>Role: {userRole}</small>
                 </div>
               )}
-              <button 
+              <button
                 className="btn btn-sm d-none d-md-block"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                style={{ 
+                style={{
                   background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
                   border: "none",
                   color: "#1a1a1a",
@@ -364,11 +364,11 @@ export default function Layout({ children }) {
               >
                 <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
               </button>
-              <button 
+              <button
                 className="btn btn-sm d-md-none"
                 onClick={() => setSidebarCollapsed(false)}
                 title="Close Menu"
-                style={{ 
+                style={{
                   background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
                   border: "none",
                   color: "#1a1a1a",
@@ -379,7 +379,7 @@ export default function Layout({ children }) {
               </button>
             </div>
           </div>
-          
+
           <div className="accordion accordion-flush" id="sidebarAccordion" style={{ overflowY: "auto", maxHeight: "calc(100vh - 120px)" }}>
             {/* Super Admin & Developer - 3 Division Access */}
             {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "developer") && (
@@ -395,69 +395,69 @@ export default function Layout({ children }) {
                   <div id="superAdminManagementCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
                       {hasPermission('Management', 'Dashboard', 'view') && (
-                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                                onClick={() => navigate("/admin-dashboard")}>
+                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                          onClick={() => navigate("/admin-dashboard")}>
                           <i className="bi bi-house-fill me-2"></i>
                           <span className="nav-text">Dashboard</span>
                         </button>
                       )}
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employees/create-emp")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employees/create-emp")}>
                         <i className="bi bi-person-plus-fill me-2"></i>
                         <span className="nav-text">Add Employee</span>
                       </button>
-                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employees/employees-list")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employees/employees-list")}>
                         <i className="bi bi-people-fill me-2"></i>
                         <span className="nav-text">Employees List</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/terminated-employees")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/terminated-employees")}>
                         <i className="bi bi-person-x-fill me-2"></i>
                         <span className="nav-text">Terminated Employees</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin/monitor")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin/monitor")}>
                         <i className="bi bi-bar-chart-fill me-2"></i>
                         <span className="nav-text">Monitor Employees</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/documents")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/documents")}>
                         <i className="bi bi-file-earmark-text-fill me-2"></i>
                         <span className="nav-text">Documents</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/project")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/project")}>
                         <i className="bi bi-kanban-fill me-2"></i>
                         <span className="nav-text">Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/skills")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/skills")}>
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">Skills</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/performance")}>
                         <i className="bi bi-graph-up-arrow me-2"></i>
                         <span className="nav-text">Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-absence")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">Team Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/calendar")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/calendar")}>
                         <i className="bi bi-calendar3 me-2"></i>
                         <span className="nav-text">Calendar</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/notifications")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/notifications")}>
                         <i className="bi bi-bell-fill me-2"></i>
                         <span className="nav-text">Notifications</span>
                       </button>
@@ -475,39 +475,39 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="superAdminAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/transactions")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/transactions")}>
                         <i className="bi bi-credit-card-fill me-2"></i>
                         <span className="nav-text">Transactions</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/budgeting")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/budgeting")}>
                         <i className="bi bi-pie-chart-fill me-2"></i>
                         <span className="nav-text">Budgeting</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/petty-cash")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/petty-cash")}>
                         <i className="bi bi-cash-stack me-2"></i>
                         <span className="nav-text">Petty Cash</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/inventory")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/inventory")}>
                         <i className="bi bi-box-seam-fill me-2"></i>
                         <span className="nav-text">Inventory</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/payroll")}>
                         <i className="bi bi-wallet2 me-2"></i>
                         <span className="nav-text">Payroll</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/fund-transfer")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/fund-transfer")}>
                         <i className="bi bi-arrow-left-right me-2"></i>
                         <span className="nav-text">Fund Transfer</span>
                       </button>
                       {userRole === "developer" && (
-                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                                onClick={() => navigate("/rbac-control")}>
+                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                          onClick={() => navigate("/rbac-control")}>
                           <i className="bi bi-shield-lock-fill me-2"></i>
                           <span className="nav-text">RBAC Control</span>
                         </button>
@@ -526,18 +526,18 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="superAdminSalesCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/invoices")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/invoices")}>
                         <i className="bi bi-receipt me-2"></i>
                         <span className="nav-text">Invoice Management</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/purchasing/purchase-orders")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/purchasing/purchase-orders")}>
                         <i className="bi bi-clipboard-check-fill me-2"></i>
                         <span className="nav-text">Purchase Orders</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/purchasing/purchase-invoices")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/purchasing/purchase-invoices")}>
                         <i className="bi bi-file-earmark-invoice me-2"></i>
                         <span className="nav-text">Purchase Invoices</span>
                       </button>
@@ -559,60 +559,60 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="adminWorkCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-dashboard")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-dashboard")}>
                         <i className="bi bi-house-fill me-2"></i>
                         <span className="nav-text">Dashboard</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/timecard-entry")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/timecard-entry")}>
                         <i className="bi bi-clock-fill me-2"></i>
                         <span className="nav-text">Timecard Entry</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/daily-task")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/daily-task")}>
                         <i className="bi bi-list-task me-2"></i>
                         <span className="nav-text">Daily Task</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employee-attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employee-attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">My Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-payroll")}>
                         <i className="bi bi-cash-stack me-2"></i>
                         <span className="nav-text">My Payroll</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-skills")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-skills")}>
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">My Skills</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-performance")}>
                         <i className="bi bi-graph-up-arrow me-2"></i>
                         <span className="nav-text">My Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-projects")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-projects")}>
                         <i className="bi bi-folder-fill me-2"></i>
                         <span className="nav-text">My Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/absence")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">My Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employee-calendar")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employee-calendar")}>
                         <i className="bi bi-calendar3 me-2"></i>
                         <span className="nav-text">Employee Calendar</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminManagementCollapse">
@@ -622,45 +622,45 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="adminManagementCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employees/create-emp")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employees/create-emp")}>
                         <i className="bi bi-person-plus-fill me-2"></i>
                         <span className="nav-text">Add Employee</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin/monitor")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin/monitor")}>
                         <i className="bi bi-bar-chart-fill me-2"></i>
                         <span className="nav-text">Monitor Employees</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/project")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/project")}>
                         <i className="bi bi-kanban-fill me-2"></i>
                         <span className="nav-text">Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/performance")}>
                         <i className="bi bi-graph-up me-2"></i>
                         <span className="nav-text">Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-absence")}>
                         <i className="bi bi-calendar-x me-2"></i>
                         <span className="nav-text">Team Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/calendar")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/calendar")}>
                         <i className="bi bi-calendar3 me-2"></i>
                         <span className="nav-text">Calendar</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#adminAccountsCollapse">
@@ -670,28 +670,28 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="adminAccountsCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/accounts")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/accounts")}>
                         <i className="bi bi-bank me-2"></i>
                         <span className="nav-text">Accounts</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/transactions")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/transactions")}>
                         <i className="bi bi-credit-card-fill me-2"></i>
                         <span className="nav-text">Transactions</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/budgeting")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/budgeting")}>
                         <i className="bi bi-pie-chart-fill me-2"></i>
                         <span className="nav-text">Budgeting</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/petty-cash")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/petty-cash")}>
                         <i className="bi bi-cash me-2"></i>
                         <span className="nav-text">Petty Cash</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/accounting/payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/accounting/payroll")}>
                         <i className="bi bi-wallet2 me-2"></i>
                         <span className="nav-text">Payroll</span>
                       </button>
@@ -713,50 +713,50 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="teamLeadWorkCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/timecard-entry")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/timecard-entry")}>
                         <i className="bi bi-clock-fill me-2"></i>
                         <span className="nav-text">Timecard Entry</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/daily-task")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/daily-task")}>
                         <i className="bi bi-list-task me-2"></i>
                         <span className="nav-text">Daily Task</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-projects")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-projects")}>
                         <i className="bi bi-folder-fill me-2"></i>
                         <span className="nav-text">My Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-performance")}>
                         <i className="bi bi-graph-up-arrow me-2"></i>
                         <span className="nav-text">My Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employee-attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employee-attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">My Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-skills")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-skills")}>
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">My Skills</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/absence")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">Employee Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-payroll")}>
                         <i className="bi bi-cash-stack me-2"></i>
                         <span className="nav-text">My Payroll</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadManagementCollapse">
@@ -766,40 +766,40 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="teamLeadManagementCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin/monitor")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin/monitor")}>
                         <i className="bi bi-bar-chart-fill me-2"></i>
                         <span className="nav-text">Monitor Team</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/project")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/project")}>
                         <i className="bi bi-kanban-fill me-2"></i>
                         <span className="nav-text">Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">Team Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/performance")}>
                         <i className="bi bi-graph-up me-2"></i>
                         <span className="nav-text">Team Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-absence")}>
                         <i className="bi bi-calendar-x me-2"></i>
                         <span className="nav-text">Team Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/skills")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/skills")}>
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">Team Skills</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamLeadAccountingCollapse">
@@ -809,8 +809,8 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="teamLeadAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-payroll")}>
                         <i className="bi bi-cash-stack me-2"></i>
                         <span className="nav-text">My Payroll</span>
                       </button>
@@ -832,50 +832,50 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="teamAdminWorkCollapse" className="accordion-collapse collapse show">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/timecard-entry")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/timecard-entry")}>
                         <i className="bi bi-clock-fill me-2"></i>
                         <span className="nav-text">Timecard Entry</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/daily-task")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/daily-task")}>
                         <i className="bi bi-list-task me-2"></i>
                         <span className="nav-text">Daily Task</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-projects")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-projects")}>
                         <i className="bi bi-folder-fill me-2"></i>
                         <span className="nav-text">My Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-performance")}>
                         <i className="bi bi-graph-up-arrow me-2"></i>
                         <span className="nav-text">My Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/employee-attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employee-attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">My Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-skills")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-skills")}>
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">My Skills</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/absence")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">Employee Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-payroll")}>
                         <i className="bi bi-cash-stack me-2"></i>
                         <span className="nav-text">My Payroll</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminManagementCollapse">
@@ -885,45 +885,45 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="teamAdminManagementCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin/monitor")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin/monitor")}>
                         <i className="bi bi-bar-chart-fill me-2"></i>
                         <span className="nav-text">Monitor Team</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/project")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/project")}>
                         <i className="bi bi-kanban-fill me-2"></i>
                         <span className="nav-text">Projects</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/attendance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/attendance")}>
                         <i className="bi bi-calendar-check-fill me-2"></i>
                         <span className="nav-text">Team Attendance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/performance")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/performance")}>
                         <i className="bi bi-graph-up me-2"></i>
                         <span className="nav-text">Team Performance</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-absence")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-absence")}>
                         <i className="bi bi-calendar-x me-2"></i>
                         <span className="nav-text">Team Absence</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/documents")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/documents")}>
                         <i className="bi bi-file-earmark-text-fill me-2"></i>
                         <span className="nav-text">Documents</span>
                       </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/skills")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/skills")}>
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">Team Skills</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="accordion-item bg-dark border-0">
                   <h2 className="accordion-header">
                     <button className="accordion-button bg-dark text-white border-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#teamAdminAccountingCollapse">
@@ -933,8 +933,8 @@ export default function Layout({ children }) {
                   </h2>
                   <div id="teamAdminAccountingCollapse" className="accordion-collapse collapse">
                     <div className="accordion-body bg-dark p-0">
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/my-payroll")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-payroll")}>
                         <i className="bi bi-cash-stack me-2"></i>
                         <span className="nav-text">My Payroll</span>
                       </button>
@@ -955,38 +955,38 @@ export default function Layout({ children }) {
                 </h2>
                 <div id="internWorkCollapse" className="accordion-collapse collapse show">
                   <div className="accordion-body bg-dark p-0">
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/timecard-entry")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/timecard-entry")}>
                       <i className="bi bi-clock-fill me-2"></i>
                       <span className="nav-text">Timecard Entry</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/daily-task")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/daily-task")}>
                       <i className="bi bi-list-task me-2"></i>
                       <span className="nav-text">Daily Task</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-projects")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-projects")}>
                       <i className="bi bi-folder-fill me-2"></i>
                       <span className="nav-text">My Projects</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-performance")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-performance")}>
                       <i className="bi bi-graph-up-arrow me-2"></i>
                       <span className="nav-text">My Performance</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/employee-attendance")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/employee-attendance")}>
                       <i className="bi bi-calendar-check-fill me-2"></i>
                       <span className="nav-text">My Attendance</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-skills")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-skills")}>
                       <i className="bi bi-award-fill me-2"></i>
                       <span className="nav-text">My Skills</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/employee-calendar")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/employee-calendar")}>
                       <i className="bi bi-calendar3 me-2"></i>
                       <span className="nav-text">Employee Calendar</span>
                     </button>
@@ -1007,54 +1007,54 @@ export default function Layout({ children }) {
                 <div id="employeeWorkCollapse" className="accordion-collapse collapse show">
                   <div className="accordion-body bg-dark p-0">
                     {hasPermission('Management', 'Dashboard', 'view') && (
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                              onClick={() => navigate("/admin-dashboard")}>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-dashboard")}>
                         <i className="bi bi-house-fill me-2"></i>
                         <span className="nav-text">Dashboard</span>
                       </button>
                     )}
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/timecard-entry")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/timecard-entry")}>
                       <i className="bi bi-clock-fill me-2"></i>
                       <span className="nav-text">Timecard Entry</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/daily-task")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/daily-task")}>
                       <i className="bi bi-list-task me-2"></i>
                       <span className="nav-text">Daily Task</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-projects")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-projects")}>
                       <i className="bi bi-folder-fill me-2"></i>
                       <span className="nav-text">My Projects</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-performance")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-performance")}>
                       <i className="bi bi-graph-up-arrow me-2"></i>
                       <span className="nav-text">My Performance</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/employee-attendance")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/employee-attendance")}>
                       <i className="bi bi-calendar-check-fill me-2"></i>
                       <span className="nav-text">My Attendance</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/absence")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/absence")}>
                       <i className="bi bi-calendar-x-fill me-2"></i>
                       <span className="nav-text">My Absence</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-payroll")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-payroll")}>
                       <i className="bi bi-cash-stack me-2"></i>
                       <span className="nav-text">My Payroll</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/my-skills")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-skills")}>
                       <i className="bi bi-award-fill me-2"></i>
                       <span className="nav-text">My Skills</span>
                     </button>
-                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2" 
-                            onClick={() => navigate("/employee-calendar")}>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/employee-calendar")}>
                       <i className="bi bi-calendar3 me-2"></i>
                       <span className="nav-text">Employee Calendar</span>
                     </button>
@@ -1068,7 +1068,7 @@ export default function Layout({ children }) {
         {/* Main Content */}
         <div className="flex-grow-1 main-content" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
           {/* Top Navigation */}
-          <nav className="navbar navbar-expand-lg navbar-light px-3" style={{ 
+          <nav className="navbar navbar-expand-lg navbar-light px-3" style={{
             overflowX: "hidden",
             background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
             borderBottom: "3px solid #d4af37",
@@ -1076,11 +1076,11 @@ export default function Layout({ children }) {
           }}>
             <div className="d-flex justify-content-between align-items-center w-100">
               <div className="d-flex align-items-center">
-                <button 
+                <button
                   className="btn d-md-none me-3"
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   title="Toggle Menu"
-                  style={{ 
+                  style={{
                     background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
                     border: "none",
                     color: "#1a1a1a",
@@ -1092,8 +1092,8 @@ export default function Layout({ children }) {
                 {pathname === "/admin-dashboard" ? (
                   <div className="welcome-message">
                     <h5 className="mb-0" style={{ color: "#d4af37", fontWeight: "700", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
-                      <i className="bi bi-house-heart-fill me-2"></i>Welcome {(userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") 
-                        ? `${userRole} ${userName}` 
+                      <i className="bi bi-house-heart-fill me-2"></i>Welcome {(userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin")
+                        ? `${userRole} ${userName}`
                         : userName || userEmail}
                     </h5>
                   </div>
@@ -1113,7 +1113,7 @@ export default function Layout({ children }) {
               <div className="d-flex align-items-center gap-2">
                 {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "team-lead" || userRole === "Team-admin" || userRole === "team-admin" || userRole === "Employee" || userRole === "employee") && (
                   <div className="position-relative notification-container">
-                    <button 
+                    <button
                       className="btn position-relative"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1122,7 +1122,7 @@ export default function Layout({ children }) {
                         if (!showNotifications) fetchNotifications();
                       }}
                       title="Notifications"
-                      style={{ 
+                      style={{
                         background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
                         border: "none",
                         color: "#1a1a1a",
@@ -1140,7 +1140,7 @@ export default function Layout({ children }) {
                   </div>
                 )}
                 <div className="position-relative dropdown-container" id="profile-dropdown-container">
-                  <button 
+                  <button
                     className="btn dropdown-toggle d-flex align-items-center"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1148,7 +1148,7 @@ export default function Layout({ children }) {
                       setShowNotifications(false);
                     }}
                     aria-expanded={showProfileDropdown}
-                    style={{ 
+                    style={{
                       background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
                       border: "none",
                       color: "#1a1a1a",
@@ -1157,11 +1157,11 @@ export default function Layout({ children }) {
                     }}
                   >
                     {profilePicture ? (
-                      <img 
-                        src={profilePicture} 
-                        alt="Profile" 
+                      <img
+                        src={profilePicture}
+                        alt="Profile"
                         className="rounded-circle me-2"
-                        style={{width: '32px', height: '32px', objectFit: 'cover', border: '2px solid #1a1a1a'}}
+                        style={{ width: '32px', height: '32px', objectFit: 'cover', border: '2px solid #1a1a1a' }}
                       />
                     ) : (
                       <i className="bi bi-person-circle me-2"></i>
@@ -1172,21 +1172,21 @@ export default function Layout({ children }) {
               </div>
             </div>
           </nav>
-          
+
           {/* Notifications Portal */}
           {showNotifications && typeof window !== 'undefined' && createPortal(
-            <div 
+            <div
               data-dropdown="notifications"
               className="notification-dropdown"
-              style={{ 
+              style={{
                 position: "fixed",
                 top: "60px",
-                right: "20px", 
+                right: "20px",
                 width: "min(400px, calc(100vw - 40px))",
                 maxHeight: "min(500px, calc(100vh - 100px))",
-                backgroundColor: "white", 
-                border: "2px solid #d4af37", 
-                borderRadius: "12px", 
+                backgroundColor: "white",
+                border: "2px solid #d4af37",
+                borderRadius: "12px",
                 boxShadow: "0 8px 24px rgba(212, 175, 55, 0.3)",
                 zIndex: 99999,
                 overflowY: "auto",
@@ -1194,7 +1194,7 @@ export default function Layout({ children }) {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-3" style={{ 
+              <div className="p-3" style={{
                 background: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
                 borderBottom: "2px solid #d4af37",
                 borderRadius: "10px 10px 0 0",
@@ -1213,10 +1213,10 @@ export default function Layout({ children }) {
                       </span>
                     )}
                   </div>
-                  <button 
+                  <button
                     className="btn btn-sm"
                     onClick={() => setShowNotifications(false)}
-                    style={{ 
+                    style={{
                       background: "linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)",
                       border: "none",
                       color: "#1a1a1a",
@@ -1238,7 +1238,7 @@ export default function Layout({ children }) {
                 <div>
                   {notifications.map((notification) => {
                     const getNotificationIcon = (type) => {
-                      switch(type) {
+                      switch (type) {
                         case 'holiday': return 'bi-calendar-event';
                         case 'payroll': return 'bi-cash-coin';
                         case 'success': return 'bi-check-circle';
@@ -1247,9 +1247,9 @@ export default function Layout({ children }) {
                         default: return 'bi-info-circle';
                       }
                     };
-                    
+
                     const getNotificationColor = (type) => {
-                      switch(type) {
+                      switch (type) {
                         case 'holiday': return '#d4af37';
                         case 'payroll': return '#28a745';
                         case 'success': return '#28a745';
@@ -1258,10 +1258,10 @@ export default function Layout({ children }) {
                         default: return '#17a2b8';
                       }
                     };
-                    
+
                     return (
-                      <div 
-                        key={notification._id} 
+                      <div
+                        key={notification._id}
                         className="notification-item"
                         onClick={() => {
                           if (notification.type === 'payroll') {
@@ -1274,7 +1274,7 @@ export default function Layout({ children }) {
                           setShowNotifications(false);
                           markAsRead(notification._id);
                         }}
-                        style={{ 
+                        style={{
                           padding: "16px",
                           borderBottom: "1px solid #f0f0f0",
                           cursor: "pointer",
@@ -1293,9 +1293,9 @@ export default function Layout({ children }) {
                         }}
                       >
                         <div className="d-flex align-items-start gap-3">
-                          <div 
+                          <div
                             className="d-flex align-items-center justify-content-center flex-shrink-0"
-                            style={{ 
+                            style={{
                               width: "40px",
                               height: "40px",
                               borderRadius: "50%",
@@ -1311,9 +1311,9 @@ export default function Layout({ children }) {
                                 {notification.title}
                               </div>
                               {!notification.isRead && (
-                                <span 
+                                <span
                                   className="badge rounded-pill ms-2 flex-shrink-0"
-                                  style={{ 
+                                  style={{
                                     background: getNotificationColor(notification.type),
                                     fontSize: "9px",
                                     padding: "3px 8px"
@@ -1328,11 +1328,11 @@ export default function Layout({ children }) {
                             </div>
                             <div className="d-flex align-items-center mt-2" style={{ fontSize: "11px", color: "#999" }}>
                               <i className="bi bi-clock me-1"></i>
-                              {new Date(notification.createdAt).toLocaleString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
+                              {new Date(notification.createdAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
                               })}
                             </div>
                           </div>
@@ -1345,109 +1345,109 @@ export default function Layout({ children }) {
             </div>,
             document.body
           )}
-          
+
           {/* Profile Dropdown Portal */}
           {showProfileDropdown && typeof window !== 'undefined' && createPortal(
-            <div 
+            <div
               data-dropdown="profile"
-              style={{ 
+              style={{
                 position: "fixed",
                 top: "60px",
-                right: "20px", 
-                minWidth: "220px", 
-                backgroundColor: "white", 
-                border: "1px solid #dee2e6", 
-                borderRadius: "8px", 
+                right: "20px",
+                minWidth: "220px",
+                backgroundColor: "white",
+                border: "1px solid #dee2e6",
+                borderRadius: "8px",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                 zIndex: 99999,
                 display: "block"
               }}
               onClick={(e) => e.stopPropagation()}
             >
-                      <div style={{ 
-                        padding: "16px", 
-                        borderBottom: "1px solid #e9ecef",
-                        backgroundColor: "#f8f9fa"
-                      }}>
-                        <div style={{ 
-                          fontWeight: "600", 
-                          color: "#212529", 
-                          fontSize: "14px",
-                          marginBottom: "4px"
-                        }}>{userName || userEmail.split('@')[0]}</div>
-                        <div style={{ 
-                          fontSize: "11px", 
-                          color: "#0d6efd",
-                          fontWeight: "500"
-                        }}>{userRole}</div>
-                      </div>
-                      <button 
-                        style={{ 
-                          width: "100%", 
-                          padding: "12px 16px", 
-                          border: "none", 
-                          backgroundColor: "transparent", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "#212529",
-                          fontSize: "14px",
-                          display: "flex",
-                          alignItems: "center",
-                          transition: "background-color 0.2s ease"
-                        }}
-                        onClick={() => {
-                          navigate("/profile");
-                          setShowProfileDropdown(false);
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
-                      >
-                        <span style={{ marginRight: "8px" }}>⚙️</span> Profile Settings
-                      </button>
-                      <button 
-                        style={{ 
-                          width: "100%", 
-                          padding: "12px 16px", 
-                          border: "none", 
-                          backgroundColor: "transparent", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "#212529",
-                          fontSize: "14px",
-                          display: "flex",
-                          alignItems: "center",
-                          transition: "background-color 0.2s ease",
-                          borderTop: "1px solid #e9ecef"
-                        }}
-                        onClick={() => {
-                          navigate("/account-settings");
-                          setShowProfileDropdown(false);
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
-                      >
-                        <span style={{ marginRight: "8px" }}>🔒</span> Account Settings
-                      </button>
-                      <button 
-                        style={{ 
-                          width: "100%", 
-                          padding: "12px 16px", 
-                          border: "none", 
-                          backgroundColor: "transparent", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "#dc3545",
-                          fontSize: "14px",
-                          display: "flex",
-                          alignItems: "center",
-                          transition: "background-color 0.2s ease"
-                        }}
-                        onClick={handleLogout}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
-                      >
-                        <span style={{ marginRight: "8px" }}>🚪</span> Logout
-                      </button>
+              <div style={{
+                padding: "16px",
+                borderBottom: "1px solid #e9ecef",
+                backgroundColor: "#f8f9fa"
+              }}>
+                <div style={{
+                  fontWeight: "600",
+                  color: "#212529",
+                  fontSize: "14px",
+                  marginBottom: "4px"
+                }}>{userName || userEmail.split('@')[0]}</div>
+                <div style={{
+                  fontSize: "11px",
+                  color: "#0d6efd",
+                  fontWeight: "500"
+                }}>{userRole}</div>
+              </div>
+              <button
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  color: "#212529",
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "background-color 0.2s ease"
+                }}
+                onClick={() => {
+                  navigate("/profile");
+                  setShowProfileDropdown(false);
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+              >
+                <i className="bi bi-gear-fill me-2" style={{ color: "#d4af37" }}></i> Profile Settings
+              </button>
+              <button
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  color: "#212529",
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "background-color 0.2s ease",
+                  borderTop: "1px solid #e9ecef"
+                }}
+                onClick={() => {
+                  navigate("/account-settings");
+                  setShowProfileDropdown(false);
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+              >
+                <i className="bi bi-shield-lock-fill me-2" style={{ color: "#d4af37" }}></i> Account Settings
+              </button>
+              <button
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  color: "#dc3545",
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "background-color 0.2s ease"
+                }}
+                onClick={handleLogout}
+                onMouseEnter={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+              >
+                <i className="bi bi-box-arrow-right me-2"></i> Logout
+              </button>
             </div>,
             document.body
           )}

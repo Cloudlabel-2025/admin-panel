@@ -8,37 +8,57 @@ export default function CreateItem() {
   const router = useRouter();
   const [form, setForm] = useState({
     itemName: "",
-    sku: "",
     category: "",
     quantity: "",
     price: "",
     supplier: "",
-    assignedTo: "",
-    status: "Available",
   });
-  const [users, setUsers] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    // Fetch users for "assignedTo"
-    fetch("/api/User")
-      .then((res) => res.json())
-      .then(setUsers)
-      .catch(() => setUsers([]));
-  }, []);
+
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!form.itemName.trim()) newErrors.itemName = 'Item name is required';
+    if (form.itemName.length > 100) newErrors.itemName = 'Item name must be less than 100 characters';
+    if (!form.category) newErrors.category = 'Category is required';
+    if (!form.quantity || form.quantity < 0) newErrors.quantity = 'Valid quantity is required';
+    if (!form.price || form.price <= 0) newErrors.price = 'Valid price is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      setSuccessMessage('Please fix the errors in the form');
+      setShowSuccess(true);
+      return;
+    }
+    
+    setLoading(true);
     try {
       const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          quantity: parseInt(form.quantity),
+          price: parseFloat(form.price)
+        }),
       });
       
       if (response.ok) {
-        router.push("/inventory");
+        const result = await response.json();
+        setSuccessMessage(`Successfully created ${result.count} items with unique asset IDs!`);
+        setShowSuccess(true);
+        setTimeout(() => router.push("/inventory"), 1500);
       } else {
         const error = await response.json();
         setSuccessMessage(`Error: ${error.details || error.error}`);
@@ -47,6 +67,8 @@ export default function CreateItem() {
     } catch (error) {
       setSuccessMessage('Failed to create item. Please try again.');
       setShowSuccess(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,19 +82,19 @@ export default function CreateItem() {
       )}
       <div className="container-fluid px-4">
         {/* Header */}
-        <div className="row mb-4">
-          <div className="col-12">
-            <div className="bg-white rounded-3 shadow-sm p-4">
-              <div className="d-flex align-items-center">
-                <div className="me-3">
-                  <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '50px', height: '50px'}}>
-                    <span className="text-white fs-4">➕</span>
-                  </div>
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
+          <div className="card-body p-4">
+            <div className="d-flex align-items-center">
+              <div className="me-3">
+                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '60px', height: '60px', background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)'}}>
+                  <i className="bi bi-plus-circle-fill" style={{fontSize: '28px', color: '#1a1a1a'}}></i>
                 </div>
-                <div>
-                  <h2 className="text-primary mb-1">Add New Inventory Item</h2>
-                  <p className="text-muted mb-0">Create a new asset entry in your inventory system</p>
-                </div>
+              </div>
+              <div>
+                <h2 className="mb-1" style={{ color: '#d4af37', textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+                  <i className="bi bi-box-seam me-2"></i>Add New Inventory Item
+                </h2>
+                <small style={{ color: '#f4e5c3' }}>Create a new asset entry in your inventory system</small>
               </div>
             </div>
           </div>
@@ -81,67 +103,90 @@ export default function CreateItem() {
         {/* Form */}
         <div className="row">
           <div className="col-12">
-            <div className="bg-white rounded-3 shadow-sm p-4">
+            <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+              <div className="card-body p-4">
               <form onSubmit={handleSubmit}>
                 {/* Basic Information */}
                 <div className="mb-4">
-                  <h5 className="text-primary mb-3 border-bottom pb-2">📝 Basic Information</h5>
+                  <h5 className="mb-3 pb-2" style={{ color: '#d4af37', borderBottom: '2px solid #d4af37' }}>
+                    <i className="bi bi-info-circle-fill me-2"></i>Basic Information
+                  </h5>
                   <div className="row">
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-12 mb-3">
                       <label className="form-label fw-bold">Item Name *</label>
                       <input
                         type="text"
-                        className="form-control form-control-lg"
-                        placeholder="Enter item name"
+                        className={`form-control form-control-lg ${errors.itemName ? 'is-invalid' : ''}`}
+                        placeholder="Enter item name (e.g., Dell Latitude 5520, HP LaserJet Pro)"
                         required
                         value={form.itemName}
-                        onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+                        onChange={(e) => {
+                          setForm({ ...form, itemName: e.target.value });
+                          if (errors.itemName) setErrors({...errors, itemName: ''});
+                        }}
                       />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label fw-bold">Stock Keeping Unit (SKU) *</label>
-                      <input
-                        type="text"
-                        className="form-control form-control-lg"
-                        placeholder="Enter SKU code"
-                        required
-                        value={form.sku}
-                        onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                      />
+                      {errors.itemName && <div className="invalid-feedback">{errors.itemName}</div>}
+                      <small className="text-muted">Unique asset IDs will be auto-generated for each quantity</small>
                     </div>
                   </div>
                 </div>
 
                 {/* Category & Stock */}
                 <div className="mb-4">
-                  <h5 className="text-primary mb-3 border-bottom pb-2">📦 Category & Stock</h5>
+                  <h5 className="mb-3 pb-2" style={{ color: '#d4af37', borderBottom: '2px solid #d4af37' }}>
+                    <i className="bi bi-box-seam-fill me-2"></i>Category & Stock
+                  </h5>
                   <div className="row">
                     <div className="col-md-4 mb-3">
                       <label className="form-label fw-bold">Category *</label>
                       <select
-                        className="form-select form-select-lg"
+                        className={`form-select form-select-lg ${errors.category ? 'is-invalid' : ''}`}
                         value={form.category}
-                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        onChange={(e) => {
+                          setForm({ ...form, category: e.target.value });
+                          if (errors.category) setErrors({...errors, category: ''});
+                        }}
                         required
                       >
                         <option value="">Choose category...</option>
-                        <option value="hardware">💻 Hardware</option>
-                        <option value="software">💿 Software</option>
-                        <option value="cleaning equipments">🧹 Cleaning Equipment</option>
-                        <option value="furniture">🪑 Furniture</option>
+                        <option value="Laptop">Laptop</option>
+                        <option value="Desktop">Desktop</option>
+                        <option value="Monitor">Monitor</option>
+                        <option value="Keyboard">Keyboard</option>
+                        <option value="Mouse">Mouse</option>
+                        <option value="Headset">Headset</option>
+                        <option value="Webcam">Webcam</option>
+                        <option value="Printer">Printer</option>
+                        <option value="Scanner">Scanner</option>
+                        <option value="Router">Router</option>
+                        <option value="Switch">Switch</option>
+                        <option value="Server">Server</option>
+                        <option value="UPS">UPS</option>
+                        <option value="Projector">Projector</option>
+                        <option value="Chair">Chair</option>
+                        <option value="Desk">Desk</option>
+                        <option value="Cabinet">Cabinet</option>
+                        <option value="Software License">Software License</option>
+                        <option value="Mobile Device">Mobile Device</option>
+                        <option value="Tablet">Tablet</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
                     <div className="col-md-4 mb-3">
                       <label className="form-label fw-bold">Quantity *</label>
                       <input
                         type="number"
-                        className="form-control form-control-lg"
+                        className={`form-control form-control-lg ${errors.quantity ? 'is-invalid' : ''}`}
                         placeholder="0"
                         min="0"
                         required
                         value={form.quantity}
-                        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                        onChange={(e) => {
+                          setForm({ ...form, quantity: e.target.value });
+                          if (errors.quantity) setErrors({...errors, quantity: ''});
+                        }}
                       />
+                      {errors.quantity && <div className="invalid-feedback">{errors.quantity}</div>}
                     </div>
                     <div className="col-md-4 mb-3">
                       <label className="form-label fw-bold">Price (₹) *</label>
@@ -149,24 +194,30 @@ export default function CreateItem() {
                         <span className="input-group-text">₹</span>
                         <input
                           type="number"
-                          className="form-control"
+                          className={`form-control ${errors.price ? 'is-invalid' : ''}`}
                           placeholder="0.00"
                           min="0"
                           step="0.01"
                           required
                           value={form.price}
-                          onChange={(e) => setForm({ ...form, price: e.target.value })}
+                          onChange={(e) => {
+                            setForm({ ...form, price: e.target.value });
+                            if (errors.price) setErrors({...errors, price: ''});
+                          }}
                         />
                       </div>
+                      {errors.price && <div className="invalid-feedback d-block">{errors.price}</div>}
                     </div>
                   </div>
                 </div>
 
-                {/* Supplier & Status */}
+                {/* Supplier */}
                 <div className="mb-4">
-                  <h5 className="text-primary mb-3 border-bottom pb-2">🏢 Supplier & Status</h5>
+                  <h5 className="mb-3 pb-2" style={{ color: '#d4af37', borderBottom: '2px solid #d4af37' }}>
+                    <i className="bi bi-building-fill me-2"></i>Supplier
+                  </h5>
                   <div className="row">
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-12 mb-3">
                       <label className="form-label fw-bold">Supplier</label>
                       <input
                         type="text"
@@ -176,57 +227,34 @@ export default function CreateItem() {
                         onChange={(e) => setForm({ ...form, supplier: e.target.value })}
                       />
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label fw-bold">Status</label>
-                      <select
-                        className="form-select form-select-lg"
-                        value={form.status}
-                        onChange={(e) => setForm({ ...form, status: e.target.value })}
-                      >
-                        <option value="Available">✅ Available</option>
-                        <option value="Assigned">📄 Assigned</option>
-                        <option value="Out of Stock">❌ Out of Stock</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Assignment */}
-                <div className="mb-4">
-                  <h5 className="text-primary mb-3 border-bottom pb-2">👥 Assignment</h5>
-                  <div className="row">
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label fw-bold">Assign To</label>
-                      <select
-                        className="form-select form-select-lg"
-                        value={form.assignedTo}
-                        onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
-                      >
-                        <option value="">Select user (optional)...</option>
-                        {users.map((user) => (
-                          <option key={user._id} value={user._id}>
-                            {user.name} ({user.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="d-flex gap-3 pt-3 border-top">
-                  <button type="submit" className="btn btn-primary btn-lg px-4">
-                    <i className="me-2">✅</i> Save Item
+                <div className="d-flex gap-3 pt-3" style={{ borderTop: '2px solid #d4af37' }}>
+                  <button type="submit" className="btn btn-lg px-4" disabled={loading} style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', border: 'none', color: '#1a1a1a', fontWeight: '600', opacity: loading ? 0.7 : 1 }}>
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle-fill me-2"></i>Save Item
+                      </>
+                    )}
                   </button>
                   <button 
                     type="button" 
-                    className="btn btn-outline-secondary btn-lg px-4"
+                    className="btn btn-lg px-4"
                     onClick={() => router.push('/inventory')}
+                    style={{ border: '2px solid #d4af37', color: '#d4af37', background: 'transparent', fontWeight: '600' }}
                   >
-                    <i className="me-2">❌</i> Cancel
+                    <i className="bi bi-x-circle-fill me-2"></i>Cancel
                   </button>
                 </div>
               </form>
+              </div>
             </div>
           </div>
         </div>
