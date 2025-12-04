@@ -10,7 +10,10 @@ async function connectMongoose() {
         if (mongoose.connection.readyState === 1) {
             return;
         }
-        await mongoose.connect(MONGODB_URI);
+        await mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 30000,
+            socketTimeoutMS: 45000,
+        });
         console.log("MongoDB is Connected");
     }
     catch (err){

@@ -24,7 +24,9 @@ export default function CreateItem() {
     const newErrors = {};
     
     if (!form.itemName.trim()) newErrors.itemName = 'Item name is required';
-    if (form.itemName.length > 100) newErrors.itemName = 'Item name must be less than 100 characters';
+    else if (form.itemName.length > 15) newErrors.itemName = 'Item name must be max 15 characters';
+    else if ((form.itemName.match(/\d/g) || []).length > 6) newErrors.itemName = 'Max 6 numbers allowed';
+    else if ((form.itemName.match(/[^a-zA-Z0-9\s]/g) || []).length > 3) newErrors.itemName = 'Max 3 special characters allowed';
     if (!form.category) newErrors.category = 'Category is required';
     if (!form.quantity || form.quantity < 0) newErrors.quantity = 'Valid quantity is required';
     if (!form.price || form.price <= 0) newErrors.price = 'Valid price is required';

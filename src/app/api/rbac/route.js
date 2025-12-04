@@ -18,13 +18,14 @@ export async function GET(req) {
     const userId = searchParams.get('userId');
     
     if (userId) {
-      const userPermission = await UserPermission.findOne({ userId });
+      const userPermission = await UserPermission.findOne({ userId }).maxTimeMS(5000);
       return NextResponse.json(userPermission?.permissions || {});
     }
     
-    const allPermissions = await UserPermission.find({});
+    const allPermissions = await UserPermission.find({}).maxTimeMS(5000);
     return NextResponse.json(allPermissions);
   } catch (error) {
+    console.error('RBAC API Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

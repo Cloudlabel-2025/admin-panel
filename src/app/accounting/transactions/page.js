@@ -47,12 +47,20 @@ export default function TransactionsPage() {
       const response = await fetch("/api/transactions");
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.error(`API error: ${response.status}`);
+        setTransactions([]);
+        setStats({ totalCredit: 0, totalDebit: 0, balance: 0, totalTransactions: 0 });
+        setLoading(false);
+        return;
       }
       
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Response is not JSON");
+        console.error("Response is not JSON");
+        setTransactions([]);
+        setStats({ totalCredit: 0, totalDebit: 0, balance: 0, totalTransactions: 0 });
+        setLoading(false);
+        return;
       }
       
       const data = await response.json();
