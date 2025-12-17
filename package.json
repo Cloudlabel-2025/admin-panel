@@ -23,7 +23,7 @@
     "jspdf-autotable": "^5.0.2",
     "libphonenumber-js": "^1.12.24",
     "mongoose": "^8.18.0",
-    "next": "15.5.2",
+    "next": "15.5.3",
     "path": "^0.12.7",
     "pdfkit": "^0.17.2",
     "react": "19.1.0",
@@ -34,6 +34,6 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "15.5.2"
+    "eslint-config-next": "15.5.3"
   }
 }
