@@ -461,6 +461,13 @@ export default function Layout({ children }) {
                         <i className="bi bi-bell-fill me-2"></i>
                         <span className="nav-text">Notifications</span>
                       </button>
+                      {userRole === "super-admin" || userRole === "Super-admin" ? (
+                        <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                          onClick={() => navigate("/settings")}>
+                          <i className="bi bi-gear-fill me-2"></i>
+                          <span className="nav-text">Settings</span>
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -608,6 +615,11 @@ export default function Layout({ children }) {
                         onClick={() => navigate("/employee-calendar")}>
                         <i className="bi bi-calendar3 me-2"></i>
                         <span className="nav-text">Employee Calendar</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-metrics")}>
+                        <i className="bi bi-graph-up me-2"></i>
+                        <span className="nav-text">My Metrics</span>
                       </button>
                     </div>
                   </div>
@@ -990,6 +1002,11 @@ export default function Layout({ children }) {
                       <i className="bi bi-calendar3 me-2"></i>
                       <span className="nav-text">Employee Calendar</span>
                     </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-metrics")}>
+                      <i className="bi bi-graph-up me-2"></i>
+                      <span className="nav-text">My Metrics</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1057,6 +1074,11 @@ export default function Layout({ children }) {
                       onClick={() => navigate("/employee-calendar")}>
                       <i className="bi bi-calendar3 me-2"></i>
                       <span className="nav-text">Employee Calendar</span>
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-metrics")}>
+                      <i className="bi bi-graph-up me-2"></i>
+                      <span className="nav-text">My Metrics</span>
                     </button>
                   </div>
                 </div>

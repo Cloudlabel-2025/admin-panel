@@ -1,61 +1,111 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
 import Layout from "../components/Layout";
 import SuccessMessage from "../components/SuccessMessage";
 
+const MAX_BREAKS = 1;
+const BREAK_DURATION = 30;
+const LUNCH_DURATION = 60;
+const REQUIRED_WORK_HOURS = 8;
+const GRACE_TIME = 60;
 
 export default function TimecardPage() {
   const router = useRouter();
   const [employeeId, setEmployeeId] = useState("");
   const [employeeData, setEmployeeData] = useState(null);
-  const [timecards, setTimecards] = useState([]);
   const [current, setCurrent] = useState(null);
-
-  const [stats, setStats] = useState({
-    totalDays: 0,
-    totalHours: 0,
-    avgHours: 0,
-    presentDays: 0,
-    absentDays: 0,
-    permissionDays: 0,
-    overtimeHours: 0
-  });
-  const [isLunchActive, setIsLunchActive] = useState(false);
-  const [lunchDuration, setLunchDuration] = useState(0);
-  const [permission, setPermission] = useState(0);
-  const [reason, setReason] = useState("");
-  const [permissionLocked, setPermissionLocked] = useState(false);
   const [breaks, setBreaks] = useState([]);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [breakReason, setBreakReason] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [lateLogin, setLateLogin] = useState(false);
+  const [requiredLoginTime, setRequiredLoginTime] = useState("10:00");
+  const [userRole, setUserRole] = useState("");
+  const [newLoginTime, setNewLoginTime] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const hasCreatedTimecard = useRef(false);
 
-  // Helpers
-  const getTimeString = () =>
-    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const getTimeString = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const getDateString = () => new Date().toISOString().split("T")[0];
-  
-  // Convert time string to minutes for calculation
-  const timeToMinutes = (timeStr) => {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(":").map(Number);
+
+  const timeToMinutes = (time) => {
+    const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
   };
-  
-  // Convert minutes to HH:MM format
+
   const minutesToTime = (minutes) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    return `${h}h ${m}m`;
   };
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const d = new Date(dateStr);
-    const dayName = d.toLocaleDateString("en-GB", { weekday: "short" });
-    return d.toLocaleDateString("en-GB") + ` (${dayName})`;
+
+  const calculateWorkMinutes = () => {
+    if (!current?.logIn || !current?.logOut) return 0;
+    
+    let total = timeToMinutes(current.logOut) - timeToMinutes(current.logIn);
+    
+    if (current.lunchOut && current.lunchIn) {
+      total -= (timeToMinutes(current.lunchIn) - timeToMinutes(current.lunchOut));
+    }
+    
+    return Math.max(0, total);
+  };
+
+  const fetchRequiredLoginTime = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/settings?key=REQUIRED_LOGIN_TIME', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRequiredLoginTime(data.value || "10:00");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const updateLoginTime = async () => {
+    if (!newLoginTime) {
+      setSuccessMessage("Please enter a valid time");
+      setShowSuccess(true);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          key: 'REQUIRED_LOGIN_TIME',
+          value: newLoginTime,
+          updatedBy: employeeId,
+          role: userRole
+        })
+      });
+
+      if (res.ok) {
+        setRequiredLoginTime(newLoginTime);
+        setSuccessMessage(`Login time updated to ${newLoginTime} for all employees`);
+        setShowSuccess(true);
+        setShowSettings(false);
+        setNewLoginTime("");
+      } else {
+        const error = await res.json();
+        setSuccessMessage(error.error || "Update failed");
+        setShowSuccess(true);
+      }
+    } catch (err) {
+      setSuccessMessage("Error updating login time");
+      setShowSuccess(true);
+    }
   };
 
   useEffect(() => {
@@ -65,7 +115,14 @@ export default function TimecardPage() {
       router.push("/");
       return;
     }
+    const roleLower = role.toLowerCase();
+    if (roleLower === 'super-admin' || roleLower === 'developer') {
+      router.push('/admin-dashboard');
+      return;
+    }
     setEmployeeId(empId);
+    setUserRole(role);
+    fetchRequiredLoginTime();
     if (!empId.startsWith('ADMIN')) {
       fetchEmployeeData(empId);
     }
@@ -86,7 +143,6 @@ export default function TimecardPage() {
     }
   };
 
-  // Fetch all records
   const fetchTimecards = async () => {
     if (!employeeId) return;
     const token = localStorage.getItem('token');
@@ -95,51 +151,19 @@ export default function TimecardPage() {
     });
     if (!res.ok) return;
     const data = await res.json();
-    setTimecards(data);
-    calculateStats(data);
 
     const today = data.find((t) => t.date?.startsWith(getDateString()));
     if (today) {
       setCurrent(today);
-      setIsLunchActive(today.lunchOut && !today.lunchIn);
-      setPermission(Number(today.permission) || 0);
-      setReason(today.reason || "");
-      if (today.permission && today.reason) {
-        setPermissionLocked(true);
-      }
       setBreaks(today.breaks || []);
       const ongoingBreak = (today.breaks || []).find(b => b.breakOut && !b.breakIn);
       setIsOnBreak(!!ongoingBreak);
-      updateLunchDuration(today);
-    } else {
-      // Check for previous day's incomplete timecard and auto-logout
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
-      
-      const incompleteTimecard = data.find((t) => 
-        t.date?.startsWith(yesterdayStr) && t.logIn && !t.logOut
-      );
-      
-      if (incompleteTimecard) {
-        // Auto-logout previous day's timecard at end of that day (23:59)
-        const token = localStorage.getItem('token');
-        await fetch("/api/timecard", {
-          method: "PUT",
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            _id: incompleteTimecard._id, 
-            logOut: "23:59",
-            logoutDate: yesterdayStr
-          }),
-        });
-      }
-      
-      // Auto-create entry with login time when employee accesses the page
-      const newEntry = { employeeId, date: getDateString(), logIn: getTimeString() };
+      setLateLogin(today.lateLogin || false);
+      hasCreatedTimecard.current = true;
+    } else if (!hasCreatedTimecard.current) {
+      hasCreatedTimecard.current = true;
+      const loginTime = getTimeString();
+      const newEntry = { employeeId, date: getDateString(), logIn: loginTime, userRole };
       const token = localStorage.getItem('token');
       const res2 = await fetch("/api/timecard", {
         method: "POST",
@@ -152,79 +176,21 @@ export default function TimecardPage() {
       const data2 = await res2.json();
       if (data2.timecard) {
         setCurrent(data2.timecard);
-        // Refresh timecards to show updated data
-        fetchTimecards();
-      }
-    }
-  };
-
-  const calculateStats = (data) => {
-    const totalDays = data.length;
-    let totalMinutes = 0;
-    let presentDays = 0;
-    let absentDays = 0;
-    let permissionDays = 0;
-    let overtimeMinutes = 0;
-
-    data.forEach(t => {
-      const hours = calcTotalHours(t);
-      
-      if (hours !== "-") {
-        const [h, m] = hours.split(":").map(Number);
-        const minutes = h * 60 + m;
-        totalMinutes += minutes;
-        
-        // Calculate attendance status based on actual hours worked
-        if (h >= 8) {
-          presentDays++;
-        } else if (h >= 4) {
-          presentDays++; // Half day counts as present
-        } else {
-          absentDays++;
+        setLateLogin(data2.timecard.lateLogin || false);
+        if (data2.timecard.lateLogin) {
+          setSuccessMessage(`Late login! Required: ${requiredLoginTime}. Admins notified.`);
+          setShowSuccess(true);
         }
-        
-        // Calculate overtime
-        if (h > 8) overtimeMinutes += minutes - 480; // 480 = 8 hours
-      } else {
-        absentDays++;
       }
-    });
-
-    setStats({
-      totalDays,
-      totalHours: (totalMinutes / 60).toFixed(1),
-      avgHours: totalDays > 0 ? (totalMinutes / 60 / totalDays).toFixed(1) : 0,
-      presentDays,
-      absentDays,
-      overtimeHours: (overtimeMinutes / 60).toFixed(1)
-    });
-  };
-
-  const updateLunchDuration = (timecard) => {
-    if (timecard?.lunchOut && timecard?.lunchIn) {
-      const [loH, loM] = timecard.lunchOut.split(":").map(Number);
-      const [liH, liM] = timecard.lunchIn.split(":").map(Number);
-      const duration = (liH * 60 + liM) - (loH * 60 + loM);
-      setLunchDuration(Math.max(0, duration));
-    } else if (timecard?.lunchOut && !timecard?.lunchIn) {
-      // Calculate ongoing lunch duration
-      const [loH, loM] = timecard.lunchOut.split(":").map(Number);
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const lunchStart = loH * 60 + loM;
-      setLunchDuration(Math.max(0, currentMinutes - lunchStart));
-    } else {
-      setLunchDuration(0);
     }
   };
 
   useEffect(() => {
-    if (employeeId) {
+    if (employeeId && requiredLoginTime) {
       fetchTimecards();
     }
-  }, [employeeId]);
+  }, [employeeId, requiredLoginTime]);
 
-  // Update record
   const updateTimecard = async (updates) => {
     if (!current?._id) return;
     const token = localStorage.getItem('token');
@@ -236,43 +202,53 @@ export default function TimecardPage() {
       },
       body: JSON.stringify({ _id: current._id, ...updates }),
     });
-    if (!res.ok) return;
+    
+    if (!res.ok) {
+      const error = await res.json();
+      setSuccessMessage(error.details || error.error || "Update failed");
+      setShowSuccess(true);
+      return false;
+    }
+    
     const data = await res.json();
     if (data.timecard) {
       setCurrent(data.timecard);
-      setTimecards((prev) =>
-        prev.map((t) => (t._id === data.timecard._id ? data.timecard : t))
-      );
+      setBreaks(data.timecard.breaks || []);
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogOut = async () => {
+    const workMin = calculateWorkMinutes();
+    const requiredMin = REQUIRED_WORK_HOURS * 60;
+    
+    if (workMin < requiredMin) {
+      setSuccessMessage(`Cannot logout: Need ${minutesToTime(requiredMin - workMin)} more work time`);
+      setShowSuccess(true);
+      return;
+    }
+    
+    const success = await updateTimecard({ logOut: getTimeString() });
+    if (success) {
+      setSuccessMessage("Logged out successfully");
+      setShowSuccess(true);
     }
   };
 
-  // Actions
-  const handleLogOut = () => {
-    // Rule 5: Logout finalizes the record - no more changes after this
-    // Store logout date along with logout time for cross-date tracking
-    const logoutData = { 
-      logOut: getTimeString(),
-      logoutDate: getDateString() // Track logout date separately
-    };
-    updateTimecard(logoutData);
-  };
-  
   const handleLunchOut = () => {
-    // Rule 5: No lunch actions after logout
     if (current?.logOut) {
-      setSuccessMessage("Cannot take lunch break after logout");
+      setSuccessMessage("Cannot take lunch after logout");
       setShowSuccess(true);
       return;
     }
     
     if (!current?.lunchOut) {
       updateTimecard({ lunchOut: getTimeString() });
-      setIsLunchActive(true);
     }
   };
-  
+
   const handleLunchIn = () => {
-    // Rule 5: No lunch actions after logout
     if (current?.logOut) {
       setSuccessMessage("Cannot return from lunch after logout");
       setShowSuccess(true);
@@ -280,33 +256,13 @@ export default function TimecardPage() {
     }
     
     if (current?.lunchOut && !current?.lunchIn) {
+      const duration = timeToMinutes(getTimeString()) - timeToMinutes(current.lunchOut);
+      if (duration > LUNCH_DURATION) {
+        setSuccessMessage(`Lunch exceeded ${LUNCH_DURATION} minutes`);
+        setShowSuccess(true);
+      }
       updateTimecard({ lunchIn: getTimeString() });
-      setIsLunchActive(false);
     }
-  };
-  
-
-
-
-
-  const handleSavePermission = () => {
-    if (current?.logOut) {
-      setSuccessMessage("Cannot add permission after logout");
-      setShowSuccess(true);
-      return;
-    }
-    if (permission > 2) {
-      setSuccessMessage("Permission cannot exceed 2 hours");
-      setShowSuccess(true);
-      return;
-    }
-    if (!reason.trim()) {
-      setSuccessMessage("Please provide a reason for permission");
-      setShowSuccess(true);
-      return;
-    }
-    updateTimecard({ permission, reason });
-    setPermissionLocked(true);
   };
 
   const handleBreakOut = () => {
@@ -320,21 +276,18 @@ export default function TimecardPage() {
       setShowSuccess(true);
       return;
     }
-    if (breaks.length >= 3) {
-      setSuccessMessage("Maximum 3 breaks allowed per day");
+    if (breaks.length >= MAX_BREAKS) {
+      setSuccessMessage(`Maximum ${MAX_BREAKS} breaks allowed`);
       setShowSuccess(true);
       return;
     }
     if (!breakReason.trim()) {
-      setSuccessMessage("Please provide a reason for break");
+      setSuccessMessage("Break reason required");
       setShowSuccess(true);
       return;
     }
     
-    const newBreak = {
-      breakOut: getTimeString(),
-      reason: breakReason
-    };
+    const newBreak = { breakOut: getTimeString(), reason: breakReason };
     const updatedBreaks = [...breaks, newBreak];
     setBreaks(updatedBreaks);
     setIsOnBreak(true);
@@ -349,7 +302,7 @@ export default function TimecardPage() {
       return;
     }
     if (!isOnBreak) {
-      setSuccessMessage("Not currently on break");
+      setSuccessMessage("Not on break");
       setShowSuccess(true);
       return;
     }
@@ -359,126 +312,30 @@ export default function TimecardPage() {
         ? { ...b, breakIn: getTimeString() }
         : b
     );
+    
+    const lastBreak = updatedBreaks[updatedBreaks.length - 1];
+    if (lastBreak?.breakIn && lastBreak?.breakOut) {
+      const duration = timeToMinutes(lastBreak.breakIn) - timeToMinutes(lastBreak.breakOut);
+      
+      if (duration > BREAK_DURATION) {
+        setSuccessMessage(`Break exceeded ${BREAK_DURATION} minutes`);
+        setShowSuccess(true);
+      }
+    }
+    
     setBreaks(updatedBreaks);
     setIsOnBreak(false);
     updateTimecard({ breaks: updatedBreaks });
-  };
+  }; 
 
-  // Enhanced hours calculation with system date-wise calculation
-  const calcTotalHours = (t) => {
-    // Rule 1: Login Time = Entry Time (automatically recorded)
-    // Rule 5: Only count work between login and logout
-    if (!t.logIn || !t.logOut) return "-";
-    
-    try {
-      let loginMinutes = timeToMinutes(t.logIn);
-      let logoutMinutes = timeToMinutes(t.logOut);
-      
-      // Check if logout happened on a different date
-      const loginDate = new Date(t.date);
-      const logoutDate = t.logoutDate ? new Date(t.logoutDate) : loginDate;
-      
-      // Calculate date difference in days
-      const daysDiff = Math.floor((logoutDate - loginDate) / (1000 * 60 * 60 * 24));
-      
-      // If logout is on next day, add 24 hours per day difference
-      if (daysDiff > 0) {
-        logoutMinutes += daysDiff * 24 * 60;
-      }
-      // If logout time is less than login time on same date, add 24 hours
-      else if (daysDiff === 0 && logoutMinutes < loginMinutes) {
-        logoutMinutes += 24 * 60;
-      }
-      
-      let totalWorked = logoutMinutes - loginMinutes;
-      
-      // Rule 2: Lunch Out/In Deduction - only if both values exist
-      if (t.lunchOut && t.lunchIn) {
-        let lunchOutMinutes = timeToMinutes(t.lunchOut);
-        let lunchInMinutes = timeToMinutes(t.lunchIn);
-        
-        // Handle lunch break spanning to next day
-        if (lunchInMinutes < lunchOutMinutes) {
-          lunchInMinutes += 24 * 60;
-        }
-        
-        const lunchDuration = lunchInMinutes - lunchOutMinutes;
-        if (lunchDuration > 0) {
-          totalWorked -= lunchDuration;
-        }
-      }
-      
-
-      
-      // Permission deduction (max 2 hours)
-      if (t.permission && !isNaN(t.permission)) {
-        const permissionMinutes = Math.min(Number(t.permission) * 60, 120); // Max 2 hours
-        totalWorked -= permissionMinutes;
-      }
-      
-      // Ensure non-negative result
-      totalWorked = Math.max(0, totalWorked);
-      
-      return minutesToTime(totalWorked);
-    } catch (error) {
-      console.error('Error calculating hours:', error);
-      return "-";
-    }
-  };
-
-  // Rule 4: Status Classification based on total working hours
-  const getWorkStatus = (t) => {
-    const hours = calcTotalHours(t);
-    if (hours === "-") return { status: "Incomplete", color: "secondary" };
-    
-    const [h, m] = hours.split(":").map(Number);
-    const totalHours = h + (m / 60);
-    
-    // Rule 4: Status based on working hours
-    if (totalHours >= 8) return { status: "Full Day", color: "success" };
-    if (totalHours >= 4) return { status: "Half Day", color: "warning" };
-    return { status: "Absent", color: "danger" }; // < 4 hrs = Absent
-  };
-
-  const formatDuration = (minutes) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${h}h ${m}m`;
-  };
-
-  // Live time tracking
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (current?.lunchOut && !current?.lunchIn) {
-        updateLunchDuration(current);
-      }
-    }, 60000); // Update every minute
-    
-    return () => clearInterval(interval);
-  }, [current]);
-
-  // Export Excel
-  const exportReport = () => {
-    if (!timecards.length) return;
-    const wsData = timecards.map((t) => ({
-      Date: formatDate(t.date),
-      LogIn: t.logIn || "-",
-      LogOut: t.logOut || "-",
-      LunchOut: t.lunchOut || "-",
-      LunchIn: t.lunchIn || "-",
-      Permission: t.permission ? `${t.permission} hr` : "-",
-      Reason: t.reason || "-",
-      TotalHours: calcTotalHours(t),
-    }));
-    const ws = XLSX.utils.json_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
-    XLSX.writeFile(wb, "Monthly_Report.xlsx");
-  };
-
+  
   if (!employeeId) {
     return <div>Loading...</div>;
   }
+
+  const workMin = calculateWorkMinutes();
+  const requiredMin = (REQUIRED_WORK_HOURS * 60) + LUNCH_DURATION + BREAK_DURATION + GRACE_TIME;
+  const progress = current?.logOut ? 100 : Math.min(100, (workMin / requiredMin) * 100);
 
   return (
     <Layout>
@@ -489,155 +346,183 @@ export default function TimecardPage() {
             onClose={() => setShowSuccess(false)} 
           />
         )}
+
+        {lateLogin && (
+          <div className="alert alert-warning mb-4">
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            <strong>Late Login:</strong> Required login time is {requiredLoginTime}. Team Admin, Team Lead, Super Admin, and Developers have been notified.
+          </div>
+        )}
+
         <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', border: '2px solid #d4af37' }}>
           <div className="card-body p-4">
             <div className="d-flex justify-content-between align-items-center">
               <h3 className="mb-0" style={{ color: '#ffffff' }}>
                 <i className="bi bi-clock-history me-2" style={{ color: '#d4af37' }}></i>
-                My Timecard
+                Production Timecard
               </h3>
-              <button onClick={exportReport} className="btn btn-success">
-                <i className="bi bi-file-earmark-excel me-2"></i>Export Report
-              </button>
+              <div className="text-end">
+                <small className="text-white d-block">Required Login: {requiredLoginTime}</small>
+                <small className="text-white d-block">Work Hours: {REQUIRED_WORK_HOURS} hrs</small>
+                {userRole === 'SUPER_ADMIN' && (
+                  <button 
+                    className="btn btn-sm btn-warning mt-2"
+                    onClick={() => setShowSettings(!showSettings)}
+                  >
+                    <i className="bi bi-gear me-1"></i>Settings
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Employee Info */}
+        {userRole === 'SUPER_ADMIN' && showSettings && (
+          <div className="card shadow-sm mb-4 border-warning">
+            <div className="card-header bg-warning">
+              <h5 className="mb-0">
+                <i className="bi bi-gear me-2"></i>Super Admin Settings
+              </h5>
+            </div>
+            <div className="card-body">
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label fw-bold">Set Required Login Time (All Employees)</label>
+                  <input 
+                    type="time" 
+                    className="form-control" 
+                    value={newLoginTime}
+                    onChange={(e) => setNewLoginTime(e.target.value)}
+                  />
+                </div>
+                <div className="col-md-6 d-flex align-items-end">
+                  <button 
+                    className="btn btn-primary w-100"
+                    onClick={updateLoginTime}
+                  >
+                    <i className="bi bi-check-circle me-2"></i>Update Login Time
+                  </button>
+                </div>
+              </div>
+              <small className="text-muted d-block mt-2">
+                This will update the required login time for all employees. Late logins will trigger notifications.
+              </small>
+            </div>
+          </div>
+        )}
+
         {employeeData && (
           <div className="card mb-4 shadow-sm" style={{ border: '2px solid #d4af37' }}>
             <div className="card-body p-4">
               <div className="row g-3">
                 <div className="col-md-3">
-                  <div className="d-flex align-items-center">
-                    <i className="bi bi-person-fill me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
-                    <div>
-                      <small className="text-muted d-block">Name</small>
-                      <strong>{employeeData.firstName} {employeeData.lastName}</strong>
-                    </div>
-                  </div>
+                  <small className="text-muted d-block">Name</small>
+                  <strong>{employeeData.firstName} {employeeData.lastName}</strong>
                 </div>
                 <div className="col-md-3">
-                  <div className="d-flex align-items-center">
-                    <i className="bi bi-badge-tm me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
-                    <div>
-                      <small className="text-muted d-block">Employee ID</small>
-                      <strong>{employeeData.employeeId}</strong>
-                    </div>
-                  </div>
+                  <small className="text-muted d-block">Employee ID</small>
+                  <strong>{employeeData.employeeId}</strong>
                 </div>
                 <div className="col-md-3">
-                  <div className="d-flex align-items-center">
-                    <i className="bi bi-building me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
-                    <div>
-                      <small className="text-muted d-block">Department</small>
-                      <strong>{employeeData.department}</strong>
-                    </div>
-                  </div>
+                  <small className="text-muted d-block">Department</small>
+                  <strong>{employeeData.department}</strong>
                 </div>
                 <div className="col-md-3">
-                  <div className="d-flex align-items-center">
-                    <i className="bi bi-calendar-event me-2" style={{ color: '#d4af37', fontSize: '1.5rem' }}></i>
-                    <div>
-                      <small className="text-muted d-block">Today</small>
-                      <strong>{formatDate(new Date().toISOString())}</strong>
-                    </div>
-                  </div>
+                  <small className="text-muted d-block">Today</small>
+                  <strong>{new Date().toLocaleDateString()}</strong>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-
-
-        {/* Today's Timecard */}
         <div className="card mb-4 shadow-sm" style={{ border: '2px solid #d4af37' }}>
           <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
-            <h5 className="mb-0"><i className="bi bi-calendar-check me-2"></i>Today&apos;s Timecard</h5>
+            <h5 className="mb-0">Work Progress</h5>
+          </div>
+          <div className="card-body">
+            <div className="progress mb-2" style={{ height: '30px' }}>
+              <div
+                className={`progress-bar ${progress >= 100 ? 'bg-success' : 'bg-warning'}`}
+                style={{ width: `${progress}%` }}
+              >
+                {progress.toFixed(1)}% - {minutesToTime(workMin)} / {REQUIRED_WORK_HOURS}h
+              </div>
+            </div>
+            {!current?.logOut && workMin < requiredMin && (
+              <small className="text-danger">
+                Need {minutesToTime(requiredMin - workMin)} more to complete {REQUIRED_WORK_HOURS} hours
+              </small>
+            )}
+          </div>
+        </div>
+
+        <div className="card mb-4 shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h5 className="mb-0">Today's Timecard</h5>
           </div>
           <div className="card-body p-4">
-            {/* First Row */}
             <div className="row g-4">
-              {/* 1st Column - Login/Logout */}
               <div className="col-md-6">
                 <div className="card h-100" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', border: '2px solid #d4af37' }}>
-                  <div className="card-body p-3">
-                    <div className="text-center mb-3">
-                      <i className="bi bi-box-arrow-in-right" style={{ color: '#d4af37', fontSize: '2rem' }}></i>
-                      <h6 className="fw-bold mt-2" style={{ color: '#1a1a1a' }}>Login / Logout</h6>
-                    </div>
+                  <div className="card-body">
+                    <h6 className="fw-bold mb-3">Login / Logout</h6>
                     <div className="row g-3">
                       <div className="col-6">
-                        <label className="form-label fw-bold mb-2 text-success">Login Time</label>
-                        <input type="text" className="form-control fw-bold text-center" value={current?.logIn || "-"} readOnly />
+                        <label className="form-label fw-bold">Login Time</label>
+                        <input type="text" className="form-control text-center" value={current?.logIn || "-"} readOnly />
+                        {lateLogin && <small className="text-danger d-block mt-1">Late Login</small>}
                       </div>
                       <div className="col-6">
-                        <label className="form-label fw-bold mb-2 text-danger">Logout Time</label>
-                        <input type="text" className="form-control fw-bold text-center mb-2" value={current?.logOut || "-"} readOnly />
+                        <label className="form-label fw-bold">Logout Time</label>
+                        <input type="text" className="form-control text-center mb-2" value={current?.logOut || "-"} readOnly />
                         <button onClick={handleLogOut} disabled={!!current?.logOut} className="btn btn-danger btn-sm w-100">
-                          <i className="fas fa-power-off me-1"></i>Logout
+                          <i className="bi bi-box-arrow-right me-1"></i>Logout
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              {/* 2nd Column - Lunch */}
+
               <div className="col-md-6">
                 <div className="card h-100" style={{ background: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)', border: '2px solid #d4af37' }}>
-                  <div className="card-body p-3">
-                    <div className="text-center mb-3">
-                      <i className="bi bi-cup-hot" style={{ color: '#856404', fontSize: '2rem' }}></i>
-                      <h6 className="fw-bold mt-2" style={{ color: '#856404' }}>Lunch Break</h6>
-                    </div>
+                  <div className="card-body">
+                    <h6 className="fw-bold mb-3">Lunch Break (Max {LUNCH_DURATION} min)</h6>
                     <div className="row g-3">
                       <div className="col-6">
-                        <label className="form-label fw-bold mb-2">Lunch Out</label>
-                        <input type="text" className="form-control fw-bold text-center mb-2" value={current?.lunchOut || "-"} readOnly />
+                        <label className="form-label fw-bold">Lunch Out</label>
+                        <input type="text" className="form-control text-center mb-2" value={current?.lunchOut || "-"} readOnly />
                         <button className="btn btn-warning btn-sm w-100" onClick={handleLunchOut} disabled={!!current?.lunchOut || !!current?.logOut}>
-                          <i className="fas fa-utensils me-1"></i>Go Out
+                          <i className="bi bi-cup-hot me-1"></i>Go Out
                         </button>
                       </div>
                       <div className="col-6">
-                        <label className="form-label fw-bold mb-2">Lunch In</label>
-                        <input type="text" className="form-control fw-bold text-center mb-2" value={current?.lunchIn || "-"} readOnly />
+                        <label className="form-label fw-bold">Lunch In</label>
+                        <input type="text" className="form-control text-center mb-2" value={current?.lunchIn || "-"} readOnly />
                         <button className="btn btn-success btn-sm w-100" onClick={handleLunchIn} disabled={!current?.lunchOut || !!current?.lunchIn || !!current?.logOut}>
-                          <i className="fas fa-arrow-left me-1"></i>Come In
+                          <i className="bi bi-arrow-left me-1"></i>Come In
                         </button>
                       </div>
                     </div>
-                    {isLunchActive && (
-                      <div className="text-center mt-2">
-                        <div className="badge bg-warning text-dark">
-                          <i className="fas fa-clock me-1"></i>On Lunch: {formatDuration(lunchDuration)}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
-            
-            {/* Second Row */}
+
             <div className="row g-4 mt-3">
-              {/* 1st Column - Break */}
-              <div className="col-md-6">
-                <div className="card h-100" style={{ background: 'linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%)', border: '2px solid #d4af37' }}>
-                  <div className="card-body p-3">
-                    <div className="text-center mb-3">
-                      <i className="bi bi-pause-circle" style={{ color: '#0c5460', fontSize: '2rem' }}></i>
-                      <h6 className="fw-bold mt-2" style={{ color: '#0c5460' }}>Break ({breaks.length}/3)</h6>
-                    </div>
+              <div className="col-md-12">
+                <div className="card" style={{ background: 'linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%)', border: '2px solid #d4af37' }}>
+                  <div className="card-body">
+                    <h6 className="fw-bold mb-3">Breaks ({breaks.length}/{MAX_BREAKS}) - Max {BREAK_DURATION} min each</h6>
                     <div className="mb-3">
-                      <label className="form-label fw-bold mb-2">Break Reason</label>
+                      <label className="form-label fw-bold">Break Reason</label>
                       <input 
                         type="text" 
                         className="form-control" 
                         value={breakReason} 
                         onChange={(e) => setBreakReason(e.target.value)}
-                        disabled={isOnBreak || breaks.length >= 3 || !!current?.logOut}
+                        disabled={isOnBreak || breaks.length >= MAX_BREAKS || !!current?.logOut}
                         placeholder="Enter reason"
                       />
                     </div>
@@ -646,9 +531,9 @@ export default function TimecardPage() {
                         <button 
                           onClick={handleBreakOut} 
                           className="btn btn-warning btn-sm w-100" 
-                          disabled={isOnBreak || breaks.length >= 3 || !breakReason.trim() || !!current?.logOut}
+                          disabled={isOnBreak || breaks.length >= MAX_BREAKS || !breakReason.trim() || !!current?.logOut}
                         >
-                          <i className="fas fa-pause me-1"></i>Break Out
+                          <i className="bi bi-pause-circle me-1"></i>Break Out
                         </button>
                       </div>
                       <div className="col-6">
@@ -657,83 +542,50 @@ export default function TimecardPage() {
                           className="btn btn-success btn-sm w-100" 
                           disabled={!isOnBreak || !!current?.logOut}
                         >
-                          <i className="fas fa-play me-1"></i>Break In
+                          <i className="bi bi-play-circle me-1"></i>Break In
                         </button>
                       </div>
                     </div>
                     {isOnBreak && (
                       <div className="text-center mt-2">
-                        <div className="badge bg-info">
-                          <i className="fas fa-clock me-1"></i>On Break
-                        </div>
+                        <div className="badge bg-info">On Break</div>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-              
-              {/* 2nd Column - Permission */}
-              <div className="col-md-6">
-                <div className="card h-100" style={{ background: 'linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%)', border: '2px solid #d4af37' }}>
-                  <div className="card-body p-3">
-                    <div className="text-center mb-3">
-                      <i className="bi bi-clock-fill" style={{ color: '#383d41', fontSize: '2rem' }}></i>
-                      <h6 className="fw-bold mt-2" style={{ color: '#383d41' }}>Permission Request</h6>
-                    </div>
-                    <div className="mb-3">
-                      <label className="form-label fw-bold mb-2">Hours</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        max="2" 
-                        step="0.5" 
-                        className="form-control" 
-                        value={permission} 
-                        onChange={(e) => setPermission(Math.min(2, Math.max(0, Number(e.target.value))))}
-                        disabled={permissionLocked || !!current?.logOut} 
-                      />
-                    </div>
-                    <div className="mb-3">
-                      <label className="form-label fw-bold mb-2">Reason</label>
-                      <textarea 
-                        className="form-control" 
-                        value={reason} 
-                        onChange={(e) => setReason(e.target.value)} 
-                        disabled={permissionLocked || !!current?.logOut}
-                        rows="2"
-                        placeholder="Enter reason"
-                      />
-                    </div>
-                    <button onClick={handleSavePermission} className="btn btn-primary btn-sm w-100" disabled={permissionLocked || !reason.trim() || !!current?.logOut}>
-                      <i className="fas fa-save me-1"></i>Save Permission
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            
-            {/* Break Records */}
             {breaks.length > 0 && (
               <div className="mt-4">
-                <h6 className="fw-bold mb-3"><i className="bi bi-list-ul me-2" style={{ color: '#d4af37' }}></i>Today&apos;s Breaks</h6>
+                <h6 className="fw-bold mb-3">Today's Breaks</h6>
                 <div className="table-responsive">
                   <table className="table table-bordered mb-0">
-                    <thead style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#ffffff' }}>
+                    <thead className="table-dark">
                       <tr>
-                        <th className="fw-bold py-3">Break Out</th>
-                        <th className="fw-bold py-3">Break In</th>
-                        <th className="fw-bold py-3">Reason</th>
+                        <th>Break Out</th>
+                        <th>Break In</th>
+                        <th>Duration</th>
+                        <th>Reason</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {breaks.map((breakItem, index) => (
-                        <tr key={index}>
-                          <td className="fw-bold py-2">{breakItem.breakOut}</td>
-                          <td className="fw-bold py-2">{breakItem.breakIn || "On Break"}</td>
-                          <td className="py-2">{breakItem.reason}</td>
-                        </tr>
-                      ))}
+                      {breaks.map((breakItem, index) => {
+                        const duration = breakItem.breakIn 
+                          ? timeToMinutes(breakItem.breakIn) - timeToMinutes(breakItem.breakOut)
+                          : 0;
+                        return (
+                          <tr key={index}>
+                            <td>{breakItem.breakOut}</td>
+                            <td>{breakItem.breakIn || "On Break"}</td>
+                            <td>
+                              {duration > 0 ? `${duration} min` : "-"}
+                              {duration > BREAK_DURATION && <span className="text-danger ms-2">(Exceeded)</span>}
+                            </td>
+                            <td>{breakItem.reason}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -742,58 +594,22 @@ export default function TimecardPage() {
           </div>
         </div>
 
-        {/* Monthly Records */}
         <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
           <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
-            <h5 className="mb-0"><i className="bi bi-calendar3 me-2"></i>Monthly Timecard Records</h5>
+            <h5 className="mb-0">Rules & Constraints</h5>
           </div>
           <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-hover">
-                <thead style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#ffffff' }}>
-                  <tr>
-                    <th>Date</th>
-                    <th>Login</th>
-                    <th>Logout</th>
-                    <th>Lunch Out</th>
-                    <th>Lunch In</th>
-                    <th>Permission</th>
-                    <th>Reason</th>
-                    <th>Total Hours</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {timecards.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="text-center text-muted">
-                        No timecard records found.
-                      </td>
-                    </tr>
-                  )}
-                  {timecards.map((t) => {
-                    const workStatus = getWorkStatus(t);
-                    return (
-                      <tr key={t._id}>
-                        <td>{formatDate(t.date)}</td>
-                        <td>{t.logIn || "-"}</td>
-                        <td>{t.logOut || "-"}</td>
-                        <td>{t.lunchOut || "-"}</td>
-                        <td>{t.lunchIn || "-"}</td>
-                        <td>{t.permission ? `${t.permission}h` : "-"}</td>
-                        <td>{t.reason || "-"}</td>
-                        <td className="fw-bold">{calcTotalHours(t)}</td>
-                        <td>
-                          <span className={`badge bg-${workStatus.color}`}>
-                            {workStatus.status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="mb-0">
+              <li>Required Login Time: <strong>{requiredLoginTime}</strong> (Late logins notify admins)</li>
+              <li>Required Work Hours: <strong>{REQUIRED_WORK_HOURS} hours</strong></li>
+              <li>Lunch Break: <strong>Max {LUNCH_DURATION} minutes</strong></li>
+              <li>Breaks: <strong>Max {MAX_BREAKS} breaks, {BREAK_DURATION} minutes each</strong></li>
+              <li>Must complete lunch and all breaks before logout</li>
+              <li>Cannot logout without completing {REQUIRED_WORK_HOURS} hours</li>
+              {userRole === 'SUPER_ADMIN' && (
+                <li className="text-warning"><strong>Super Admin:</strong> Can modify required login time for all employees</li>
+              )}
+            </ul>
           </div>
         </div>
       </div>
