@@ -59,37 +59,81 @@ const TimecardSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-    default: Date.now, // system date
+    default: Date.now,
   },
   logIn: {
     type: String,
-    default: "", // auto-filled when login button clicked
+    default: "",
   },
   logOut: {
     type: String,
-    default: "", // auto-filled when logout button clicked
+    default: "",
   },
   lunchOut: {
     type: String,
-    default: "", // auto-filled when lunch checkbox checked
+    default: "",
   },
   lunchIn: {
     type: String,
-    default: "", // auto-filled when lunch checkbox unchecked
+    default: "",
   },
   permission: {
     type: Number,
-    default: 0, // in hours (decimal)
-    validate: {
-      validator: function(v) {
-        return v >= 0 && v <= 2;
-      },
-      message: "Permission cannot exceed 2 hours"
-    }
+    default: 0,
+  },
+  permissionMinutes: {
+    type: Number,
+    default: 0,
+  },
+  permissionReason: {
+    type: String,
+    default: "",
+  },
+  permissionLocked: {
+    type: Boolean,
+    default: false,
   },
   reason: {
     type: String,
     default: "",
+  },
+  breaks: [{
+    breakOut: { type: String, default: "" },
+    breakIn: { type: String, default: "" },
+    reason: { type: String, default: "" }
+  }],
+  lateLogin: {
+    type: Boolean,
+    default: false
+  },
+  lateLoginMinutes: {
+    type: Number,
+    default: 0
+  },
+  attendanceStatus: {
+    type: String,
+    enum: ['Present', 'Half Day', 'Leave', 'Absent'],
+    default: 'Present'
+  },
+  statusReason: {
+    type: String,
+    default: ''
+  },
+  workMinutes: {
+    type: Number,
+    default: 0
+  },
+  userRole: {
+    type: String,
+    default: ''
+  },
+  autoLogoutReason: {
+    type: String,
+    default: '',
+  },
+  manualLogoutReason: {
+    type: String,
+    default: '',
   },
   totalHours: {
     type: String,
@@ -99,21 +143,27 @@ const TimecardSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-});
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  }
+}, { strict: false });
 
 // Middleware to calculate hours on save
 TimecardSchema.pre("save", function (next) {
   try {
-    this.totalHours = calculatedTotalHours(
-      this.logIn,
-      this.logOut,
-      this.lunchOut,
-      this.lunchIn,
-      this.permission
-    );
+    this.updatedAt = new Date();
+    if (this.logOut) {
+      this.totalHours = calculatedTotalHours(
+        this.logIn,
+        this.logOut,
+        this.lunchOut,
+        this.lunchIn,
+        this.permission
+      );
+    }
   } catch (error) {
     console.error('Error in save middleware:', error);
-    this.totalHours = "00:00";
   }
   next();
 });
@@ -167,5 +217,11 @@ TimecardSchema.methods.recalculateTotalHours = function() {
   return this.save();
 };
 
-export default mongoose.models.Timecard ||
-  mongoose.model("Timecard", TimecardSchema);
+// Force delete cached model to ensure schema updates
+if (mongoose.models.Timecard) {
+  delete mongoose.models.Timecard;
+}
+
+const Timecard = mongoose.model("Timecard", TimecardSchema);
+
+export default Timecard;

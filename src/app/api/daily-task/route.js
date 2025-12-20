@@ -128,6 +128,37 @@ export async function POST(req) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
     }
     
+    // Handle logout entry creation
+    if (data.isLogout) {
+      const taskDate = data.date ? new Date(data.date) : new Date();
+      const startOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+      const endOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), 23, 59, 59);
+      
+      const dailyTask = await DailyTask.findOne({
+        employeeId: data.employeeId,
+        date: { $gte: startOfDay, $lte: endOfDay }
+      });
+      
+      if (dailyTask) {
+        const maxSerial = dailyTask.tasks.length > 0 
+          ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
+          : 0;
+        
+        dailyTask.tasks.push({
+          Serialno: maxSerial + 1,
+          details: data.task,
+          status: data.status,
+          isSaved: true,
+          isLogout: true
+        });
+        dailyTask.updatedAt = new Date();
+        await dailyTask.save();
+        return NextResponse.json({ message: "Logout entry added", dailyTask }, { status: 200 });
+      }
+      
+      return NextResponse.json({ error: "No daily task found" }, { status: 404 });
+    }
+    
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
@@ -165,6 +196,68 @@ export async function PUT(req) {
   try {
     await connectMongoose();
     const body = await req.json();
+    
+    // Handle first entry update on login
+    if (body.action === 'update_first_entry') {
+      console.log('=== DAILY TASK API: Received update_first_entry action ===');
+      console.log('Body:', JSON.stringify(body));
+      
+      const taskDate = body.date ? new Date(body.date) : new Date();
+      const startOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+      const endOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), 23, 59, 59);
+      
+      console.log('Searching for task between:', startOfDay, 'and', endOfDay);
+      
+      let dailyTask = await DailyTask.findOne({
+        employeeId: body.employeeId,
+        date: { $gte: startOfDay, $lte: endOfDay }
+      });
+      
+      console.log('Found daily task:', dailyTask ? 'YES' : 'NO');
+      
+      // Create daily task if it doesn't exist
+      if (!dailyTask) {
+        console.log('Creating new daily task with login entry');
+        dailyTask = await DailyTask.create({
+          employeeId: body.employeeId,
+          employeeName: body.employeeName,
+          date: taskDate,
+          tasks: [{
+            Serialno: 1,
+            details: body.task,
+            status: 'Completed',
+            startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
+            endTime: '',
+            isSaved: false
+          }]
+        });
+        console.log('Created new daily task:', dailyTask);
+        return NextResponse.json({ message: 'Daily task created with login entry', dailyTask });
+      }
+      
+      if (dailyTask.tasks && dailyTask.tasks.length > 0) {
+        console.log('First task before update:', dailyTask.tasks[0]);
+        dailyTask.tasks[0].details = body.task;
+        dailyTask.tasks[0].status = 'Completed';
+        dailyTask.tasks[0].startTime = body.task.match(/\d{2}:\d{2}/)?.[0] || dailyTask.tasks[0].startTime;
+        dailyTask.updatedAt = new Date();
+        await dailyTask.save();
+        console.log('First task after update:', dailyTask.tasks[0]);
+        return NextResponse.json({ message: 'First entry updated', dailyTask });
+      }
+      
+      console.log('No tasks array, creating first entry');
+      dailyTask.tasks = [{
+        Serialno: 1,
+        details: body.task,
+        status: 'Completed',
+        startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
+        endTime: '',
+        isSaved: false
+      }];
+      await dailyTask.save();
+      return NextResponse.json({ message: 'First entry created', dailyTask });
+    }
     
     // Handle logout completion
     if (body.action === 'complete_on_logout') {

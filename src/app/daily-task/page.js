@@ -159,7 +159,9 @@ export default function DailyTaskComponent() {
     if (!task.endTime) {
       errors[`endTime_${index}`] = "End time is required";
     }
-    if (task.startTime && task.endTime && task.startTime >= task.endTime) {
+    // Skip time validation for login/logout entries
+    const isLoginLogout = task.details?.includes('Logged in at') || task.details?.includes('Logged out at') || task.isLogout;
+    if (!isLoginLogout && task.startTime && task.endTime && task.startTime >= task.endTime) {
       errors[`endTime_${index}`] = "End time must be after start time";
     }
     return errors;
@@ -264,24 +266,14 @@ export default function DailyTaskComponent() {
       return;
     }
 
-    // Prevent editing start time (system controlled)
-    if (field === 'startTime') {
-      setError('Start time is automatically set and cannot be edited.');
+    // Prevent editing start time and end time (system controlled)
+    if (field === 'startTime' || field === 'endTime') {
+      setError('Start and end times are automatically tracked and cannot be edited.');
       setTimeout(() => setError(''), 3000);
       return;
     }
 
-    // When end time is changed, update next task's start time
-    if (field === 'endTime' && value) {
-      updated[index][field] = value;
-      // Update next task's start time if it exists and is not saved
-      if (index < updated.length - 1 && !updated[index + 1].isSaved) {
-        updated[index + 1].startTime = value;
-      }
-    } else {
-      updated[index][field] = value;
-    }
-
+    updated[index][field] = value;
     setDailyTasks(updated);
 
     // Clear validation error for this field
@@ -838,9 +830,8 @@ export default function DailyTaskComponent() {
                                 type="time"
                                 className={`form-control form-control-sm ${validationErrors[`endTime_${idx}`] ? 'is-invalid' : ''}`}
                                 value={task.endTime}
-                                onChange={(e) => handleChange(idx, "endTime", e.target.value)}
-                                disabled={task.isSaved}
-                                title={task.isSaved ? "End time cannot be changed after saving" : ""}
+                                disabled
+                                title="End time is automatically set when you add next task or save"
                               />
                               {validationErrors[`endTime_${idx}`] && (
                                 <div className="invalid-feedback">{validationErrors[`endTime_${idx}`]}</div>
@@ -856,6 +847,7 @@ export default function DailyTaskComponent() {
                                 className="form-select form-select-sm"
                                 value={task.status}
                                 onChange={(e) => handleChange(idx, "status", e.target.value)}
+                                disabled={task.details?.includes('Logged in at') || task.details?.includes('Logged out at') || task.isLogout}
                               >
                                 {STATUS_OPTIONS.map(status => (
                                   <option key={status} value={status}>{status}</option>

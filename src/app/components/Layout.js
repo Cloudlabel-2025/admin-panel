@@ -461,6 +461,11 @@ export default function Layout({ children }) {
                         <i className="bi bi-bell-fill me-2"></i>
                         <span className="nav-text">Notifications</span>
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/employee-daily-tasks")}>
+                        <i className="bi bi-list-task me-2"></i>
+                        <span className="nav-text">Employee Daily Tasks</span>
+                      </button>
                       {userRole === "super-admin" || userRole === "Super-admin" ? (
                         <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                           onClick={() => navigate("/settings")}>
