@@ -186,7 +186,12 @@ export default function TimecardPage() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ employeeId, date: getDateString(), userRole }),
+      body: JSON.stringify({ 
+        employeeId, 
+        date: getDateString(), 
+        userRole,
+        logIn: getTimeString()
+      }),
     });
     
     const data = await res.json();

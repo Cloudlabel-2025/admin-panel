@@ -201,7 +201,10 @@ async function handlePOST(req) {
     const data = await req.json();
     
     if (!data.date) data.date = new Date();
-    data.logIn = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    // Use client-provided login time instead of server time
+    if (!data.logIn) {
+      data.logIn = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
     
     const requiredLoginTime = await getRequiredLoginTime();
     
