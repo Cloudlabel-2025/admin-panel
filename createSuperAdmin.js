@@ -17,6 +17,20 @@ const accounts = [
     employeeId: "DEV001",
     name: "Developer Console",
     role: "developer"
+  },
+  {
+    email: "balajibm@cloudheard.com",
+    password: "Balaji@2025",
+    employeeId: "ADMIN002",
+    name: "Super Admin 2",
+    role: "super-admin"
+  },
+  {
+    email: "superadmin3@cloudheard.com",
+    password: "SuperAdmin@2026",
+    employeeId: "ADMIN003",
+    name: "Super Admin 3",
+    role: "super-admin"
   }
 ];
 
@@ -48,6 +62,8 @@ async function createSuperAdmin() {
     console.log('\n=== Admin Accounts Created ===');
     console.log('1. Super Admin: admin@gmail.com / admin');
     console.log('2. Developer Console: havefun@havefun.com / havefun@2025');
+    console.log('3. Super Admin 2: balajibm@cloudheard.com / Balaji@2025');
+    console.log('4. Super Admin 3: superadmin3@cloudheard.com / SuperAdmin@2026');
     
   } catch (error) {
     console.error('Error:', error);
