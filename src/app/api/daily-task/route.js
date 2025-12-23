@@ -128,8 +128,14 @@ export async function POST(req) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
     }
     
-    // Handle logout entry creation
-    if (data.isLogout) {
+    // Handle lunch and logout entries
+    if (data.isLogout || data.isLunchOut || data.isLunchIn) {
+      console.log('=== LUNCH/LOGOUT ENTRY ===');
+      console.log('isLogout:', data.isLogout);
+      console.log('isLunchOut:', data.isLunchOut);
+      console.log('isLunchIn:', data.isLunchIn);
+      console.log('Task:', data.task);
+      
       const taskDate = data.date ? new Date(data.date) : new Date();
       const startOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
       const endOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), 23, 59, 59);
@@ -140,20 +146,63 @@ export async function POST(req) {
       });
       
       if (dailyTask) {
+        // If lunch in, only update the existing lunch out entry
+        if (data.isLunchIn) {
+          console.log('Processing lunch in...');
+          console.log('Total tasks:', dailyTask.tasks.length);
+          const lunchOutEntry = dailyTask.tasks.slice().reverse().find(t => 
+            (t.isLunchOut || t.details === 'Lunch break') && !t.endTime
+          );
+          console.log('Found lunch out entry:', lunchOutEntry ? 'YES' : 'NO');
+          if (lunchOutEntry) {
+            console.log('Updating lunch out entry with end time');
+            const lunchInTime = data.task.match(/\d{2}:\d{2}/)?.[0] || '';
+            lunchOutEntry.endTime = lunchInTime;
+            lunchOutEntry.status = 'Completed';
+            
+            // Add new task with lunch in time as start time
+            const maxSerial = dailyTask.tasks.length > 0 
+              ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
+              : 0;
+            
+            dailyTask.tasks.push({
+              Serialno: maxSerial + 1,
+              details: '',
+              status: 'In Progress',
+              startTime: lunchInTime,
+              endTime: '',
+              isSaved: false
+            });
+            
+            dailyTask.updatedAt = new Date();
+            await dailyTask.save();
+            console.log('Lunch entry updated and new task added');
+            return NextResponse.json({ message: "Lunch entry updated", dailyTask }, { status: 200 });
+          }
+          console.log('No lunch out entry found to update');
+          return NextResponse.json({ error: "No lunch out entry found" }, { status: 404 });
+        }
+        
+        // Add new entry only for lunch out or logout
+        console.log('Adding new entry for lunch out or logout');
         const maxSerial = dailyTask.tasks.length > 0 
           ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
           : 0;
         
         dailyTask.tasks.push({
           Serialno: maxSerial + 1,
-          details: data.task,
-          status: data.status,
+          details: data.isLunchOut ? 'Lunch break' : data.task,
+          status: data.isLunchOut ? 'In Progress' : data.status,
+          startTime: data.task.match(/\d{2}:\d{2}/)?.[0] || '',
+          endTime: '',
           isSaved: true,
-          isLogout: true
+          isLogout: data.isLogout || false,
+          isLunchOut: data.isLunchOut || false
         });
         dailyTask.updatedAt = new Date();
         await dailyTask.save();
-        return NextResponse.json({ message: "Logout entry added", dailyTask }, { status: 200 });
+        console.log('New entry added successfully');
+        return NextResponse.json({ message: "Entry added", dailyTask }, { status: 200 });
       }
       
       return NextResponse.json({ error: "No daily task found" }, { status: 404 });
@@ -235,7 +284,9 @@ export async function PUT(req) {
         return NextResponse.json({ message: 'Daily task created with login entry', dailyTask });
       }
       
-      if (dailyTask.tasks && dailyTask.tasks.length > 0) {
+      if (!dailyTask.tasks) dailyTask.tasks = [];
+      
+      if (dailyTask.tasks.length > 0) {
         console.log('First task before update:', dailyTask.tasks[0]);
         dailyTask.tasks[0].details = body.task;
         dailyTask.tasks[0].status = 'Completed';
@@ -246,15 +297,15 @@ export async function PUT(req) {
         return NextResponse.json({ message: 'First entry updated', dailyTask });
       }
       
-      console.log('No tasks array, creating first entry');
-      dailyTask.tasks = [{
+      console.log('No tasks, creating first entry');
+      dailyTask.tasks.push({
         Serialno: 1,
         details: body.task,
         status: 'Completed',
         startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
         endTime: '',
         isSaved: false
-      }];
+      });
       await dailyTask.save();
       return NextResponse.json({ message: 'First entry created', dailyTask });
     }

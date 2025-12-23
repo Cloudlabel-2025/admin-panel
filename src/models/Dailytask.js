@@ -16,7 +16,9 @@ const DailyTaskSchema = new mongoose.Schema({
       link: { type: String, default: "" },
       feedback: { type: String, default: "" },
       isSaved: { type: Boolean, default: false },
-      isNew: { type: Boolean, default: false }
+      isNew: { type: Boolean, default: false },
+      isLogout: { type: Boolean, default: false },
+      isLunchOut: { type: Boolean, default: false }
     },
   ],
 

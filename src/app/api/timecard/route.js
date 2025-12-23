@@ -350,11 +350,58 @@ async function handlePUT(req) {
       return NextResponse.json({ error: "Lunch already completed" }, { status: 400 });
     }
 
+    if (updates.lunchOut && !timecard.lunchOut) {
+      try {
+        const { createEmployeeModel } = require('@/models/Employee');
+        const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+        let employeeName = timecard.employeeId;
+        
+        for (const dept of departments) {
+          const EmployeeModel = createEmployeeModel(dept);
+          const emp = await EmployeeModel.findOne({ employeeId: timecard.employeeId });
+          if (emp) {
+            employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+            break;
+          }
+        }
+        
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId: timecard.employeeId,
+            employeeName: employeeName,
+            date: timecard.date,
+            task: `Lunch break started at ${updates.lunchOut}`,
+            status: 'In Progress',
+            isLunchOut: true
+          })
+        });
+      } catch (err) {
+        console.error('Failed to add lunch out task:', err);
+      }
+    }
+
     if (updates.lunchIn && timecard.lunchOut) {
       const lunchDuration = timeToMinutes(updates.lunchIn) - timeToMinutes(timecard.lunchOut);
       if (lunchDuration > LUNCH_DURATION) {
         const extension = lunchDuration - LUNCH_DURATION;
         await notifyExtension(timecard.employeeId, 'Lunch', extension, timecard.userRole);
+      }
+      
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId: timecard.employeeId,
+            date: timecard.date,
+            task: `Lunch break ended at ${updates.lunchIn}`,
+            isLunchIn: true
+          })
+        });
+      } catch (err) {
+        console.error('Failed to update lunch in task:', err);
       }
     }
 
