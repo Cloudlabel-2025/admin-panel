@@ -80,6 +80,7 @@ const notifyExtension = async (employeeId, type, extensionMinutes, userRole) => 
     }
     
     const notifications = [];
+    const notifiedIds = new Set();
     
     // Always notify ADMIN001
     notifications.push({
@@ -89,19 +90,23 @@ const notifyExtension = async (employeeId, type, extensionMinutes, userRole) => 
       type: 'warning',
       isRead: false
     });
+    notifiedIds.add('ADMIN001');
     
     for (const dept of departments) {
       const EmployeeModel = createEmployeeModel(dept);
       const recipients = await EmployeeModel.find({ role: { $in: recipientRoles } });
       
       for (const recipient of recipients) {
-        notifications.push({
-          employeeId: recipient.employeeId,
-          title: `${type} Extension Alert`,
-          message: `${employeeName} (${employeeId}) extended ${type.toLowerCase()} by ${extensionMinutes} minutes`,
-          type: 'warning',
-          isRead: false
-        });
+        if (!notifiedIds.has(recipient.employeeId)) {
+          notifications.push({
+            employeeId: recipient.employeeId,
+            title: `${type} Extension Alert`,
+            message: `${employeeName} (${employeeId}) extended ${type.toLowerCase()} by ${extensionMinutes} minutes`,
+            type: 'warning',
+            isRead: false
+          });
+          notifiedIds.add(recipient.employeeId);
+        }
       }
     }
     
@@ -152,6 +157,7 @@ const notifyLateLogin = async (employeeId, loginTime, requiredTime, userRole) =>
     console.log('Backend: Looking for recipients with roles:', recipientRoles);
     
     const notifications = [];
+    const notifiedIds = new Set();
     
     // Always notify ADMIN001 (super admin)
     notifications.push({
@@ -161,6 +167,7 @@ const notifyLateLogin = async (employeeId, loginTime, requiredTime, userRole) =>
       type: 'warning',
       isRead: false
     });
+    notifiedIds.add('ADMIN001');
     
     for (const dept of departments) {
       const EmployeeModel = createEmployeeModel(dept);
@@ -168,17 +175,22 @@ const notifyLateLogin = async (employeeId, loginTime, requiredTime, userRole) =>
       console.log(`Backend: Found ${recipients.length} recipients in ${dept}:`, recipients.map(r => `${r.employeeId}(${r.role})`));
       
       for (const recipient of recipients) {
-        notifications.push({
-          employeeId: recipient.employeeId,
-          title: 'Late Login Alert',
-          message: `${employeeName} (${employeeId}) logged in late at ${loginTime}. Required: ${requiredTime}`,
-          type: 'warning',
-          isRead: false
-        });
+        if (!notifiedIds.has(recipient.employeeId)) {
+          notifications.push({
+            employeeId: recipient.employeeId,
+            title: 'Late Login Alert',
+            message: `${employeeName} (${employeeId}) logged in late at ${loginTime}. Required: ${requiredTime}`,
+            type: 'warning',
+            isRead: false
+          });
+          notifiedIds.add(recipient.employeeId);
+        }
       }
     }
     
     console.log('Backend: Total notifications to send:', notifications.length);
+    console.log('Backend: Notification recipients:', notifications.map(n => n.employeeId));
+    console.log('Backend: Unique recipients:', [...notifiedIds]);
     
     if (notifications.length > 0) {
       const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/notifications`, {
@@ -208,7 +220,11 @@ async function handlePOST(req) {
     
     const requiredLoginTime = await getRequiredLoginTime();
     
+    console.log('Login time:', data.logIn, 'Required:', requiredLoginTime);
+    console.log('Login minutes:', timeToMinutes(data.logIn), 'Required minutes:', timeToMinutes(requiredLoginTime));
+    
     if (timeToMinutes(data.logIn) > timeToMinutes(requiredLoginTime)) {
+      console.log('Late login detected, notifying admins');
       await notifyLateLogin(data.employeeId, data.logIn, requiredLoginTime, data.userRole);
       data.lateLogin = true;
       data.lateLoginMinutes = timeToMinutes(data.logIn) - timeToMinutes(requiredLoginTime);
