@@ -29,6 +29,8 @@ export default function DailyTaskComponent() {
     logOut: "",
     lunchOut: "",
     lunchIn: "",
+    permissionMinutes: 0,
+    permissionLocked: false
   });
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,9 @@ export default function DailyTaskComponent() {
         logOut: todayTimecard.logOut || "",
         lunchOut: todayTimecard.lunchOut || "",
         lunchIn: todayTimecard.lunchIn || "",
+        breaks: todayTimecard.breaks || [],
+        permissionMinutes: todayTimecard.permissionMinutes || 0,
+        permissionLocked: todayTimecard.permissionLocked || false
       });
 
       // 2️⃣ Fetch today's DailyTask
@@ -169,29 +174,49 @@ export default function DailyTaskComponent() {
 
   // Add new task
   const addTask = () => {
+    // Prevent adding tasks during active permission
+    if (timecard.permissionMinutes > 0 && !timecard.permissionLocked) {
+      setError('Cannot add tasks during active permission. Please lock or cancel the permission first.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     const currentTime = new Date().toLocaleTimeString('en-GB', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit'
     });
 
-    // Update previous task's end time if it's empty
     const updatedTasks = [...dailyTasks];
+    let newTaskStartTime = currentTime;
+
+    // Update previous task's end time if it's empty
     if (updatedTasks.length > 0) {
       const lastIndex = updatedTasks.length - 1;
-      if (!updatedTasks[lastIndex].endTime && !updatedTasks[lastIndex].isSaved) {
-        updatedTasks[lastIndex].endTime = currentTime;
+      const lastTask = updatedTasks[lastIndex];
+      
+      if (!lastTask.endTime && !lastTask.isSaved) {
+        // Only update if current time is different from start time
+        if (lastTask.startTime !== currentTime) {
+          lastTask.endTime = currentTime;
+          lastTask.status = 'Completed';
+          newTaskStartTime = currentTime;
+        } else {
+          // If same time, don't allow adding new task
+          setError('Cannot add new task at the same time as previous task. Please wait.');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+      } else if (lastTask.endTime) {
+        // Use last task's end time as new task's start time
+        newTaskStartTime = lastTask.endTime;
       }
     }
-
-    // Get previous task's end time or current time for new task start time
-    const lastTask = updatedTasks[updatedTasks.length - 1];
-    const startTime = lastTask?.endTime || currentTime;
 
     const newTask = {
       Serialno: updatedTasks.length + 1,
       details: "",
-      startTime: startTime,
+      startTime: newTaskStartTime,
       endTime: "",
       status: "In Progress",
       remarks: "",
@@ -501,13 +526,36 @@ export default function DailyTaskComponent() {
 
     // Calculate lunch duration
     let lunchMinutes = 0;
+    let unaccountedLunchTime = 0;
     if (timecard.lunchOut && timecard.lunchIn) {
       const [lunchOutH, lunchOutM] = timecard.lunchOut.split(':').map(Number);
       const [lunchInH, lunchInM] = timecard.lunchIn.split(':').map(Number);
       lunchMinutes = (lunchInH * 60 + lunchInM) - (lunchOutH * 60 + lunchOutM);
+      unaccountedLunchTime = lunchMinutes > 60 ? lunchMinutes - 60 : 0;
     }
 
-    // Calculate total task time
+    // Calculate break duration
+    let totalBreakMinutes = 0;
+    let unaccountedBreakTime = 0;
+    if (timecard.breaks && Array.isArray(timecard.breaks)) {
+      timecard.breaks.forEach(b => {
+        if (b.breakOut && b.breakIn) {
+          const breakDuration = ((b.breakIn.split(':').map(Number)[0] * 60 + b.breakIn.split(':').map(Number)[1]) - 
+                                (b.breakOut.split(':').map(Number)[0] * 60 + b.breakOut.split(':').map(Number)[1]));
+          totalBreakMinutes += breakDuration;
+          if (breakDuration > 30) {
+            unaccountedBreakTime += breakDuration - 30;
+          }
+        }
+      });
+    }
+
+    // Permission handling - exclude from work time, only excess goes to unaccounted
+    const permissionMinutes = timecard.permissionMinutes || 0;
+    const PERMISSION_LIMIT = 120; // 2 hours
+    const excessPermissionTime = permissionMinutes > PERMISSION_LIMIT ? permissionMinutes - PERMISSION_LIMIT : 0;
+
+    // Calculate total task time from daily tasks
     let totalTaskMinutes = 0;
     dailyTasks.forEach(task => {
       if (task.startTime && task.endTime) {
@@ -518,12 +566,18 @@ export default function DailyTaskComponent() {
       }
     });
 
+    // Calculate gaps between tasks
     const gaps = calculateTimeGaps();
     const totalGapMinutes = gaps.reduce((sum, gap) => sum + gap.gapMinutes, 0);
 
-    const effectiveWorkMinutes = totalWorkMinutes - lunchMinutes;
+    // Effective work time (excluding standard lunch, break, and ALL permission time)
+    const standardLunchTime = Math.min(lunchMinutes, 60);
+    const standardBreakTime = Math.min(totalBreakMinutes, 30);
+    const effectiveWorkMinutes = totalWorkMinutes - standardLunchTime - standardBreakTime - permissionMinutes;
+    
+    // Unaccounted time = effective work - (task time + gaps) + excess lunch + excess break + excess permission
     const accountedMinutes = totalTaskMinutes + totalGapMinutes;
-    const unaccountedMinutes = effectiveWorkMinutes - accountedMinutes;
+    const unaccountedMinutes = Math.max(0, effectiveWorkMinutes - accountedMinutes + unaccountedLunchTime + unaccountedBreakTime + excessPermissionTime);
 
     const productivityRate = effectiveWorkMinutes > 0 ?
       ((totalTaskMinutes / effectiveWorkMinutes) * 100).toFixed(1) : 0;
@@ -531,10 +585,14 @@ export default function DailyTaskComponent() {
     return {
       totalWorkMinutes,
       lunchMinutes,
+      permissionMinutes,
       effectiveWorkMinutes,
       totalTaskMinutes,
       totalGapMinutes,
       unaccountedMinutes,
+      unaccountedLunchTime,
+      unaccountedBreakTime,
+      excessPermissionTime,
       productivityRate,
       gaps
     };
@@ -847,7 +905,6 @@ export default function DailyTaskComponent() {
                                 className="form-select form-select-sm"
                                 value={task.status}
                                 onChange={(e) => handleChange(idx, "status", e.target.value)}
-                                disabled={task.details?.includes('Logged in at') || task.details?.includes('Logged out at') || task.isLogout}
                               >
                                 {STATUS_OPTIONS.map(status => (
                                   <option key={status} value={status}>{status}</option>

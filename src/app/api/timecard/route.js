@@ -23,6 +23,7 @@ const GRACE_TIME = 60;
 const LEAVE_THRESHOLD = 4 * 60; // 4 hours
 const HALF_DAY_THRESHOLD = 8 * 60; // 8 hours
 const PERMISSION_LIMIT = 2 * 60; // 2 hours
+const MAX_PERMISSIONS_PER_MONTH = 2;
 
 const timeToMinutes = (time) => {
   const [h, m] = time.split(':').map(Number);
@@ -35,7 +36,10 @@ const calculateWorkMinutes = (timecard) => {
   let total = timeToMinutes(timecard.logOut) - timeToMinutes(timecard.logIn);
   
   if (timecard.lunchOut && timecard.lunchIn) {
-    total -= (timeToMinutes(timecard.lunchIn) - timeToMinutes(timecard.lunchOut));
+    const lunchDuration = timeToMinutes(timecard.lunchIn) - timeToMinutes(timecard.lunchOut);
+    // Only deduct standard lunch time (60 min), excess is unaccounted time
+    const deductibleLunch = Math.min(lunchDuration, LUNCH_DURATION);
+    total -= deductibleLunch;
   }
   
   return Math.max(0, total);
@@ -214,20 +218,32 @@ async function handlePOST(req) {
     
     if (!data.date) data.date = new Date();
     // Use client-provided login time instead of server time
-    if (!data.logIn) {
+    if (!data.logIn && !data.permissionMinutes) {
       data.logIn = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
     
     const requiredLoginTime = await getRequiredLoginTime();
     
-    console.log('Login time:', data.logIn, 'Required:', requiredLoginTime);
-    console.log('Login minutes:', timeToMinutes(data.logIn), 'Required minutes:', timeToMinutes(requiredLoginTime));
+    // Handle permission before login
+    if (data.permissionMinutes && !data.logIn) {
+      console.log('Creating timecard with permission before login:', data.permissionMinutes, 'minutes');
+      const timecard = await Timecard.create({
+        ...data,
+        permissionLocked: data.permissionLocked || false
+      });
+      return NextResponse.json({ message: "Permission recorded before login", timecard }, { status: 201 });
+    }
     
-    if (timeToMinutes(data.logIn) > timeToMinutes(requiredLoginTime)) {
-      console.log('Late login detected, notifying admins');
-      await notifyLateLogin(data.employeeId, data.logIn, requiredLoginTime, data.userRole);
-      data.lateLogin = true;
-      data.lateLoginMinutes = timeToMinutes(data.logIn) - timeToMinutes(requiredLoginTime);
+    if (data.logIn) {
+      console.log('Login time:', data.logIn, 'Required:', requiredLoginTime);
+      console.log('Login minutes:', timeToMinutes(data.logIn), 'Required minutes:', timeToMinutes(requiredLoginTime));
+      
+      if (timeToMinutes(data.logIn) > timeToMinutes(requiredLoginTime)) {
+        console.log('Late login detected, notifying admins');
+        await notifyLateLogin(data.employeeId, data.logIn, requiredLoginTime, data.userRole);
+        data.lateLogin = true;
+        data.lateLoginMinutes = timeToMinutes(data.logIn) - timeToMinutes(requiredLoginTime);
+      }
     }
     
     const timecard = await Timecard.create(data);
@@ -381,6 +397,17 @@ async function handlePUT(req) {
           }
         }
         
+        // Update last task end time to lunch out time
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_current_task_end',
+            employeeId: timecard.employeeId,
+            endTime: updates.lunchOut
+          })
+        });
+        
         await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -429,6 +456,25 @@ async function handlePUT(req) {
       
       const lastBreak = updates.breaks[updates.breaks.length - 1];
       console.log('Backend: Last break:', JSON.stringify(lastBreak));
+      
+      // If break out (new break started), update last task end time
+      if (lastBreak?.breakOut && !lastBreak?.breakIn) {
+        try {
+          await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update_current_task_end',
+              employeeId: timecard.employeeId,
+              endTime: lastBreak.breakOut
+            })
+          });
+        } catch (err) {
+          console.error('Failed to update task end time on break out:', err);
+        }
+      }
+      
+      // If break in (break completed), add new task
       if (lastBreak?.breakOut && lastBreak?.breakIn) {
         const duration = timeToMinutes(lastBreak.breakIn) - timeToMinutes(lastBreak.breakOut);
         console.log('Backend: Break duration:', duration, 'minutes');
@@ -437,29 +483,125 @@ async function handlePUT(req) {
           console.log('Backend: Break extension detected:', extension, 'minutes');
           await notifyExtension(timecard.employeeId, 'Break', extension, timecard.userRole);
         }
+        
+        try {
+          const { createEmployeeModel } = require('@/models/Employee');
+          const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+          let employeeName = timecard.employeeId;
+          
+          for (const dept of departments) {
+            const EmployeeModel = createEmployeeModel(dept);
+            const emp = await EmployeeModel.findOne({ employeeId: timecard.employeeId });
+            if (emp) {
+              employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+              break;
+            }
+          }
+          
+          // Add new task with break in time as start time
+          await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'add_task_after_break',
+              employeeId: timecard.employeeId,
+              employeeName: employeeName,
+              startTime: lastBreak.breakIn
+            })
+          });
+        } catch (err) {
+          console.error('Failed to add task after break:', err);
+        }
       }
+      
       timecard.breaks = updates.breaks;
       console.log('Backend: Set timecard.breaks to:', JSON.stringify(timecard.breaks));
     }
 
     if (updates.permissionMinutes !== undefined) {
       console.log('Backend: Permission update - Minutes:', updates.permissionMinutes, 'Reason:', updates.permissionReason);
-      if (timecard.permissionLocked) {
+      if (timecard.permissionLocked && updates.permissionMinutes > 0) {
         return NextResponse.json({ error: "Permission already locked, cannot update" }, { status: 400 });
       }
-      if (updates.permissionMinutes < 30) {
+      if (updates.permissionMinutes > 0 && updates.permissionMinutes < 30) {
         return NextResponse.json({ error: "Permission must be at least 30 minutes" }, { status: 400 });
       }
-      timecard.permissionMinutes = updates.permissionMinutes;
-      if (updates.permissionReason !== undefined) {
-        timecard.permissionReason = updates.permissionReason;
+      
+      // Check monthly permission limit
+      if (updates.permissionMinutes > 0 && !timecard.permissionLocked) {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        
+        const monthlyPermissions = await Timecard.countDocuments({
+          employeeId: timecard.employeeId,
+          date: { $gte: startOfMonth, $lte: endOfMonth },
+          permissionLocked: true,
+          _id: { $ne: _id }
+        });
+        
+        console.log('Backend: Monthly permissions used:', monthlyPermissions);
+        
+        if (monthlyPermissions >= MAX_PERMISSIONS_PER_MONTH) {
+          return NextResponse.json({ 
+            error: `Permission limit reached. You can only take permission ${MAX_PERMISSIONS_PER_MONTH} times per month.`,
+            details: `You have already used ${monthlyPermissions} permissions this month.`
+          }, { status: 400 });
+        }
       }
-      if (updates.permissionLocked !== undefined) {
-        timecard.permissionLocked = updates.permissionLocked;
-      }
-      if (updates.permissionMinutes > PERMISSION_LIMIT) {
-        console.log('Backend: Permission exceeds limit, notifying admins');
-        await notifyExtension(timecard.employeeId, 'Permission', updates.permissionMinutes - PERMISSION_LIMIT, timecard.userRole);
+      
+      // Handle permission removal
+      if (updates.permissionMinutes === 0) {
+        timecard.permissionMinutes = 0;
+        timecard.permissionReason = "";
+        timecard.permissionLocked = false;
+      } else {
+        // Handle permission addition/update
+        timecard.permissionMinutes = updates.permissionMinutes;
+        if (updates.permissionReason !== undefined) {
+          timecard.permissionReason = updates.permissionReason;
+        }
+        if (updates.permissionLocked !== undefined) {
+          timecard.permissionLocked = updates.permissionLocked;
+          
+          // Add permission entry to daily task when locked
+          if (updates.permissionLocked) {
+            try {
+              const { createEmployeeModel } = require('@/models/Employee');
+              const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+              let employeeName = timecard.employeeId;
+              
+              for (const dept of departments) {
+                const EmployeeModel = createEmployeeModel(dept);
+                const emp = await EmployeeModel.findOne({ employeeId: timecard.employeeId });
+                if (emp) {
+                  employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+                  break;
+                }
+              }
+              
+              await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  employeeId: timecard.employeeId,
+                  employeeName: employeeName,
+                  date: timecard.date,
+                  task: `Permission: ${updates.permissionMinutes} minutes`,
+                  status: 'Completed',
+                  isPermission: true,
+                  permissionMinutes: updates.permissionMinutes
+                })
+              });
+            } catch (err) {
+              console.error('Failed to add permission task:', err);
+            }
+          }
+        }
+        if (updates.permissionMinutes > PERMISSION_LIMIT) {
+          console.log('Backend: Permission exceeds limit, notifying admins');
+          await notifyExtension(timecard.employeeId, 'Permission', updates.permissionMinutes - PERMISSION_LIMIT, timecard.userRole);
+        }
       }
     }
 

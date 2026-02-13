@@ -33,8 +33,13 @@ async function getNextEmployeeId() {
 export async function GET() {
   try {
     await connectMongoose();
-    const db = mongoose.connection.db;
     
+    // Ensure connection is ready
+    if (mongoose.connection.readyState !== 1) {
+      await new Promise((resolve) => mongoose.connection.once('connected', resolve));
+    }
+    
+    const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
     const departmentCollections = collections
       .map((col) => col.name)

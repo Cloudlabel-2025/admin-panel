@@ -129,11 +129,12 @@ export async function POST(req) {
     }
     
     // Handle lunch and logout entries
-    if (data.isLogout || data.isLunchOut || data.isLunchIn) {
-      console.log('=== LUNCH/LOGOUT ENTRY ===');
+    if (data.isLogout || data.isLunchOut || data.isLunchIn || data.isPermission) {
+      console.log('=== LUNCH/LOGOUT/PERMISSION ENTRY ===');
       console.log('isLogout:', data.isLogout);
       console.log('isLunchOut:', data.isLunchOut);
       console.log('isLunchIn:', data.isLunchIn);
+      console.log('isPermission:', data.isPermission);
       console.log('Task:', data.task);
       
       const taskDate = data.date ? new Date(data.date) : new Date();
@@ -160,19 +161,22 @@ export async function POST(req) {
             lunchOutEntry.endTime = lunchInTime;
             lunchOutEntry.status = 'Completed';
             
-            // Add new task with lunch in time as start time
+            // Add new task with lunch in time as start time (only if different from end time)
             const maxSerial = dailyTask.tasks.length > 0 
               ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
               : 0;
             
-            dailyTask.tasks.push({
-              Serialno: maxSerial + 1,
-              details: '',
-              status: 'In Progress',
-              startTime: lunchInTime,
-              endTime: '',
-              isSaved: false
-            });
+            // Only add new task if lunch in time is different from lunch out time
+            if (lunchInTime !== lunchOutEntry.startTime) {
+              dailyTask.tasks.push({
+                Serialno: maxSerial + 1,
+                details: '',
+                status: 'In Progress',
+                startTime: lunchInTime,
+                endTime: '',
+                isSaved: false
+              });
+            }
             
             dailyTask.updatedAt = new Date();
             await dailyTask.save();
@@ -183,21 +187,34 @@ export async function POST(req) {
           return NextResponse.json({ error: "No lunch out entry found" }, { status: 404 });
         }
         
-        // Add new entry only for lunch out or logout
-        console.log('Adding new entry for lunch out or logout');
+        // Add new entry only for lunch out or logout or permission
+        console.log('Adding new entry for lunch out or logout or permission');
         const maxSerial = dailyTask.tasks.length > 0 
           ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
           : 0;
         
+        const timeFromTask = data.task.match(/\d{2}:\d{2}/)?.[0] || '';
+        
+        // For permission, calculate duration display
+        let taskDetails = data.task;
+        if (data.isPermission) {
+          const hours = Math.floor(data.permissionMinutes / 60);
+          const mins = data.permissionMinutes % 60;
+          taskDetails = `Permission: ${hours}h ${mins}m`;
+        } else if (data.isLunchOut) {
+          taskDetails = 'Lunch break';
+        }
+        
         dailyTask.tasks.push({
           Serialno: maxSerial + 1,
-          details: data.isLunchOut ? 'Lunch break' : data.task,
-          status: data.isLunchOut ? 'In Progress' : data.status,
-          startTime: data.task.match(/\d{2}:\d{2}/)?.[0] || '',
+          details: taskDetails,
+          status: data.status || (data.isLunchOut ? 'In Progress' : 'Completed'),
+          startTime: timeFromTask,
           endTime: '',
-          isSaved: true,
+          isSaved: data.isPermission ? true : false,
           isLogout: data.isLogout || false,
-          isLunchOut: data.isLunchOut || false
+          isLunchOut: data.isLunchOut || false,
+          isPermission: data.isPermission || false
         });
         dailyTask.updatedAt = new Date();
         await dailyTask.save();
@@ -246,6 +263,63 @@ export async function PUT(req) {
     await connectMongoose();
     const body = await req.json();
     
+    // Handle timeline updates for current task end time
+    if (body.action === 'update_current_task_end') {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      const dailyTask = await DailyTask.findOne({
+        employeeId: body.employeeId,
+        date: { $gte: startOfDay, $lte: endOfDay }
+      });
+      
+      if (dailyTask && dailyTask.tasks.length > 0) {
+        // Find the last task without an end time
+        const lastTask = dailyTask.tasks.slice().reverse().find(t => !t.endTime || t.endTime === '');
+        if (lastTask && lastTask.startTime !== body.endTime) {
+          lastTask.endTime = body.endTime;
+          lastTask.status = 'Completed';
+          await dailyTask.save();
+          return NextResponse.json({ message: 'Current task end time updated', dailyTask });
+        }
+      }
+      
+      return NextResponse.json({ message: 'No current task to update' });
+    }
+    
+    // Handle adding new task after break
+    if (body.action === 'add_task_after_break') {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      const dailyTask = await DailyTask.findOne({
+        employeeId: body.employeeId,
+        date: { $gte: startOfDay, $lte: endOfDay }
+      });
+      
+      if (dailyTask) {
+        const maxSerial = dailyTask.tasks.length > 0 
+          ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
+          : 0;
+        
+        dailyTask.tasks.push({
+          Serialno: maxSerial + 1,
+          details: '',
+          status: 'In Progress',
+          startTime: body.startTime,
+          endTime: '',
+          isSaved: false
+        });
+        
+        await dailyTask.save();
+        return NextResponse.json({ message: 'Task added after break', dailyTask });
+      }
+      
+      return NextResponse.json({ message: 'No daily task found' });
+    }
+    
     // Handle first entry update on login
     if (body.action === 'update_first_entry') {
       console.log('=== DAILY TASK API: Received update_first_entry action ===');
@@ -274,7 +348,7 @@ export async function PUT(req) {
           tasks: [{
             Serialno: 1,
             details: body.task,
-            status: 'Completed',
+            status: 'In Progress',
             startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
             endTime: '',
             isSaved: false
@@ -289,7 +363,7 @@ export async function PUT(req) {
       if (dailyTask.tasks.length > 0) {
         console.log('First task before update:', dailyTask.tasks[0]);
         dailyTask.tasks[0].details = body.task;
-        dailyTask.tasks[0].status = 'Completed';
+        dailyTask.tasks[0].status = body.status || dailyTask.tasks[0].status || 'In Progress';
         dailyTask.tasks[0].startTime = body.task.match(/\d{2}:\d{2}/)?.[0] || dailyTask.tasks[0].startTime;
         dailyTask.updatedAt = new Date();
         await dailyTask.save();
@@ -301,7 +375,7 @@ export async function PUT(req) {
       dailyTask.tasks.push({
         Serialno: 1,
         details: body.task,
-        status: 'Completed',
+        status: 'In Progress',
         startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
         endTime: '',
         isSaved: false

@@ -466,6 +466,11 @@ export default function Layout({ children }) {
                         <i className="bi bi-list-task me-2"></i>
                         <span className="nav-text">Employee Daily Tasks</span>
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-task")}>
+                        <i className="bi bi-upload me-2"></i>
+                        <span className="nav-text">Task Management</span>
+                      </button>
                       {userRole === "super-admin" || userRole === "Super-admin" ? (
                         <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                           onClick={() => navigate("/settings")}>
@@ -607,6 +612,11 @@ export default function Layout({ children }) {
                         <span className="nav-text">My Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/my-tasks")}>
+                        <i className="bi bi-check2-square me-2"></i>
+                        <span className="nav-text">My Tasks</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                         onClick={() => navigate("/my-projects")}>
                         <i className="bi bi-folder-fill me-2"></i>
                         <span className="nav-text">My Projects</span>
@@ -673,6 +683,11 @@ export default function Layout({ children }) {
                         onClick={() => navigate("/calendar")}>
                         <i className="bi bi-calendar3 me-2"></i>
                         <span className="nav-text">Calendar</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-task")}>
+                        <i className="bi bi-upload me-2"></i>
+                        <span className="nav-text">Task Management</span>
                       </button>
                     </div>
                   </div>
@@ -1064,6 +1079,11 @@ export default function Layout({ children }) {
                       onClick={() => navigate("/absence")}>
                       <i className="bi bi-calendar-x-fill me-2"></i>
                       <span className="nav-text">My Absence</span>
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-tasks")}>
+                      <i className="bi bi-check2-square me-2"></i>
+                      <span className="nav-text">My Tasks</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                       onClick={() => navigate("/my-payroll")}>

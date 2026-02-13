@@ -30,6 +30,7 @@ export default function TimecardPage() {
   const [permissionMinutes, setPermissionMinutes] = useState(0);
   const [permissionReason, setPermissionReason] = useState("");
   const [hasLoggedIn, setHasLoggedIn] = useState(false);
+  const [monthlyPermissionCount, setMonthlyPermissionCount] = useState(0);
   const hasCreatedTimecard = useRef(false);
 
   const getTimeString = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -53,7 +54,10 @@ export default function TimecardPage() {
     let total = timeToMinutes(endTime) - timeToMinutes(current.logIn);
     
     if (current.lunchOut && current.lunchIn) {
-      total -= (timeToMinutes(current.lunchIn) - timeToMinutes(current.lunchOut));
+      const lunchDuration = timeToMinutes(current.lunchIn) - timeToMinutes(current.lunchOut);
+      // Only deduct standard lunch time (60 min), excess is unaccounted time
+      const deductibleLunch = Math.min(lunchDuration, LUNCH_DURATION);
+      total -= deductibleLunch;
     }
     
     return Math.max(0, total);
@@ -170,6 +174,15 @@ export default function TimecardPage() {
       setHasLoggedIn(!!today.logIn);
       hasCreatedTimecard.current = true;
     }
+    
+    // Count monthly permissions
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthlyPerms = data.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate >= startOfMonth && t.permissionLocked && t.permissionMinutes > 0;
+    }).length;
+    setMonthlyPermissionCount(monthlyPerms);
   };
 
   const handleLogin = async () => {
@@ -348,6 +361,45 @@ export default function TimecardPage() {
       return;
     }
     
+    // Check monthly limit
+    if (monthlyPermissionCount >= 2) {
+      setSuccessMessage(`Permission limit reached. You can only take permission 2 times per month. Used: ${monthlyPermissionCount}/2`);
+      setShowSuccess(true);
+      return;
+    }
+    
+    // If no timecard exists (before login), create one first
+    if (!current?._id) {
+      const token = localStorage.getItem('token');
+      const res = await fetch("/api/timecard", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          employeeId, 
+          date: getDateString(), 
+          userRole,
+          permissionMinutes,
+          permissionReason,
+          permissionLocked: true
+        }),
+      });
+      
+      const data = await res.json();
+      if (data.timecard) {
+        setCurrent(data.timecard);
+        setMonthlyPermissionCount(prev => prev + 1);
+        setSuccessMessage(`Permission of ${permissionMinutes} min recorded before login`);
+        setShowSuccess(true);
+      } else if (data.error) {
+        setSuccessMessage(data.error);
+        setShowSuccess(true);
+      }
+      return;
+    }
+    
     console.log('Frontend: Sending permission update to backend');
     const success = await updateTimecard({ 
       permissionMinutes, 
@@ -356,6 +408,7 @@ export default function TimecardPage() {
     });
     if (success) {
       console.log('Frontend: Permission updated successfully');
+      setMonthlyPermissionCount(prev => prev + 1);
       setSuccessMessage(`Permission of ${permissionMinutes} min recorded`);
       setShowSuccess(true);
     }
@@ -712,10 +765,15 @@ export default function TimecardPage() {
                         type="text" 
                         className="form-control" 
                         value={breakReason} 
-                        onChange={(e) => setBreakReason(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '').slice(0, 30);
+                          setBreakReason(value);
+                        }}
                         disabled={isOnBreak || breaks.length >= MAX_BREAKS || !!current?.logOut}
-                        placeholder="Enter reason"
+                        placeholder="Enter reason "
+                        maxLength={30}
                       />
+                      <small className="text-muted">{breakReason.length}/30 characters</small>
                     </div>
                     <div className="row g-2">
                       <div className="col-6">
@@ -749,42 +807,54 @@ export default function TimecardPage() {
               <div className="col-md-6">
                 <div className="card" style={{ background: 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)', border: '2px solid #d4af37' }}>
                   <div className="card-body">
-                    <h6 className="fw-bold mb-3">Permission (Max {PERMISSION_LIMIT / 60} hours)</h6>
+                    <h6 className="fw-bold mb-3">Permission (Max {PERMISSION_LIMIT / 60} hours) - {monthlyPermissionCount}/2 used this month</h6>
                     <div className="mb-3">
-                      <label className="form-label fw-bold">Permission Time (minutes)</label>
-                      <input 
-                        type="number" 
-                        className="form-control" 
+                      <label className="form-label fw-bold">Permission Time</label>
+                      <select 
+                        className="form-select" 
                         value={permissionMinutes} 
                         onChange={(e) => setPermissionMinutes(Number(e.target.value))}
-                        disabled={!!current?.logOut || !!current?.permissionLocked}
-                        min="30"
-                        max={PERMISSION_LIMIT}
-                      />
+                        disabled={!!current?.logOut || !!current?.permissionLocked || monthlyPermissionCount >= 2}
+                      >
+                        <option value={0}>Select Duration</option>
+                        <option value={30}>0.5 hours (30 min)</option>
+                        <option value={60}>1 hour (60 min)</option>
+                        <option value={90}>1.5 hours (90 min)</option>
+                        <option value={120}>2 hours (120 min)</option>
+                      </select>
+                      {monthlyPermissionCount >= 2 && (
+                        <small className="text-danger d-block mt-1">Monthly limit reached (2/2)</small>
+                      )}
                     </div>
                     <div className="mb-3">
                       <label className="form-label fw-bold">Reason</label>
-                      <input 
-                        type="text" 
+                      <textarea 
                         className="form-control" 
                         value={permissionReason} 
                         onChange={(e) => setPermissionReason(e.target.value)}
-                        disabled={!!current?.logOut || !!current?.permissionLocked}
-                        placeholder="Enter reason"
+                        disabled={!!current?.logOut || !!current?.permissionLocked || monthlyPermissionCount >= 2}
+                        placeholder="Enter detailed reason for permission"
+                        rows="2"
                       />
                     </div>
                     <button 
                       onClick={handlePermissionUpdate} 
                       className="btn btn-primary btn-sm w-100" 
-                      disabled={!!current?.logOut || permissionMinutes < 30 || !permissionReason.trim() || !!current?.permissionLocked || !hasLoggedIn}
+                      disabled={!!current?.logOut || permissionMinutes < 30 || !permissionReason.trim() || !!current?.permissionLocked || monthlyPermissionCount >= 2}
                     >
-                      <i className="bi bi-check-circle me-1"></i>Update Permission
+                      <i className="bi bi-check-circle me-1"></i>Add Permission
                     </button>
-                    {current?.permissionLocked && (
+                    {current?.permissionLocked ? (
                       <div className="text-center mt-2">
-                        <small className="text-success">Permission Locked</small>
+                        <div className="badge bg-success">Permission Locked</div>
+                        <small className="d-block text-muted mt-1">Cannot be modified</small>
                       </div>
-                    )}
+                    ) : permissionMinutes > 0 ? (
+                      <div className="text-center mt-2">
+                        <div className="badge bg-warning text-dark">Permission Added (Not Locked)</div>
+                        <small className="d-block text-muted mt-1">Can still be removed or modified</small>
+                      </div>
+                    ) : null}
                     {permissionMinutes > 0 && (
                       <div className="text-center mt-2">
                         <small className={permissionMinutes > PERMISSION_LIMIT ? 'text-danger' : 'text-success'}>
@@ -808,6 +878,7 @@ export default function TimecardPage() {
                         <th>Break Out</th>
                         <th>Break In</th>
                         <th>Duration</th>
+                        <th>Unaccounted Time</th>
                         <th>Reason</th>
                       </tr>
                     </thead>
@@ -816,18 +887,37 @@ export default function TimecardPage() {
                         const duration = breakItem.breakIn 
                           ? timeToMinutes(breakItem.breakIn) - timeToMinutes(breakItem.breakOut)
                           : 0;
+                        const unaccountedTime = duration > BREAK_DURATION ? duration - BREAK_DURATION : 0;
                         return (
                           <tr key={index}>
                             <td>{breakItem.breakOut}</td>
                             <td>{breakItem.breakIn || "On Break"}</td>
                             <td>
                               {duration > 0 ? `${duration} min` : "-"}
-                              {duration > BREAK_DURATION && <span className="text-danger ms-2">(Exceeded)</span>}
+                              {duration > BREAK_DURATION && <span className="text-danger ms-2">(Late Break)</span>}
+                            </td>
+                            <td className={unaccountedTime > 0 ? 'text-danger fw-bold' : 'text-muted'}>
+                              {unaccountedTime > 0 ? `${unaccountedTime} min` : "-"}
                             </td>
                             <td>{breakItem.reason}</td>
                           </tr>
                         );
                       })}
+                      {/* Lunch row if taken */}
+                      {current?.lunchOut && (
+                        <tr className="table-warning">
+                          <td>{current.lunchOut}</td>
+                          <td>{current.lunchIn || "On Lunch"}</td>
+                          <td>
+                            {current.lunchIn ? `${lunchTime} min` : "-"}
+                            {lunchTime > LUNCH_DURATION && <span className="text-danger ms-2">(Late Lunch)</span>}
+                          </td>
+                          <td className={lunchTime > LUNCH_DURATION ? 'text-danger fw-bold' : 'text-muted'}>
+                            {lunchTime > LUNCH_DURATION ? `${lunchTime - LUNCH_DURATION} min` : "-"}
+                          </td>
+                          <td>Lunch Break</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -854,7 +944,7 @@ export default function TimecardPage() {
               <li>Manual logout: <strong>Allowed anytime</strong> (Logs lunch/break status)</li>
               <li>Lunch Break: <strong>60 minutes</strong> (Company-provided, not counted in work time)</li>
               <li>Breaks: <strong>Max {MAX_BREAKS} break, {BREAK_DURATION} minutes</strong></li>
-              <li>Permission: <strong>Min 30 minutes, Max 2 hours per day</strong> (If &gt; 2 hours, marked as Half Day)</li>
+              <li>Permission: <strong>0.5h, 1h, 1.5h, or 2h per day</strong> (Can be added before or after login, locks automatically. If &gt; 2 hours, marked as Half Day. <strong className="text-danger">Limited to 2 times per month</strong>)</li>
               <li>Extensions: Lunch or break extensions notify admins automatically</li>
               <li>Must complete lunch and all breaks before logout</li>
               {userRole === 'SUPER_ADMIN' && (

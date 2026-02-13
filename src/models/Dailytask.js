@@ -18,7 +18,8 @@ const DailyTaskSchema = new mongoose.Schema({
       isSaved: { type: Boolean, default: false },
       isNew: { type: Boolean, default: false },
       isLogout: { type: Boolean, default: false },
-      isLunchOut: { type: Boolean, default: false }
+      isLunchOut: { type: Boolean, default: false },
+      isPermission: { type: Boolean, default: false }
     },
   ],
 
