@@ -988,6 +988,11 @@ export default function Layout({ children }) {
                 <div id="internWorkCollapse" className="accordion-collapse collapse show">
                   <div className="accordion-body bg-dark p-0">
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/Dashboard")}>
+                      <i className="bi bi-house-fill me-2"></i>
+                      <span className="nav-text">Dashboard</span>
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                       onClick={() => navigate("/timecard-entry")}>
                       <i className="bi bi-clock-fill me-2"></i>
                       <span className="nav-text">Timecard Entry</span>
@@ -1043,13 +1048,11 @@ export default function Layout({ children }) {
                 </h2>
                 <div id="employeeWorkCollapse" className="accordion-collapse collapse show">
                   <div className="accordion-body bg-dark p-0">
-                    {hasPermission('Management', 'Dashboard', 'view') && (
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/admin-dashboard")}>
-                        <i className="bi bi-house-fill me-2"></i>
-                        <span className="nav-text">Dashboard</span>
-                      </button>
-                    )}
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/Dashboard")}>
+                      <i className="bi bi-house-fill me-2"></i>
+                      <span className="nav-text">Dashboard</span>
+                    </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                       onClick={() => navigate("/timecard-entry")}>
                       <i className="bi bi-clock-fill me-2"></i>
