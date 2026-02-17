@@ -24,7 +24,7 @@ export default function AdminTaskPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
-    if (!userRole || !["admin", "super-admin", "Super-admin", "developer"].includes(userRole)) {
+    if (!userRole || !["admin", "super-admin", "Super-admin", "developer", "Team-Lead", "Team-admin"].includes(userRole)) {
       router.push("/");
       return;
     }

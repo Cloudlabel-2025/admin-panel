@@ -46,15 +46,87 @@ export async function GET(req) {
   }
 }
 
-// POST: create tasks from Excel upload with validation
+// POST: create tasks from Excel upload or single task assignment
 export async function POST(req) {
   try {
     await connectMongoose();
-    const { tasks } = await req.json();
+    const body = await req.json();
+    const { tasks, singleTask, assignedBy, assignerRole } = body;
 
-    if (!tasks || !Array.isArray(tasks)) {
-      return NextResponse.json({ error: "Invalid tasks data" }, { status: 400 });
+    // Handle single task assignment
+    if (singleTask) {
+      const { employeeId, taskName, client, module, topic, startDate, expectedendDate, remarks } = singleTask;
+
+      if (!employeeId || !taskName) {
+        return NextResponse.json({ error: "Employee ID and Task Name are required" }, { status: 400 });
+      }
+
+      // Get employee details
+      const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+      let employee = null;
+      for (const dept of departments) {
+        employee = await findEmployeeByIdAndDepartment(employeeId, dept);
+        if (employee) break;
+      }
+
+      if (!employee) {
+        return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+      }
+
+      // Role-based assignment validation
+      const employeeRole = employee.role?.toLowerCase();
+      const assignerRoleLower = assignerRole?.toLowerCase();
+
+      if (assignerRoleLower === 'team-lead') {
+        if (!['team-admin', 'employee', 'intern'].includes(employeeRole)) {
+          return NextResponse.json({ error: "Team-Lead can only assign tasks to Team-Admin, Employee, or Intern" }, { status: 403 });
+        }
+      } else if (assignerRoleLower === 'team-admin') {
+        if (!['employee', 'intern'].includes(employeeRole)) {
+          return NextResponse.json({ error: "Team-Admin can only assign tasks to Employee or Intern" }, { status: 403 });
+        }
+      }
+
+      const taskData = {
+        employeeId,
+        department: employee.department,
+        name: `${employee.firstName} ${employee.lastName}`,
+        client: client || "",
+        module: module || "",
+        topic: topic || "",
+        taskName,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        expectedendDate: expectedendDate ? new Date(expectedendDate) : null,
+        assignedBy: assignedBy || "Admin",
+        status: "Yet to start",
+        remarks: remarks || ""
+      };
+
+      const task = await Task.create(taskData);
+
+      // Send notification
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/notifications`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notifications: [{
+              employeeId,
+              title: 'New Task Assigned',
+              message: `You have been assigned a new task: ${taskName} by ${assignedBy}`,
+              type: 'info',
+              isRead: false
+            }]
+          })
+        });
+      } catch (err) {
+        console.log('Notification failed');
+      }
+
+      return NextResponse.json({ task, message: "Task assigned successfully" }, { status: 201 });
     }
+
+    // Handle bulk Excel upload (existing code)
 
     const result = {
       totalRows: tasks.length,

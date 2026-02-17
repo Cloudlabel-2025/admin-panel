@@ -828,6 +828,11 @@ export default function Layout({ children }) {
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">Team Skills</span>
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-task")}>
+                        <i className="bi bi-clipboard-check me-2"></i>
+                        <span className="nav-text">Task Management</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -952,6 +957,11 @@ export default function Layout({ children }) {
                         <i className="bi bi-award-fill me-2"></i>
                         <span className="nav-text">Team Skills</span>
                       </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/admin-task")}>
+                        <i className="bi bi-clipboard-check me-2"></i>
+                        <span className="nav-text">Task Management</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1001,6 +1011,11 @@ export default function Layout({ children }) {
                       onClick={() => navigate("/daily-task")}>
                       <i className="bi bi-list-task me-2"></i>
                       <span className="nav-text">Daily Task</span>
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/my-tasks")}>
+                      <i className="bi bi-check2-square me-2"></i>
+                      <span className="nav-text">My Tasks</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                       onClick={() => navigate("/my-projects")}>
