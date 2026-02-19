@@ -249,6 +249,14 @@ export default function DailyTaskComponent() {
       return;
     }
 
+    // Check if all tasks have task names
+    const tasksWithoutNames = dailyTasks.filter(t => !t.details || t.details.trim() === '');
+    if (tasksWithoutNames.length > 0) {
+      setError('Cannot update. All tasks must have task names.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     try {
       const payload = {
         employeeId: user.employeeId,
@@ -366,6 +374,14 @@ export default function DailyTaskComponent() {
     try {
       if (!dailyTasks.length) {
         setError("No tasks to save");
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+
+      // Check if all tasks have task names
+      const tasksWithoutNames = dailyTasks.filter(t => !t.details || t.details.trim() === '');
+      if (tasksWithoutNames.length > 0) {
+        setError('Cannot save. All tasks must have task names.');
         setTimeout(() => setError(''), 3000);
         return;
       }
