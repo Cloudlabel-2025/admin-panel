@@ -13,7 +13,7 @@
 const response = await fetch("/api/User/login", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
+  body: JSON.stringify(1{
     email: "admin@gmail.com",
     password: "Admin@2025"
   })

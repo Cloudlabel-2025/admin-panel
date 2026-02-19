@@ -226,7 +226,7 @@ export default function DailyTaskComponent() {
     const newTask = {
       Serialno: updatedTasks.length + 1,
       details: "",
-      startTime: newTaskStartTime,
+      startTime: "",
       endTime: "",
       status: "In Progress",
       remarks: "",
@@ -306,6 +306,22 @@ export default function DailyTaskComponent() {
       setError('Start and end times are automatically tracked and cannot be edited.');
       setTimeout(() => setError(''), 3000);
       return;
+    }
+
+    // Set start time when task name is first entered
+    if (field === 'details' && value.trim() !== '' && !task.startTime) {
+      const currentTime = new Date().toLocaleTimeString('en-GB', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      // Use previous task's end time or current time
+      if (index > 0 && updated[index - 1].endTime) {
+        updated[index].startTime = updated[index - 1].endTime;
+      } else {
+        updated[index].startTime = currentTime;
+      }
     }
 
     updated[index][field] = value;
