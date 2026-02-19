@@ -174,6 +174,16 @@ export default function DailyTaskComponent() {
 
   // Add new task
   const addTask = () => {
+    // Check if last task has task name entered
+    if (dailyTasks.length > 0) {
+      const lastTask = dailyTasks[dailyTasks.length - 1];
+      if (!lastTask.details || lastTask.details.trim() === '') {
+        setError('Please enter task name for the current task before adding a new one.');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+    }
+
     // Prevent adding tasks during active permission
     if (timecard.permissionMinutes > 0 && !timecard.permissionLocked) {
       setError('Cannot add tasks during active permission. Please lock or cancel the permission first.');
@@ -863,9 +873,17 @@ export default function DailyTaskComponent() {
                                 className={`form-control form-control-sm ${validationErrors[`details_${idx}`] ? 'is-invalid' : ''}`}
                                 value={task.details}
                                 onChange={(e) => handleChange(idx, "details", e.target.value)}
+                                onKeyDown={(e) => {
+                                  if ((e.key === 'Tab' || e.key === 'Enter') && (!task.details || task.details.trim() === '')) {
+                                    e.preventDefault();
+                                    setError('Task name is mandatory. Please enter task details before moving to next field.');
+                                    setTimeout(() => setError(''), 3000);
+                                  }
+                                }}
                                 disabled={task.isSaved}
-                                placeholder={task.isSaved ? "Task details locked" : "Enter task details"}
+                                placeholder={task.isSaved ? "Task details locked" : "Enter task details (Required)"}
                                 rows="2"
+                                required
                               />
                               {validationErrors[`details_${idx}`] && (
                                 <div className="invalid-feedback">{validationErrors[`details_${idx}`]}</div>
