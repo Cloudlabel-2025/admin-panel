@@ -217,6 +217,24 @@ async function handlePOST(req) {
     const data = await req.json();
     
     if (!data.date) data.date = new Date();
+    
+    // Check if timecard already exists for this employee and date
+    const dateStr = new Date(data.date).toISOString().split('T')[0];
+    const existingTimecard = await Timecard.findOne({
+      employeeId: data.employeeId,
+      date: {
+        $gte: new Date(dateStr),
+        $lt: new Date(new Date(dateStr).getTime() + 24 * 60 * 60 * 1000)
+      }
+    });
+    
+    if (existingTimecard && existingTimecard.logIn && data.logIn) {
+      return NextResponse.json({ 
+        error: "Already logged in today",
+        timecard: existingTimecard 
+      }, { status: 400 });
+    }
+    
     // Use client-provided login time instead of server time
     if (!data.logIn && !data.permissionMinutes) {
       data.logIn = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
