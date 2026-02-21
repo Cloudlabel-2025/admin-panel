@@ -132,21 +132,79 @@ export default function AttendancePage() {
 
 
   const exportToExcel = () => {
-    const wsData = attendance.map(a => ({
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    
+    // Group by employee for monthly summary
+    const employeeMap = {};
+    attendance.forEach(a => {
+      if (!employeeMap[a.employeeId]) {
+        employeeMap[a.employeeId] = {
+          employeeId: a.employeeId,
+          employeeName: a.employeeName,
+          department: a.department,
+          present: 0,
+          absent: 0,
+          halfDay: 0,
+          logoutMissing: 0,
+          lateLogins: 0,
+          totalHours: 0,
+          totalOvertime: 0
+        };
+      }
+      const emp = employeeMap[a.employeeId];
+      if (a.status === 'Present') emp.present++;
+      if (a.status === 'Absent') emp.absent++;
+      if (a.status === 'Half Day') emp.halfDay++;
+      if (a.status === 'Logout Missing') emp.logoutMissing++;
+      if (a.isLateLogin) emp.lateLogins++;
+      emp.totalHours += a.totalHours || 0;
+      emp.totalOvertime += a.overtimeHours || 0;
+    });
+    
+    const summaryData = Object.values(employeeMap).map(emp => {
+      const totalDays = new Date(currentYear, currentMonth, 0).getDate();
+      const attendancePercentage = totalDays > 0 
+        ? ((emp.present + emp.halfDay * 0.5) / totalDays * 100).toFixed(2)
+        : 0;
+      
+      return {
+        EmployeeID: emp.employeeId,
+        EmployeeName: emp.employeeName,
+        Department: emp.department,
+        Present: emp.present,
+        Absent: emp.absent,
+        HalfDay: emp.halfDay,
+        LogoutMissing: emp.logoutMissing,
+        LateLogins: emp.lateLogins,
+        TotalHours: emp.totalHours.toFixed(2),
+        TotalOvertime: emp.totalOvertime.toFixed(2),
+        AttendancePercentage: attendancePercentage + '%'
+      };
+    });
+    
+    const detailData = attendance.map(a => ({
       Date: new Date(a.date).toLocaleDateString(),
       EmployeeID: a.employeeId,
       EmployeeName: a.employeeName,
+      Department: a.department,
       Status: a.status,
       TotalHours: a.totalHours?.toFixed(2) || 0,
       PermissionHours: a.permissionHours?.toFixed(2) || 0,
+      OvertimeHours: a.overtimeHours?.toFixed(2) || 0,
       LoginTime: a.loginTime || "-",
       LogoutTime: a.logoutTime || "-",
+      Late: a.isLateLogin ? `${a.lateByMinutes}m` : 'On Time',
       Remarks: a.remarks || "-"
     }));
     
-    const ws = XLSX.utils.json_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    const wsDetail = XLSX.utils.json_to_sheet(detailData);
+    
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Monthly Summary");
+    XLSX.utils.book_append_sheet(wb, wsDetail, "Detailed Records");
+    
     XLSX.writeFile(wb, `Attendance_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
@@ -468,13 +526,14 @@ export default function AttendancePage() {
                       <th><i className="bi bi-clock me-1"></i>Total Hours</th>
                       <th><i className="bi bi-door-open me-1"></i>Permission</th>
                       <th><i className="bi bi-clock-history me-1"></i>Overtime</th>
+                      <th><i className="bi bi-alarm me-1"></i>Late</th>
                       <th><i className="bi bi-chat-text me-1"></i>Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {attendance.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="text-center py-5">
+                        <td colSpan={12} className="text-center py-5">
                           <div style={{fontSize: '3rem'}}><i className="bi bi-clipboard-x text-muted"></i></div>
                           <p className="text-muted mt-2 mb-0">No attendance records found.</p>
                         </td>
@@ -498,7 +557,9 @@ export default function AttendancePage() {
                           <span className={`badge ${
                             a.status === 'Present' ? 'bg-success' : 
                             a.status === 'Half Day' ? 'bg-warning text-dark' : 
-                            a.status === 'In Office' ? 'bg-primary' : 'bg-danger'
+                            a.status === 'Logout Missing' ? 'bg-warning text-dark' :
+                            a.status === 'In Office' ? 'bg-primary' : 
+                            a.status === 'Weekend' ? 'bg-dark' : 'bg-danger'
                           }`}>
                             {a.status}
                           </span>
@@ -517,6 +578,13 @@ export default function AttendancePage() {
                         </td>
                         <td>
                           <span className="badge bg-secondary">{(a.overtimeHours || 0).toFixed(2)}h</span>
+                        </td>
+                        <td>
+                          {a.isLateLogin ? (
+                            <span className="badge bg-danger">{a.lateByMinutes}m</span>
+                          ) : (
+                            <span className="badge bg-success">On Time</span>
+                          )}
                         </td>
                         <td>
                           <small className="text-muted">{a.remarks || "—"}</small>

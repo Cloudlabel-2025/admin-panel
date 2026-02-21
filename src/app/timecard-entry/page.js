@@ -227,6 +227,44 @@ export default function TimecardPage() {
     }
   }, [employeeId, requiredLoginTime]);
 
+  // Auto-login when page loads if not logged in today
+  useEffect(() => {
+    const autoLogin = async () => {
+      if (employeeId && requiredLoginTime && !hasLoggedIn && !hasCreatedTimecard.current) {
+        const token = localStorage.getItem('token');
+        const res = await fetch("/api/timecard", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            employeeId, 
+            date: getDateString(), 
+            userRole,
+            logIn: getTimeString()
+          }),
+        });
+        
+        const data = await res.json();
+        if (data.timecard) {
+          setCurrent(data.timecard);
+          setHasLoggedIn(true);
+          setLateLogin(data.timecard.lateLogin || false);
+          hasCreatedTimecard.current = true;
+          if (data.timecard.lateLogin) {
+            setSuccessMessage(`Auto-logged in at ${data.timecard.logIn}. Late login! Required: ${requiredLoginTime}. Admins notified.`);
+          } else {
+            setSuccessMessage(`Auto-logged in at ${data.timecard.logIn}`);
+          }
+          setShowSuccess(true);
+        }
+      }
+    };
+    
+    autoLogin();
+  }, [employeeId, requiredLoginTime, hasLoggedIn]);
+
   useEffect(() => {
     if (!current?.logIn || current?.logOut) return;
     
@@ -711,11 +749,7 @@ export default function TimecardPage() {
                         <label className="form-label fw-bold">Login Time</label>
                         <input type="text" className="form-control text-center mb-2" value={current?.logIn || "-"} readOnly />
                         {lateLogin && <small className="text-danger d-block mt-1">Late Login</small>}
-                        {!hasLoggedIn && (
-                          <button onClick={handleLogin} className="btn btn-success btn-sm w-100 mt-2">
-                            <i className="bi bi-box-arrow-in-right me-1"></i>Login
-                          </button>
-                        )}
+                        {!hasLoggedIn && <small className="text-info d-block mt-1">Auto-login on page load</small>}
                       </div>
                       <div className="col-6">
                         <label className="form-label fw-bold">Logout Time</label>

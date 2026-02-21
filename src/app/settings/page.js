@@ -10,6 +10,9 @@ export default function SettingsPage() {
   const [employeeId, setEmployeeId] = useState("");
   const [requiredLoginTime, setRequiredLoginTime] = useState("10:00");
   const [newLoginTime, setNewLoginTime] = useState("");
+  const [saturdayOverrides, setSaturdayOverrides] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [isWorkingDay, setIsWorkingDay] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -27,6 +30,7 @@ export default function SettingsPage() {
     setUserRole(role);
     setEmployeeId(empId);
     fetchRequiredLoginTime();
+    fetchSaturdayOverrides();
   }, [router]);
 
   const fetchRequiredLoginTime = async () => {
@@ -38,6 +42,18 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setRequiredLoginTime(data.value || "10:00");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchSaturdayOverrides = async () => {
+    try {
+      const res = await fetch('/api/weekend-override');
+      if (res.ok) {
+        const data = await res.json();
+        setSaturdayOverrides(data);
       }
     } catch (err) {
       console.error(err);
@@ -79,6 +95,59 @@ export default function SettingsPage() {
       }
     } catch (err) {
       setSuccessMessage("Error updating login time");
+      setShowSuccess(true);
+    }
+  };
+
+  const addSaturdayOverride = async () => {
+    if (!selectedDate) {
+      setSuccessMessage("Please select a date");
+      setShowSuccess(true);
+      return;
+    }
+
+    const date = new Date(selectedDate);
+    if (date.getDay() !== 6) {
+      setSuccessMessage("Please select a Saturday");
+      setShowSuccess(true);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/weekend-override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: selectedDate,
+          isWeekend: !isWorkingDay,
+          reason: isWorkingDay ? "Working Saturday" : "Weekend Override",
+          createdBy: employeeId
+        })
+      });
+
+      if (res.ok) {
+        setSuccessMessage(`Saturday ${isWorkingDay ? 'marked as working day' : 'marked as weekend'}`);
+        setShowSuccess(true);
+        setSelectedDate("");
+        setIsWorkingDay(false);
+        fetchSaturdayOverrides();
+      }
+    } catch (err) {
+      setSuccessMessage("Error updating Saturday");
+      setShowSuccess(true);
+    }
+  };
+
+  const removeOverride = async (date) => {
+    try {
+      const res = await fetch(`/api/weekend-override?date=${date}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSuccessMessage("Override removed");
+        setShowSuccess(true);
+        fetchSaturdayOverrides();
+      }
+    } catch (err) {
+      setSuccessMessage("Error removing override");
       setShowSuccess(true);
     }
   };
@@ -148,6 +217,82 @@ export default function SettingsPage() {
         </div>
 
         <div className="card shadow-sm" style={{ border: '2px solid #d4af37' }}>
+          <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
+            <h5 className="mb-0">Saturday Override Configuration</h5>
+          </div>
+          <div className="card-body p-4">
+            <div className="alert alert-info mb-4">
+              <i className="bi bi-info-circle me-2"></i>
+              <strong>Default Rule:</strong> Sunday is always weekend. 2nd & 4th Saturdays are weekends. Override specific Saturdays below.
+            </div>
+            <div className="row g-3 mb-4">
+              <div className="col-md-6">
+                <label className="form-label fw-bold">Select Saturday</label>
+                <input 
+                  type="date" 
+                  className="form-control" 
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label fw-bold">Mark As</label>
+                <select 
+                  className="form-select" 
+                  value={isWorkingDay}
+                  onChange={(e) => setIsWorkingDay(e.target.value === 'true')}
+                >
+                  <option value="false">Weekend</option>
+                  <option value="true">Working Day</option>
+                </select>
+              </div>
+            </div>
+            <button className="btn btn-warning w-100 mb-4" onClick={addSaturdayOverride}>
+              <i className="bi bi-calendar-plus me-2"></i>Add Override
+            </button>
+            
+            {saturdayOverrides.length > 0 && (
+              <div>
+                <h6 className="fw-bold mb-3">Active Overrides</h6>
+                <div className="table-responsive">
+                  <table className="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {saturdayOverrides.map((override) => (
+                        <tr key={override._id}>
+                          <td>{new Date(override.date).toLocaleDateString()}</td>
+                          <td>
+                            <span className={`badge ${override.isWeekend ? 'bg-danger' : 'bg-success'}`}>
+                              {override.isWeekend ? 'Weekend' : 'Working Day'}
+                            </span>
+                          </td>
+                          <td>{override.reason}</td>
+                          <td>
+                            <button 
+                              className="btn btn-sm btn-danger"
+                              onClick={() => removeOverride(override.date)}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="card shadow-sm mt-4" style={{ border: '2px solid #d4af37' }}>
           <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
             <h5 className="mb-0">System Rules</h5>
           </div>

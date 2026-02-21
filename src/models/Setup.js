@@ -4,6 +4,10 @@ const SetupSchema = new mongoose.Schema({
   setupId: { type: String, unique: true, required: true },
   setupName: { type: String, required: true },
   categories: [{ type: String }],
+  standardLoginTime: { type: String, default: "09:00" },
+  gracePeriodMinutes: { type: Number, default: 15 },
+  weekendDays: { type: [Number], default: [0, 6] },
+  alternateSaturday: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -4,6 +4,7 @@ import connectMongoose from "@/app/utilis/connectMongoose";
 
 import Timecard from "@/models/Timecard";
 import Attendance from "@/models/Attendance";
+import WeekendOverride from "@/models/WeekendOverride";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
@@ -16,14 +17,126 @@ function timeToHours(timeStr) {
   return h + m / 60;
 }
 
+// Helper: check if login is late
+async function checkLateLogin(loginTime) {
+  if (!loginTime) return { isLate: false, lateBy: 0 };
+  
+  try {
+    const Settings = mongoose.models.Settings || mongoose.model('Settings', new mongoose.Schema({
+      key: { type: String, required: true, unique: true },
+      value: { type: String, required: true },
+      updatedBy: { type: String },
+      updatedAt: { type: Date, default: Date.now }
+    }));
+    
+    const setting = await Settings.findOne({ key: 'REQUIRED_LOGIN_TIME' });
+    const standardTime = setting?.value || "10:00";
+    const gracePeriod = 15;
+    
+    const [loginH, loginM] = loginTime.split(':').map(Number);
+    const [stdH, stdM] = standardTime.split(':').map(Number);
+    
+    const loginMinutes = loginH * 60 + loginM;
+    const standardMinutes = stdH * 60 + stdM + gracePeriod;
+    
+    const lateBy = loginMinutes - standardMinutes;
+    return { isLate: lateBy > 0, lateBy: Math.max(0, lateBy) };
+  } catch (err) {
+    console.error('Error checking late login:', err);
+    return { isLate: false, lateBy: 0 };
+  }
+}
+
+// Helper: check if date is weekend
+async function isWeekend(date) {
+  try {
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    // Priority 1: Manual override (highest priority)
+    const override = await WeekendOverride.findOne({ date: checkDate });
+    if (override) return override.isWeekend;
+    
+    // Priority 2: Automatic weekend detection
+    const dayOfWeek = checkDate.getDay();
+    
+    // Sunday is always weekend
+    if (dayOfWeek === 0) return true;
+    
+    // Saturday: check if 2nd or 4th
+    if (dayOfWeek === 6) {
+      const weekOfMonth = Math.ceil(checkDate.getDate() / 7);
+      return weekOfMonth === 2 || weekOfMonth === 4;
+    }
+    
+    return false;
+  } catch (err) {
+    console.error('Error checking weekend:', err);
+    return date.getDay() === 0;
+  }
+}
+
+// Helper: check if date is holiday
+async function isHoliday(date, department = null) {
+  try {
+    const Holiday = mongoose.models.Holiday;
+    if (!Holiday) return null;
+    
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const holiday = await Holiday.findOne({
+      date: checkDate,
+      $or: [
+        { type: "National" },
+        { type: "Regional", region: department },
+        { type: "Company" },
+        { department: department }
+      ]
+    });
+    
+    return holiday;
+  } catch (err) {
+    console.error('Error checking holiday:', err);
+    return null;
+  }
+}
+
 // Calculate attendance status
 function calculateAttendance(totalHours, permissionHours, hasLogout = true) {
-  // If no logout time, employee is still in office
-  if (!hasLogout) return "In Office";
+  // If no logout time, mark as logout missing
+  if (!hasLogout) return "Logout Missing";
   
   const effectiveHours = totalHours + Math.min(permissionHours, 2);
   if (effectiveHours >= 8) return "Present";
   if (effectiveHours >= 4) return "Half Day";
+  return "Absent";
+}
+
+// Calculate status based on login/logout
+function getAttendanceStatus(loginTime, logoutTime, totalHours, permissionHours, date) {
+  // If logged in but not logged out
+  if (loginTime && (!logoutTime || logoutTime.trim() === "")) {
+    // Check if date is today or future = In Office
+    const recordDate = new Date(date);
+    recordDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (recordDate >= today) {
+      return "In Office";
+    }
+    
+    // Past date without logout = Logout Missing
+    return "Logout Missing";
+  }
+  
+  // If logged out, calculate based on hours
+  if (logoutTime && logoutTime.trim() !== "") {
+    return calculateAttendance(totalHours, permissionHours, true);
+  }
+  
+  // No login = Absent
   return "Absent";
 }
 
@@ -118,21 +231,44 @@ export async function GET(req) {
     // First try to get from attendance records
     let attendanceRecords = await Attendance.find(query).sort({ date: -1 });
     
-    // If no attendance records found, generate from timecard data
-    if (attendanceRecords.length === 0) {
-      const timecards = await Timecard.find(query).sort({ date: -1 });
+    // Always check for missing timecards and generate attendance
+    const timecards = await Timecard.find(query).sort({ date: -1 });
+    
+    for (const tc of timecards) {
+      const existing = await Attendance.findOne({ employeeId: tc.employeeId, date: tc.date });
       
-      for (const tc of timecards) {
-        const totalHours = timeToHours(tc.totalHours || "00:00");
-        const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-        const hasLogout = tc.logOut && tc.logOut.trim() !== "";
-        const status = calculateAttendance(totalHours, permissionHours, hasLogout);
+      if (!existing) {
         const employeeData = await getEmployeeData(tc.employeeId);
+        const holiday = await isHoliday(new Date(tc.date), employeeData.department);
+        const isWeekendDay = await isWeekend(new Date(tc.date));
         
-        // Store in attendance database
-        await Attendance.findOneAndUpdate(
-          { employeeId: tc.employeeId, date: tc.date },
-          {
+        // Priority: Holiday > Weekend (but if weekend is overridden as working day and has login, treat as normal)
+        if (holiday) {
+          await Attendance.create({
+            employeeId: tc.employeeId,
+            employeeName: employeeData.name,
+            department: employeeData.department,
+            date: tc.date,
+            status: "Holiday",
+            remarks: `Holiday: ${holiday.name} (${holiday.type})`
+          });
+        } else if (isWeekendDay && !tc.logIn) {
+          // Weekend without login = Weekend status
+          await Attendance.create({
+            employeeId: tc.employeeId,
+            employeeName: employeeData.name,
+            department: employeeData.department,
+            date: tc.date,
+            status: "Weekend",
+            remarks: "Weekend"
+          });
+        } else {
+          const totalHours = timeToHours(tc.totalHours || "00:00");
+          const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
+          const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
+          const lateCheck = await checkLateLogin(tc.logIn);
+          
+          await Attendance.create({
             employeeId: tc.employeeId,
             employeeName: employeeData.name,
             department: employeeData.department,
@@ -143,15 +279,16 @@ export async function GET(req) {
             loginTime: tc.logIn || "",
             logoutTime: tc.logOut || "",
             overtimeHours: Math.max(0, totalHours - 8),
+            isLateLogin: lateCheck.isLate,
+            lateByMinutes: lateCheck.lateBy,
             remarks: tc.reason || ""
-          },
-          { upsert: true, new: true }
-        );
+          });
+        }
       }
-      
-      // Fetch the newly created records
-      attendanceRecords = await Attendance.find(query).sort({ date: -1 });
     }
+    
+    // Fetch all records including newly created
+    attendanceRecords = await Attendance.find(query).sort({ date: -1 });
     
     // Clean up Unknown employee names in database
     const unknownRecords = await Attendance.find({ 
@@ -206,13 +343,15 @@ export async function GET(req) {
         loginTime: record.loginTime || "",
         logoutTime: record.logoutTime || "",
         status: record.status,
+        isLateLogin: record.isLateLogin || false,
+        lateByMinutes: record.lateByMinutes || 0,
         remarks: record.remarks || ""
       });
     }
 
     return NextResponse.json(attendanceData, { status: 200 });
   } catch (err) {
-    console.error(err);
+    console.error('GET /api/attendance error:', err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }
@@ -221,6 +360,113 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await connectMongoose();
+    
+    // Check if this is an automated cron job
+    const { searchParams } = new URL(req.url);
+    const isAutomated = searchParams.get("automated") === "true";
+    const cronKey = searchParams.get("key");
+    
+    // Handle automated daily generation
+    if (isAutomated) {
+      if (cronKey !== process.env.CRON_SECRET_KEY && cronKey !== "manual-trigger") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      
+      const endOfYesterday = new Date(yesterday);
+      endOfYesterday.setHours(23, 59, 59, 999);
+      
+      const timecards = await Timecard.find({
+        date: { $gte: yesterday, $lte: endOfYesterday }
+      });
+      
+      let processed = 0, updated = 0, errors = 0;
+      
+      for (const tc of timecards) {
+        try {
+          const employeeData = await getEmployeeData(tc.employeeId);
+          const holiday = await isHoliday(new Date(tc.date), employeeData.department);
+          const isWeekendDay = await isWeekend(new Date(tc.date));
+          
+          // Priority: Holiday > Weekend (but if weekend is overridden as working day and has login, treat as normal)
+          if (holiday) {
+            await Attendance.findOneAndUpdate(
+              { employeeId: tc.employeeId, date: tc.date },
+              {
+                employeeId: tc.employeeId,
+                employeeName: employeeData.name,
+                department: employeeData.department,
+                date: tc.date,
+                status: "Holiday",
+                remarks: `Holiday: ${holiday.name} (${holiday.type})`,
+                updatedAt: new Date()
+              },
+              { upsert: true, new: true }
+            );
+          } else if (isWeekendDay && !tc.logIn) {
+            // Weekend without login = Weekend status
+            await Attendance.findOneAndUpdate(
+              { employeeId: tc.employeeId, date: tc.date },
+              {
+                employeeId: tc.employeeId,
+                employeeName: employeeData.name,
+                department: employeeData.department,
+                date: tc.date,
+                status: "Weekend",
+                remarks: "Weekend",
+                updatedAt: new Date()
+              },
+              { upsert: true, new: true }
+            );
+          } else {
+            const totalHours = timeToHours(tc.totalHours || "00:00");
+            const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
+            const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
+            const overtimeHours = Math.max(0, totalHours - 8);
+            
+            const lateCheck = await checkLateLogin(tc.logIn);
+            
+            await Attendance.findOneAndUpdate(
+              { employeeId: tc.employeeId, date: tc.date },
+              {
+                employeeId: tc.employeeId,
+                employeeName: employeeData.name,
+                department: employeeData.department,
+                date: tc.date,
+                status,
+                totalHours,
+                permissionHours,
+                loginTime: tc.logIn || "",
+                logoutTime: tc.logOut || "",
+                overtimeHours,
+                isLateLogin: lateCheck.isLate,
+                lateByMinutes: lateCheck.lateBy,
+                remarks: tc.reason || "",
+                updatedAt: new Date()
+              },
+              { upsert: true, new: true }
+            );
+          }
+          
+          existing ? updated++ : processed++;
+        } catch (err) {
+          console.error(`Error processing ${tc.employeeId}:`, err);
+          errors++;
+        }
+      }
+      
+      return NextResponse.json({
+        success: true,
+        message: "Automated attendance generation completed",
+        stats: { totalTimecards: timecards.length, newRecords: processed, updatedRecords: updated, errors },
+        processedDate: yesterday.toISOString().split('T')[0]
+      });
+    }
+    
+    // Manual generation
     const body = await req.json();
     const { startDate, endDate, employeeId } = body;
 
@@ -249,14 +495,15 @@ export async function POST(req) {
     for (const tc of timecards) {
       const totalHours = timeToHours(tc.totalHours || "00:00");
       const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-      const hasLogout = tc.logOut && tc.logOut.trim() !== "";
-      const status = calculateAttendance(totalHours, permissionHours, hasLogout);
+      const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
       const employeeData = await getEmployeeData(tc.employeeId);
       
       // Calculate lunch duration and overtime
       const lunchDuration = tc.lunchOut && tc.lunchIn ? 
         Math.abs(new Date(`1970-01-01T${tc.lunchIn}:00`) - new Date(`1970-01-01T${tc.lunchOut}:00`)) / (1000 * 60) : 0;
       const overtimeHours = Math.max(0, totalHours - 8);
+      
+      const lateCheck = await checkLateLogin(tc.logIn);
       
       await Attendance.findOneAndUpdate(
         { employeeId: tc.employeeId, date: tc.date },
@@ -272,6 +519,8 @@ export async function POST(req) {
           logoutTime: tc.logOut || "",
           lunchDuration,
           overtimeHours,
+          isLateLogin: lateCheck.isLate,
+          lateByMinutes: lateCheck.lateBy,
           remarks: tc.reason || "",
 
           updatedAt: new Date()
@@ -308,10 +557,127 @@ export async function PUT(req) {
   try {
     await connectMongoose();
     const body = await req.json();
-    const { _id, ...updates } = body;
+    const { _id, action, approvedBy, approverRemarks, ...updates } = body;
     
+    // Handle regularization requests
+    if (action === "regularize") {
+      const Regularization = mongoose.models.Regularization || mongoose.model('Regularization', new mongoose.Schema({
+        employeeId: String,
+        employeeName: String,
+        department: String,
+        attendanceId: mongoose.Schema.Types.ObjectId,
+        date: Date,
+        currentStatus: String,
+        requestedStatus: String,
+        currentLoginTime: String,
+        requestedLoginTime: String,
+        currentLogoutTime: String,
+        requestedLogoutTime: String,
+        reason: String,
+        documentUrl: String,
+        status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
+        approvedBy: String,
+        approvalDate: Date,
+        approverRemarks: String,
+        auditTrail: [{ action: String, performedBy: String, timestamp: Date, changes: Object }],
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now }
+      }));
+      
+      const attendance = await Attendance.findById(body.attendanceId);
+      if (!attendance) {
+        return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
+      }
+      
+      const regularization = await Regularization.create({
+        employeeId: body.employeeId,
+        employeeName: body.employeeName,
+        department: body.department,
+        attendanceId: body.attendanceId,
+        date: attendance.date,
+        currentStatus: attendance.status,
+        requestedStatus: body.requestedStatus,
+        currentLoginTime: attendance.loginTime,
+        requestedLoginTime: body.requestedLoginTime,
+        currentLogoutTime: attendance.logoutTime,
+        requestedLogoutTime: body.requestedLogoutTime,
+        reason: body.reason,
+        documentUrl: body.documentUrl,
+        auditTrail: [{
+          action: "Request Created",
+          performedBy: body.employeeId,
+          timestamp: new Date(),
+          changes: { status: "Pending" }
+        }]
+      });
+      
+      return NextResponse.json({ success: true, regularization });
+    }
+    
+    // Handle regularization approval/rejection
+    if (action === "approve-regularization" || action === "reject-regularization") {
+      const Regularization = mongoose.models.Regularization;
+      if (!Regularization) {
+        return NextResponse.json({ error: "Regularization model not found" }, { status: 500 });
+      }
+      
+      const regularization = await Regularization.findById(_id);
+      if (!regularization) {
+        return NextResponse.json({ error: "Regularization request not found" }, { status: 404 });
+      }
+      
+      if (action === "approve-regularization") {
+        const attendance = await Attendance.findById(regularization.attendanceId);
+        if (!attendance) {
+          return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
+        }
+        
+        const oldData = {
+          status: attendance.status,
+          loginTime: attendance.loginTime,
+          logoutTime: attendance.logoutTime
+        };
+        
+        attendance.status = regularization.requestedStatus;
+        if (regularization.requestedLoginTime) attendance.loginTime = regularization.requestedLoginTime;
+        if (regularization.requestedLogoutTime) attendance.logoutTime = regularization.requestedLogoutTime;
+        attendance.remarks = `Regularized: ${regularization.reason}`;
+        attendance.updatedAt = new Date();
+        await attendance.save();
+        
+        regularization.status = "Approved";
+        regularization.approvedBy = approvedBy;
+        regularization.approvalDate = new Date();
+        regularization.approverRemarks = approverRemarks;
+        regularization.auditTrail.push({
+          action: "Approved",
+          performedBy: approvedBy,
+          timestamp: new Date(),
+          changes: { from: oldData, to: {
+            status: regularization.requestedStatus,
+            loginTime: regularization.requestedLoginTime,
+            logoutTime: regularization.requestedLogoutTime
+          }}
+        });
+      } else {
+        regularization.status = "Rejected";
+        regularization.approvedBy = approvedBy;
+        regularization.approvalDate = new Date();
+        regularization.approverRemarks = approverRemarks;
+        regularization.auditTrail.push({
+          action: "Rejected",
+          performedBy: approvedBy,
+          timestamp: new Date(),
+          changes: { reason: approverRemarks }
+        });
+      }
+      
+      await regularization.save();
+      return NextResponse.json({ success: true, regularization });
+    }
+    
+    // Regular attendance update
     updates.updatedAt = new Date();
-    
     const attendance = await Attendance.findByIdAndUpdate(_id, updates, { new: true });
     
     if (!attendance) {

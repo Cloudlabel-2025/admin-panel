@@ -157,6 +157,8 @@ export default function DailyTaskComponent() {
     const errors = {};
     if (!task.details || task.details.trim() === "") {
       errors[`details_${index}`] = "Task details are required";
+    } else if (task.details.trim().length < 25) {
+      errors[`details_${index}`] = "Task details must be at least 25 characters";
     }
     if (!task.startTime) {
       errors[`startTime_${index}`] = "Start time is required";
@@ -174,11 +176,16 @@ export default function DailyTaskComponent() {
 
   // Add new task
   const addTask = () => {
-    // Check if last task has task name entered
+    // Check if last task has task name entered with minimum 25 characters
     if (dailyTasks.length > 0) {
       const lastTask = dailyTasks[dailyTasks.length - 1];
       if (!lastTask.details || lastTask.details.trim() === '') {
         setError('Please enter task name for the current task before adding a new one.');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      if (lastTask.details.trim().length < 25) {
+        setError('Task name must be at least 25 characters. Current task has only ' + lastTask.details.trim().length + ' characters.');
         setTimeout(() => setError(''), 3000);
         return;
       }
@@ -232,7 +239,7 @@ export default function DailyTaskComponent() {
       remarks: "",
       link: "",
       feedback: "",
-      isNew: true,
+      isNewTask: true,
       isSaved: false,
       createdAt: new Date().toISOString()
     };
@@ -249,10 +256,10 @@ export default function DailyTaskComponent() {
       return;
     }
 
-    // Check if all tasks have task names
-    const tasksWithoutNames = dailyTasks.filter(t => !t.details || t.details.trim() === '');
-    if (tasksWithoutNames.length > 0) {
-      setError('Cannot update. All tasks must have task names.');
+    // Check if all tasks have task names with minimum 25 characters
+    const invalidTasks = dailyTasks.filter(t => !t.details || t.details.trim() === '' || t.details.trim().length < 25);
+    if (invalidTasks.length > 0) {
+      setError('Cannot update. All tasks must have task names with at least 25 characters.');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -378,10 +385,10 @@ export default function DailyTaskComponent() {
         return;
       }
 
-      // Check if all tasks have task names
-      const tasksWithoutNames = dailyTasks.filter(t => !t.details || t.details.trim() === '');
-      if (tasksWithoutNames.length > 0) {
-        setError('Cannot save. All tasks must have task names.');
+      // Check if all tasks have task names with minimum 25 characters
+      const invalidTasks = dailyTasks.filter(t => !t.details || t.details.trim() === '' || t.details.trim().length < 25);
+      if (invalidTasks.length > 0) {
+        setError('Cannot save. All tasks must have task names with at least 25 characters.');
         setTimeout(() => setError(''), 3000);
         return;
       }
@@ -913,7 +920,7 @@ export default function DailyTaskComponent() {
                                   }
                                 }}
                                 disabled={task.isSaved}
-                                placeholder={task.isSaved ? "Task details locked" : "Enter task details (Required)"}
+                                placeholder={task.isSaved ? "Task details locked" : "Enter task details (Required - Min 25 characters)"}
                                 rows="2"
                                 required
                               />

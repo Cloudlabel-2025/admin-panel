@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 const HolidaySchema = new mongoose.Schema({
   name: { type: String, required: true },
   date: { type: Date, required: true },
-  type: { type: String, enum: ["Public", "Company", "Optional"], default: "Public" },
+  type: { type: String, enum: ["National", "Regional", "Optional", "Company"], default: "National" },
+  region: { type: String },
+  department: { type: String },
   description: { type: String },
   isRecurring: { type: Boolean, default: false },
   createdBy: { type: String, required: true },

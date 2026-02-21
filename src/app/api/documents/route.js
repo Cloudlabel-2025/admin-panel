@@ -7,8 +7,6 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
-export const config = { api: { bodyParser: false } };
-
 // 📤 Upload Document
 export async function POST(req) {
   try {

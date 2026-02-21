@@ -187,26 +187,78 @@ export async function PUT(req) {
     await connectMongoose();
     const { _id, action, approvedBy, ...updates } = await req.json();
     
+    const absence = await Absence.findById(_id);
+    if (!absence) {
+      return NextResponse.json({ error: "Absence record not found" }, { status: 404 });
+    }
+    
     if (action === "approve") {
       updates.status = "Approved";
       updates.approvalDate = new Date();
       updates.approvedBy = approvedBy;
       
-      // Update notifications
       await updateNotifications(_id, approvedBy);
+      
+      // Create attendance records for approved leave
+      const Attendance = mongoose.models.Attendance || mongoose.model('Attendance', new mongoose.Schema({
+        employeeId: String,
+        employeeName: String,
+        department: String,
+        date: Date,
+        status: String,
+        leaveType: String,
+        remarks: String,
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now }
+      }));
+      
+      const employeeData = await getEmployeeData(absence.employeeId);
+      const startDate = new Date(absence.startDate);
+      const endDate = new Date(absence.endDate);
+      
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const currentDate = new Date(d);
+        currentDate.setHours(0, 0, 0, 0);
+        
+        await Attendance.findOneAndUpdate(
+          { employeeId: absence.employeeId, date: currentDate },
+          {
+            employeeId: absence.employeeId,
+            employeeName: employeeData?.name || absence.employeeId,
+            department: employeeData?.department || "Unknown",
+            date: currentDate,
+            status: "Leave",
+            leaveType: absence.leaveType || "General",
+            remarks: `Leave: ${absence.reason || 'No reason provided'}`,
+            updatedAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+      }
     } else if (action === "reject") {
       updates.status = "Rejected";
       updates.approvalDate = new Date();
       updates.rejectedBy = approvedBy;
+    } else if (action === "cancel") {
+      updates.status = "Cancelled";
+      
+      // Remove attendance records for cancelled leave
+      const Attendance = mongoose.models.Attendance;
+      if (Attendance) {
+        const startDate = new Date(absence.startDate);
+        const endDate = new Date(absence.endDate);
+        
+        await Attendance.deleteMany({
+          employeeId: absence.employeeId,
+          date: { $gte: startDate, $lte: endDate },
+          status: "Leave"
+        });
+      }
     }
     
-    const absence = await Absence.findByIdAndUpdate(_id, updates, { new: true });
+    const updatedAbsence = await Absence.findByIdAndUpdate(_id, updates, { new: true });
     
-    if (!absence) {
-      return NextResponse.json({ error: "Absence record not found" }, { status: 404 });
-    }
-    
-    return NextResponse.json({ success: true, absence });
+    return NextResponse.json({ success: true, absence: updatedAbsence });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
