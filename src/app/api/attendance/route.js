@@ -179,10 +179,20 @@ export async function GET(req) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const department = searchParams.get("department");
+    const status = searchParams.get("status");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 15;
+    const skip = (page - 1) * limit;
 
     let query = {};
     if (employeeId && !isAdmin) {
       query.employeeId = employeeId;
+    } else if (employeeId && isAdmin) {
+      query.employeeId = employeeId;
+    }
+    
+    if (status) {
+      query.status = status;
     }
     
     // Filter by department for team roles
@@ -229,88 +239,24 @@ export async function GET(req) {
     }
     
     // First try to get from attendance records
-    let attendanceRecords = await Attendance.find(query).sort({ date: -1 });
+    let attendanceRecords = [];
     
-    // Always check for missing timecards and generate attendance
-    const timecards = await Timecard.find(query).sort({ date: -1 });
+    // Get total count for pagination
+    let totalRecords = await Attendance.countDocuments(query);
+    let totalPages = Math.ceil(totalRecords / limit);
     
-    for (const tc of timecards) {
-      const existing = await Attendance.findOne({ employeeId: tc.employeeId, date: tc.date });
-      
-      if (!existing) {
-        const employeeData = await getEmployeeData(tc.employeeId);
-        const holiday = await isHoliday(new Date(tc.date), employeeData.department);
-        const isWeekendDay = await isWeekend(new Date(tc.date));
-        
-        // Priority: Holiday > Weekend (but if weekend is overridden as working day and has login, treat as normal)
-        if (holiday) {
-          await Attendance.create({
-            employeeId: tc.employeeId,
-            employeeName: employeeData.name,
-            department: employeeData.department,
-            date: tc.date,
-            status: "Holiday",
-            remarks: `Holiday: ${holiday.name} (${holiday.type})`
-          });
-        } else if (isWeekendDay && !tc.logIn) {
-          // Weekend without login = Weekend status
-          await Attendance.create({
-            employeeId: tc.employeeId,
-            employeeName: employeeData.name,
-            department: employeeData.department,
-            date: tc.date,
-            status: "Weekend",
-            remarks: "Weekend"
-          });
-        } else {
-          const totalHours = timeToHours(tc.totalHours || "00:00");
-          const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-          const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
-          const lateCheck = await checkLateLogin(tc.logIn);
-          
-          await Attendance.create({
-            employeeId: tc.employeeId,
-            employeeName: employeeData.name,
-            department: employeeData.department,
-            date: tc.date,
-            status,
-            totalHours,
-            permissionHours,
-            loginTime: tc.logIn || "",
-            logoutTime: tc.logOut || "",
-            overtimeHours: Math.max(0, totalHours - 8),
-            isLateLogin: lateCheck.isLate,
-            lateByMinutes: lateCheck.lateBy,
-            remarks: tc.reason || ""
-          });
-        }
-      }
-    }
+    // Fetch paginated records
+    attendanceRecords = await Attendance.find(query).sort({ date: -1 }).skip(skip).limit(limit);
     
-    // Fetch all records including newly created
-    attendanceRecords = await Attendance.find(query).sort({ date: -1 });
+    // Update old "In Office" records to "Logout Missing"
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(23, 59, 59, 999);
     
-    // Clean up Unknown employee names in database
-    const unknownRecords = await Attendance.find({ 
-      $or: [
-        { employeeName: "Unknown" },
-        { employeeName: { $exists: false } },
-        { employeeName: "" }
-      ]
-    });
-    
-    for (const record of unknownRecords) {
-      const employeeData = await getEmployeeData(record.employeeId);
-      if (employeeData) {
-        await Attendance.findByIdAndUpdate(record._id, {
-          employeeName: employeeData.name,
-          department: employeeData.department
-        });
-      }
-    }
-    
-    // Fetch updated records
-    attendanceRecords = await Attendance.find(query).sort({ date: -1 });
+    await Attendance.updateMany(
+      { status: "In Office", date: { $lt: yesterday } },
+      { $set: { status: "Logout Missing" } }
+    );
     
     // Populate employee names for all records
     const attendanceData = [];
@@ -349,7 +295,17 @@ export async function GET(req) {
       });
     }
 
-    return NextResponse.json(attendanceData, { status: 200 });
+    return NextResponse.json({
+      data: attendanceData,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalRecords,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    }, { status: 200 });
   } catch (err) {
     console.error('GET /api/attendance error:', err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

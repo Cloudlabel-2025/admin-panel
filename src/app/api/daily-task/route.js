@@ -105,12 +105,17 @@ export async function GET(req) {
     let query = {};
     if (employeeId) query.employeeId = employeeId;
     if (dateParam) {
-      const start = new Date(dateParam);
-      const end = new Date(dateParam);
-      end.setHours(23, 59, 59);
+      const start = new Date(dateParam + 'T00:00:00.000Z');
+      const end = new Date(dateParam + 'T23:59:59.999Z');
+      query.date = { $gte: start, $lte: end };
+    } else if (employeeId && !month && !year) {
+      // Get today's tasks only for employee
+      const today = new Date().toISOString().split('T')[0];
+      const start = new Date(today + 'T00:00:00.000Z');
+      const end = new Date(today + 'T23:59:59.999Z');
       query.date = { $gte: start, $lte: end };
     }
-    const tasks = await DailyTask.find(query).sort({ date: -1 });
+    const tasks = await DailyTask.find(query).sort({ date: -1 }).limit(1);
     return NextResponse.json(tasks, { status: 200 });
   } catch (err) {
     console.error(err);
@@ -126,6 +131,16 @@ export async function POST(req) {
     
     if (!data.employeeId) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
+    }
+    
+    // Validate task names (except for system entries)
+    if (data.tasks && !data.isLogout && !data.isLunchOut && !data.isLunchIn && !data.isPermission) {
+      const invalidTasks = data.tasks.filter(t => !t.isLogout && !t.isLunchOut && !t.isPermission && (!t.details || t.details.trim() === ''));
+      if (invalidTasks.length > 0) {
+        return NextResponse.json({ 
+          error: "All tasks must have task names. Please enter task details for all tasks." 
+        }, { status: 400 });
+      }
     }
     
     // Handle lunch and logout entries
@@ -226,8 +241,8 @@ export async function POST(req) {
     }
     
     const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
     
     // Find existing task for today or create new one
     const existingTask = await DailyTask.findOneAndUpdate(
@@ -243,7 +258,7 @@ export async function POST(req) {
           updatedAt: new Date()
         },
         $setOnInsert: {
-          date: today,
+          date: startOfDay,
           createdAt: new Date()
         }
       },

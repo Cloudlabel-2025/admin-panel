@@ -5,7 +5,13 @@ const WeekendOverrideSchema = new mongoose.Schema({
   isWeekend: { type: Boolean, required: true },
   reason: { type: String, default: "" },
   createdBy: { type: String, default: "" },
+  type: { type: String, enum: ['override', 'compensation'], default: 'override' },
+  compensationDate: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.models.WeekendOverride || mongoose.model("WeekendOverride", WeekendOverrideSchema);
+if (mongoose.models.WeekendOverride) {
+  delete mongoose.models.WeekendOverride;
+}
+
+export default mongoose.model("WeekendOverride", WeekendOverrideSchema);

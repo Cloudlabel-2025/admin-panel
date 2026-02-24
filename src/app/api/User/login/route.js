@@ -1,6 +1,4 @@
 import connectMongoose from "../../../utilis/connectMongoose";
-
-
 import User from "../../../../models/User";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";

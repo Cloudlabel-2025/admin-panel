@@ -162,7 +162,7 @@ export default function TimecardPage() {
     if (!res.ok) return;
     const data = await res.json();
 
-    const today = data.find((t) => t.date?.startsWith(getDateString()));
+    const today = data.length > 0 ? data[0] : null;
     if (today) {
       setCurrent(today);
       setBreaks(today.breaks || []);
@@ -173,6 +173,9 @@ export default function TimecardPage() {
       setLateLogin(today.lateLogin || false);
       setHasLoggedIn(!!today.logIn);
       hasCreatedTimecard.current = true;
+    } else {
+      setHasLoggedIn(false);
+      hasCreatedTimecard.current = false;
     }
     
     // Count monthly permissions
@@ -208,6 +211,21 @@ export default function TimecardPage() {
     });
     
     const data = await res.json();
+    
+    if (!res.ok) {
+      if (data.timecard) {
+        setCurrent(data.timecard);
+        setHasLoggedIn(true);
+        setLateLogin(data.timecard.lateLogin || false);
+        setBreaks(data.timecard.breaks || []);
+        setPermissionMinutes(data.timecard.permissionMinutes || 0);
+        setPermissionReason(data.timecard.permissionReason || "");
+      }
+      setSuccessMessage(data.error || "Login failed");
+      setShowSuccess(true);
+      return;
+    }
+    
     if (data.timecard) {
       setCurrent(data.timecard);
       setHasLoggedIn(true);

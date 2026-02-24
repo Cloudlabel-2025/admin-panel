@@ -43,8 +43,8 @@ export default function EmployeeAttendancePage() {
     try {
       setLoading(true);
       const res = await fetch(`/api/attendance?employeeId=${empId}`);
-      const data = await res.json();
-      const attendanceData = Array.isArray(data) ? data : [];
+      const result = await res.json();
+      const attendanceData = Array.isArray(result.data) ? result.data : (Array.isArray(result) ? result : []);
       setAttendance(attendanceData);
       calculateStats(attendanceData);
     } catch (err) {
@@ -217,7 +217,9 @@ export default function EmployeeAttendancePage() {
                         <td>
                           <span className={`badge ${
                             a.status === 'Present' ? 'bg-success' : 
-                            a.status === 'Half Day' ? 'bg-warning' : 'bg-danger'
+                            a.status === 'In Office' ? 'bg-primary' :
+                            a.status === 'Half Day' ? 'bg-warning' : 
+                            a.status === 'Logout Missing' ? 'bg-warning' : 'bg-danger'
                           }`}>
                             {a.status}
                           </span>

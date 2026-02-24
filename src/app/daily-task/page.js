@@ -60,12 +60,11 @@ export default function DailyTaskComponent() {
       });
 
       // 2️⃣ Fetch today's DailyTask
-      const today = new Date().toISOString().split("T")[0];
       const dtRes = await fetch(
-        `/api/daily-task?employeeId=${user.employeeId}&date=${today}`
+        `/api/daily-task?employeeId=${user.employeeId}`
       );
       const dtData = await dtRes.json();
-      if (dtData.length) {
+      if (dtData.length && dtData[0].tasks) {
         setDailyTasks(
           dtData[0].tasks.map((t, i) => ({
             ...t,
@@ -138,11 +137,10 @@ export default function DailyTaskComponent() {
 
   // Sync existing tasks with Timecard (only for existing tasks)
   useEffect(() => {
+    if (dailyTasks.length === 0) return;
     setDailyTasks((prevTasks) =>
       prevTasks.map((task) => ({
         ...task,
-        startTime: task.startTime || timecard.logIn,
-        endTime: task.endTime || timecard.logOut,
         // Only update remarks if it already contains lunch info
         remarks: task.remarks.includes("Lunch")
           ? `Lunch Out: ${timecard.lunchOut || "--:--"}, Lunch In: ${timecard.lunchIn || "--:--"
@@ -233,13 +231,12 @@ export default function DailyTaskComponent() {
     const newTask = {
       Serialno: updatedTasks.length + 1,
       details: "",
-      startTime: "",
+      startTime: newTaskStartTime,
       endTime: "",
       status: "In Progress",
       remarks: "",
       link: "",
       feedback: "",
-      isNewTask: true,
       isSaved: false,
       createdAt: new Date().toISOString()
     };

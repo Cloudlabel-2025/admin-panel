@@ -15,6 +15,10 @@ export default function AttendancePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
   const [userRole, setUserRole] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 15;
 
   const [stats, setStats] = useState({
     totalPresent: 0,
@@ -25,6 +29,8 @@ export default function AttendancePage() {
   });
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [monthlyReports, setMonthlyReports] = useState([]);
+  const [showReportsModal, setShowReportsModal] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -71,14 +77,16 @@ export default function AttendancePage() {
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = async (page = 1) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       const currentUserRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
       
-      // Add user role for API filtering
+      params.append("page", page);
+      params.append("limit", limit);
+      
       if (currentUserRole) params.append("userRole", currentUserRole);
       
       if (!isAdmin && employeeId) {
@@ -89,10 +97,11 @@ export default function AttendancePage() {
         params.append("admin", "true");
         if (startDate) params.append("startDate", startDate);
         if (endDate) params.append("endDate", endDate);
-        if (selectedEmployee) params.append("employeeId", selectedEmployee);
+        if (selectedEmployee) {
+          params.append("employeeId", selectedEmployee);
+        }
         if (statusFilter) params.append("status", statusFilter);
         
-        // Add department filter for team roles
         if ((currentUserRole === "Team-Lead" || currentUserRole === "Team-admin") && empId) {
           try {
             const userRes = await fetch(`/api/Employee/${empId}`);
@@ -107,10 +116,18 @@ export default function AttendancePage() {
       }
 
       const res = await fetch("/api/attendance?" + params.toString());
-      const data = await res.json();
-      const attendanceData = Array.isArray(data) ? data : [];
+      const result = await res.json();
+      const attendanceData = Array.isArray(result.data) ? result.data : [];
       setAttendance(attendanceData);
-      calculateStats(attendanceData);
+      setCurrentPage(result.pagination?.currentPage || 1);
+      setTotalPages(result.pagination?.totalPages || 1);
+      setTotalRecords(result.pagination?.totalRecords || 0);
+      
+      if (selectedEmployee) {
+        calculateStats(attendanceData);
+      } else {
+        calculateStats(attendanceData);
+      }
     } catch (err) {
       console.error("Failed to fetch attendance:", err);
       setAttendance([]);
@@ -120,10 +137,19 @@ export default function AttendancePage() {
   };
 
   const calculateStats = (data) => {
-    const totalPresent = data.filter(a => a.status === "Present").length;
-    const totalAbsent = data.filter(a => a.status === "Absent").length;
-    const totalHalfDay = data.filter(a => a.status === "Half Day").length;
-    const totalInOffice = data.filter(a => a.status === "In Office").length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayRecords = data.filter(a => {
+      const recordDate = new Date(a.date);
+      recordDate.setHours(0, 0, 0, 0);
+      return recordDate.getTime() === today.getTime();
+    });
+    
+    const totalPresent = todayRecords.filter(a => a.status === "Present").length;
+    const totalAbsent = todayRecords.filter(a => a.status === "Absent").length;
+    const totalHalfDay = todayRecords.filter(a => a.status === "Half Day").length;
+    const totalInOffice = todayRecords.filter(a => a.status === "In Office").length;
     const avgHours = data.length > 0 ? data.reduce((sum, a) => sum + (a.totalHours || 0), 0) / data.length : 0;
     
     setStats({ totalPresent, totalAbsent, totalHalfDay, totalInOffice, avgHours });
@@ -237,10 +263,86 @@ export default function AttendancePage() {
   useEffect(() => {
     if (isAdmin !== null) {
       if (isAdmin || employeeId) {
-        fetchAttendance();
+        fetchAttendance(1);
+        checkMonthlyReports();
       }
     }
   }, [isAdmin, employeeId]);
+
+  const checkMonthlyReports = () => {
+    const today = new Date();
+    const isFirstDayOfMonth = today.getDate() === 1;
+    
+    if (isFirstDayOfMonth) {
+      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const monthName = lastMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+      setMonthlyReports([{ month: monthName, date: lastMonth }]);
+    }
+  };
+
+  const generateMonthlyReport = async () => {
+    try {
+      const lastMonth = monthlyReports[0].date;
+      const startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+      const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+      
+      const res = await fetch(`/api/attendance?admin=true&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
+      const result = await res.json();
+      const data = result.data || [];
+      
+      const employeeMap = {};
+      data.forEach(a => {
+        if (!employeeMap[a.employeeId]) {
+          employeeMap[a.employeeId] = {
+            employeeId: a.employeeId,
+            employeeName: a.employeeName,
+            department: a.department,
+            present: 0,
+            absent: 0,
+            halfDay: 0,
+            inOffice: 0,
+            logoutMissing: 0,
+            totalHours: 0,
+            totalOvertime: 0
+          };
+        }
+        const emp = employeeMap[a.employeeId];
+        if (a.status === 'Present') emp.present++;
+        if (a.status === 'Absent') emp.absent++;
+        if (a.status === 'Half Day') emp.halfDay++;
+        if (a.status === 'In Office') emp.inOffice++;
+        if (a.status === 'Logout Missing') emp.logoutMissing++;
+        emp.totalHours += a.totalHours || 0;
+        emp.totalOvertime += a.overtimeHours || 0;
+      });
+      
+      const reportData = Object.values(employeeMap).map(emp => ({
+        EmployeeID: emp.employeeId,
+        EmployeeName: emp.employeeName,
+        Department: emp.department,
+        Present: emp.present,
+        Absent: emp.absent,
+        HalfDay: emp.halfDay,
+        LogoutMissing: emp.logoutMissing,
+        TotalHours: emp.totalHours.toFixed(2),
+        TotalOvertime: emp.totalOvertime.toFixed(2)
+      }));
+      
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(reportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
+      XLSX.writeFile(wb, `Monthly_Attendance_${monthlyReports[0].month.replace(' ', '_')}.xlsx`);
+      
+      setMonthlyReports([]);
+      setShowReportsModal(false);
+      setSuccessMessage("Monthly report downloaded successfully");
+      setShowSuccess(true);
+    } catch (err) {
+      console.error(err);
+      setSuccessMessage("Failed to generate report");
+      setShowSuccess(true);
+    }
+  };
 
   // Employee-specific stats calculation
   const getEmployeeStats = () => {
@@ -296,7 +398,22 @@ export default function AttendancePage() {
             </small>
           </div>
           <div className="col-md-6 text-md-end">
-          <div className="d-flex gap-2 justify-content-md-end">
+          <div className="d-flex gap-2 justify-content-md-end align-items-center">
+            {monthlyReports.length > 0 && (
+              <div className="position-relative">
+                <button 
+                  className="btn btn-warning position-relative"
+                  onClick={() => setShowReportsModal(true)}
+                  style={{fontWeight: '600'}}
+                >
+                  <i className="bi bi-bell-fill me-1"></i>
+                  Monthly Report
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {monthlyReports.length}
+                  </span>
+                </button>
+              </div>
+            )}
             {isAdmin ? (
               <>
                 <button className="btn export-btn" onClick={exportToExcel} style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease'}}>
@@ -482,7 +599,7 @@ export default function AttendancePage() {
                   </select>
                 </div>
                 <div className="col-lg-3 col-md-4 d-flex align-items-end">
-                  <button className="btn filter-btn w-100" onClick={fetchAttendance} style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
+                  <button className="btn filter-btn w-100" onClick={() => fetchAttendance(1)} style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
                     <i className="bi bi-search me-1"></i> Apply Filters
                   </button>
                 </div>
@@ -499,7 +616,7 @@ export default function AttendancePage() {
             <div className="d-flex justify-content-between align-items-center py-2">
               <h5 className="mb-0"><i className="bi bi-table me-2"></i>Attendance Records</h5>
               <div className="badge fs-6 px-3 py-2" style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600'}}>
-                {attendance.length} Records
+                Page {currentPage} of {totalPages} ({totalRecords} Records)
               </div>
             </div>
           </div>
@@ -596,8 +713,59 @@ export default function AttendancePage() {
               </div>
             )}
           </div>
+          {totalPages > 1 && (
+            <div className="card-footer bg-white border-top">
+              <div className="d-flex justify-content-between align-items-center">
+                <button 
+                  className="btn btn-outline-dark"
+                  onClick={() => fetchAttendance(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <i className="bi bi-chevron-left"></i> Previous
+                </button>
+                <span className="text-muted">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button 
+                  className="btn btn-outline-dark"
+                  onClick={() => fetchAttendance(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next <i className="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      
+      {/* Monthly Report Modal */}
+      {showReportsModal && (
+        <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-file-earmark-excel me-2"></i>
+                  Monthly Attendance Report
+                </h5>
+                <button className="btn-close" onClick={() => setShowReportsModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>Generate monthly attendance report for <strong>{monthlyReports[0]?.month}</strong>?</p>
+                <p className="text-muted small">This will download an Excel file with all employee attendance data for the month.</p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowReportsModal(false)}>Cancel</button>
+                <button className="btn btn-success" onClick={generateMonthlyReport}>
+                  <i className="bi bi-download me-1"></i>
+                  Download Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <style jsx>{`
         .table-hover tbody tr:hover {

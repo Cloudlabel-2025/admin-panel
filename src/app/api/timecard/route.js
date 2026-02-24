@@ -24,6 +24,7 @@ const LEAVE_THRESHOLD = 4 * 60; // 4 hours
 const HALF_DAY_THRESHOLD = 8 * 60; // 8 hours
 const PERMISSION_LIMIT = 2 * 60; // 2 hours
 const MAX_PERMISSIONS_PER_MONTH = 2;
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://admin-panel-umber-zeta.vercel.app';
 
 const timeToMinutes = (time) => {
   const [h, m] = time.split(':').map(Number);
@@ -115,7 +116,7 @@ const notifyExtension = async (employeeId, type, extensionMinutes, userRole) => 
     }
     
     if (notifications.length > 0) {
-      await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/notifications`, {
+      await fetch(`${BASE_URL}/api/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notifications })
@@ -197,7 +198,7 @@ const notifyLateLogin = async (employeeId, loginTime, requiredTime, userRole) =>
     console.log('Backend: Unique recipients:', [...notifiedIds]);
     
     if (notifications.length > 0) {
-      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/notifications`, {
+      const response = await fetch(`${BASE_URL}/api/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notifications })
@@ -223,16 +224,65 @@ async function handlePOST(req) {
     const existingTimecard = await Timecard.findOne({
       employeeId: data.employeeId,
       date: {
-        $gte: new Date(dateStr),
-        $lt: new Date(new Date(dateStr).getTime() + 24 * 60 * 60 * 1000)
+        $gte: new Date(dateStr + 'T00:00:00.000Z'),
+        $lt: new Date(dateStr + 'T23:59:59.999Z')
       }
     });
     
+    // If timecard exists with login, return it (no duplication)
     if (existingTimecard && existingTimecard.logIn && data.logIn) {
       return NextResponse.json({ 
         error: "Already logged in today",
         timecard: existingTimecard 
       }, { status: 400 });
+    }
+    
+    // If timecard exists but no login (permission before login), update it
+    if (existingTimecard && data.logIn) {
+      existingTimecard.logIn = data.logIn;
+      existingTimecard.userRole = data.userRole;
+      
+      const requiredLoginTime = await getRequiredLoginTime();
+      if (timeToMinutes(data.logIn) > timeToMinutes(requiredLoginTime)) {
+        await notifyLateLogin(data.employeeId, data.logIn, requiredLoginTime, data.userRole);
+        existingTimecard.lateLogin = true;
+        existingTimecard.lateLoginMinutes = timeToMinutes(data.logIn) - timeToMinutes(requiredLoginTime);
+      }
+      
+      await existingTimecard.save();
+      
+      // Update first daily task entry
+      try {
+        const { createEmployeeModel } = require('@/models/Employee');
+        const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+        let employeeName = data.employeeId;
+        
+        for (const dept of departments) {
+          const EmployeeModel = createEmployeeModel(dept);
+          const emp = await EmployeeModel.findOne({ employeeId: data.employeeId });
+          if (emp) {
+            employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+            break;
+          }
+        }
+        
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_first_entry',
+            employeeId: data.employeeId,
+            employeeName: employeeName,
+            date: data.date,
+            task: `Logged in at ${existingTimecard.logIn}`,
+            status: 'In Progress'
+          })
+        });
+      } catch (err) {
+        console.error('Failed to update login task:', err);
+      }
+      
+      return NextResponse.json({ message: "Logged in successfully", timecard: existingTimecard }, { status: 201 });
     }
     
     // Use client-provided login time instead of server time
@@ -265,6 +315,43 @@ async function handlePOST(req) {
     }
     
     const timecard = await Timecard.create(data);
+    
+    // Create attendance record immediately on login
+    if (timecard.logIn) {
+      try {
+        const Attendance = (await import('@/models/Attendance')).default;
+        const attendanceDate = new Date(timecard.date);
+        attendanceDate.setHours(0, 0, 0, 0);
+        
+        const existing = await Attendance.findOne({ 
+          employeeId: data.employeeId, 
+          date: attendanceDate 
+        });
+        
+        if (!existing) {
+          await Attendance.create({
+            employeeId: data.employeeId,
+            employeeName: data.employeeId,
+            department: 'Unknown',
+            date: attendanceDate,
+            status: 'In Office',
+            loginTime: timecard.logIn,
+            logoutTime: '',
+            totalHours: 0,
+            permissionHours: 0,
+            overtimeHours: 0,
+            isLateLogin: data.lateLogin || false,
+            lateByMinutes: data.lateLoginMinutes || 0,
+            remarks: ''
+          });
+          console.log('Attendance created for', data.employeeId);
+        } else {
+          console.log('Attendance already exists for', data.employeeId);
+        }
+      } catch (err) {
+        console.error('Attendance error:', err.message);
+      }
+    }
     
     // Update first daily task entry on login
     if (timecard.logIn) {
@@ -300,7 +387,7 @@ async function handlePOST(req) {
         
         console.log('Sending PUT request with payload:', JSON.stringify(updatePayload));
         
-        const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+        const response = await fetch(`${BASE_URL}/api/daily-task`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatePayload)
@@ -334,13 +421,18 @@ export async function GET(req) {
     if (employeeId && !isAdmin) query.employeeId = employeeId;
     
     if (isAdmin && dateParam) {
-      const start = new Date(dateParam);
-      const end = new Date(dateParam);
-      end.setHours(23, 59, 59);
+      const start = new Date(dateParam + 'T00:00:00.000Z');
+      const end = new Date(dateParam + 'T23:59:59.999Z');
+      query.date = { $gte: start, $lte: end };
+    } else if (employeeId && !isAdmin) {
+      // For employee view, get today's timecard only
+      const today = new Date().toISOString().split('T')[0];
+      const start = new Date(today + 'T00:00:00.000Z');
+      const end = new Date(today + 'T23:59:59.999Z');
       query.date = { $gte: start, $lte: end };
     }
     
-    const timecards = await Timecard.find(query).sort({ date: -1 });
+    const timecards = await Timecard.find(query).sort({ date: -1 }).limit(isAdmin ? 100 : 1);
     
     const timecardsWithNames = await Promise.all(
       timecards.map(async (timecard) => {
@@ -416,7 +508,7 @@ async function handlePUT(req) {
         }
         
         // Update last task end time to lunch out time
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+        await fetch(`${BASE_URL}/api/daily-task`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -426,7 +518,7 @@ async function handlePUT(req) {
           })
         });
         
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+        await fetch(`${BASE_URL}/api/daily-task`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -451,7 +543,7 @@ async function handlePUT(req) {
       }
       
       try {
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+        await fetch(`${BASE_URL}/api/daily-task`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -478,7 +570,7 @@ async function handlePUT(req) {
       // If break out (new break started), update last task end time
       if (lastBreak?.breakOut && !lastBreak?.breakIn) {
         try {
-          await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          await fetch(`${BASE_URL}/api/daily-task`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -517,7 +609,7 @@ async function handlePUT(req) {
           }
           
           // Add new task with break in time as start time
-          await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+          await fetch(`${BASE_URL}/api/daily-task`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -598,7 +690,7 @@ async function handlePUT(req) {
                 }
               }
               
-              await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+              await fetch(`${BASE_URL}/api/daily-task`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -694,7 +786,7 @@ async function handlePUT(req) {
         }
         
         // Add logout as last entry
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+        await fetch(`${BASE_URL}/api/daily-task`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -707,7 +799,7 @@ async function handlePUT(req) {
           })
         });
         
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/daily-task`, {
+        await fetch(`${BASE_URL}/api/daily-task`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -717,13 +809,30 @@ async function handlePUT(req) {
           })
         });
         
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/attendance`, {
+        await fetch(`${BASE_URL}/api/attendance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ employeeId: timecard.employeeId })
         });
+        
+        // Update attendance record with logout
+        const Attendance = (await import('@/models/Attendance')).default;
+        const attendanceDate = new Date(timecard.date);
+        attendanceDate.setHours(0, 0, 0, 0);
+        const totalHours = timecard.workMinutes / 60;
+        
+        await Attendance.findOneAndUpdate(
+          { employeeId: timecard.employeeId, date: attendanceDate },
+          {
+            status: timecard.attendanceStatus,
+            logoutTime: updates.logOut,
+            totalHours: totalHours,
+            overtimeHours: Math.max(0, totalHours - 8),
+            updatedAt: new Date()
+          }
+        );
       } catch (err) {
-        console.error('Failed to complete daily tasks on logout:', err);
+        console.error('Failed to update on logout:', err);
       }
     }
 
