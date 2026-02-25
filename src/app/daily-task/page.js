@@ -155,8 +155,11 @@ export default function DailyTaskComponent() {
     const errors = {};
     if (!task.details || task.details.trim() === "") {
       errors[`details_${index}`] = "Task details are required";
-    } else if (task.details.trim().length < 25) {
-      errors[`details_${index}`] = "Task details must be at least 25 characters";
+    } else {
+      const alphabetCount = (task.details.match(/[a-zA-Z]/g) || []).length;
+      if (alphabetCount < 25) {
+        errors[`details_${index}`] = `Task must have at least 25 alphabetic characters (current: ${alphabetCount})`;
+      }
     }
     if (!task.startTime) {
       errors[`startTime_${index}`] = "Start time is required";
@@ -164,7 +167,6 @@ export default function DailyTaskComponent() {
     if (!task.endTime) {
       errors[`endTime_${index}`] = "End time is required";
     }
-    // Skip time validation for login/logout entries
     const isLoginLogout = task.details?.includes('Logged in at') || task.details?.includes('Logged out at') || task.isLogout;
     if (!isLoginLogout && task.startTime && task.endTime && task.startTime >= task.endTime) {
       errors[`endTime_${index}`] = "End time must be after start time";
@@ -174,7 +176,7 @@ export default function DailyTaskComponent() {
 
   // Add new task
   const addTask = () => {
-    // Check if last task has task name entered with minimum 25 characters
+    // Check if last task has task name entered with minimum 25 alphabetic characters
     if (dailyTasks.length > 0) {
       const lastTask = dailyTasks[dailyTasks.length - 1];
       if (!lastTask.details || lastTask.details.trim() === '') {
@@ -182,8 +184,9 @@ export default function DailyTaskComponent() {
         setTimeout(() => setError(''), 3000);
         return;
       }
-      if (lastTask.details.trim().length < 25) {
-        setError('Task name must be at least 25 characters. Current task has only ' + lastTask.details.trim().length + ' characters.');
+      const alphabetCount = (lastTask.details.match(/[a-zA-Z]/g) || []).length;
+      if (alphabetCount < 25) {
+        setError(`Task name must have at least 25 alphabetic characters. Current task has only ${alphabetCount} letters.`);
         setTimeout(() => setError(''), 3000);
         return;
       }
@@ -205,27 +208,13 @@ export default function DailyTaskComponent() {
     const updatedTasks = [...dailyTasks];
     let newTaskStartTime = currentTime;
 
-    // Update previous task's end time if it's empty
+    // Set previous task's end time to current time
     if (updatedTasks.length > 0) {
-      const lastIndex = updatedTasks.length - 1;
-      const lastTask = updatedTasks[lastIndex];
-      
-      if (!lastTask.endTime && !lastTask.isSaved) {
-        // Only update if current time is different from start time
-        if (lastTask.startTime !== currentTime) {
-          lastTask.endTime = currentTime;
-          lastTask.status = 'Completed';
-          newTaskStartTime = currentTime;
-        } else {
-          // If same time, don't allow adding new task
-          setError('Cannot add new task at the same time as previous task. Please wait.');
-          setTimeout(() => setError(''), 3000);
-          return;
-        }
-      } else if (lastTask.endTime) {
-        // Use last task's end time as new task's start time
-        newTaskStartTime = lastTask.endTime;
+      const lastTask = updatedTasks[updatedTasks.length - 1];
+      if (!lastTask.endTime) {
+        lastTask.endTime = currentTime;
       }
+      newTaskStartTime = lastTask.endTime;
     }
 
     const newTask = {
@@ -237,7 +226,7 @@ export default function DailyTaskComponent() {
       remarks: "",
       link: "",
       feedback: "",
-      isSaved: false,
+      detailsLocked: false,
       createdAt: new Date().toISOString()
     };
 
@@ -253,10 +242,14 @@ export default function DailyTaskComponent() {
       return;
     }
 
-    // Check if all tasks have task names with minimum 25 characters
-    const invalidTasks = dailyTasks.filter(t => !t.details || t.details.trim() === '' || t.details.trim().length < 25);
+    // Check if all tasks have task names with minimum 25 alphabetic characters
+    const invalidTasks = dailyTasks.filter(t => {
+      if (!t.details || t.details.trim() === '') return true;
+      const alphabetCount = (t.details.match(/[a-zA-Z]/g) || []).length;
+      return alphabetCount < 25;
+    });
     if (invalidTasks.length > 0) {
-      setError('Cannot update. All tasks must have task names with at least 25 characters.');
+      setError('Cannot update. All tasks must have at least 25 alphabetic characters.');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -275,7 +268,7 @@ export default function DailyTaskComponent() {
           remarks: t.remarks || "",
           link: t.link || "",
           feedback: t.feedback || "",
-          isSaved: t.isSaved || false
+          detailsLocked: t.details && t.details.trim() !== '' ? true : false
         }))
       };
 
@@ -289,6 +282,11 @@ export default function DailyTaskComponent() {
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
         setError('');
+        // Update local state to lock task names
+        setDailyTasks(dailyTasks.map(t => ({
+          ...t,
+          detailsLocked: t.details && t.details.trim() !== '' ? true : t.detailsLocked
+        })));
       } else {
         const errorData = await response.json();
         setError('Update failed: ' + (errorData.error || 'Unknown error'));
@@ -306,16 +304,9 @@ export default function DailyTaskComponent() {
     const updated = [...dailyTasks];
     const task = updated[index];
 
-    // Prevent editing saved tasks except status
-    if (task.isSaved && field !== 'status') {
-      setError('Saved tasks can only have their status updated.');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    // Prevent editing start time and end time (system controlled)
-    if (field === 'startTime' || field === 'endTime') {
-      setError('Start and end times are automatically tracked and cannot be edited.');
+    // Prevent editing locked task details
+    if (field === 'details' && task.detailsLocked) {
+      setError('Task name is locked. Only status, remarks, link, feedback, and times can be edited.');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -353,15 +344,15 @@ export default function DailyTaskComponent() {
   // Delete task
   const deleteTask = (index) => {
     const task = dailyTasks[index];
-    if (task.isSaved) {
-      setError('Cannot delete saved tasks');
+    if (task.detailsLocked) {
+      setError('Cannot delete tasks with locked details');
       setTimeout(() => setError(''), 3000);
       return;
     }
 
     const updated = [...dailyTasks];
     // If deleting a task that has a next task, update next task's start time
-    if (index < updated.length - 1 && !updated[index + 1].isSaved) {
+    if (index < updated.length - 1 && !updated[index + 1].detailsLocked) {
       const prevTask = index > 0 ? updated[index - 1] : null;
       updated[index + 1].startTime = prevTask?.endTime || updated[index].startTime;
     }
@@ -382,10 +373,14 @@ export default function DailyTaskComponent() {
         return;
       }
 
-      // Check if all tasks have task names with minimum 25 characters
-      const invalidTasks = dailyTasks.filter(t => !t.details || t.details.trim() === '' || t.details.trim().length < 25);
+      // Check if all tasks have task names with minimum 25 alphabetic characters
+      const invalidTasks = dailyTasks.filter(t => {
+        if (!t.details || t.details.trim() === '') return true;
+        const alphabetCount = (t.details.match(/[a-zA-Z]/g) || []).length;
+        return alphabetCount < 25;
+      });
       if (invalidTasks.length > 0) {
-        setError('Cannot save. All tasks must have task names with at least 25 characters.');
+        setError('Cannot save. All tasks must have at least 25 alphabetic characters.');
         setTimeout(() => setError(''), 3000);
         return;
       }
@@ -414,7 +409,7 @@ export default function DailyTaskComponent() {
       const tasksToSave = dailyTasks.map(t => ({
         ...t,
         endTime: t.endTime || currentTime,
-        isSaved: true
+        detailsLocked: t.details && t.details.trim() !== '' ? true : false
       }));
 
       const payload = {
@@ -430,7 +425,7 @@ export default function DailyTaskComponent() {
           remarks: t.remarks || "",
           link: t.link || "",
           feedback: t.feedback || "",
-          isSaved: t.isSaved
+          detailsLocked: t.detailsLocked
         }))
       };
 
@@ -650,7 +645,7 @@ export default function DailyTaskComponent() {
     const completed = dailyTasks.filter(t => t.status === "Completed").length;
     const inProgress = dailyTasks.filter(t => t.status === "In Progress").length;
     const pending = dailyTasks.filter(t => t.status === "Pending").length;
-    const saved = dailyTasks.filter(t => t.isSaved).length;
+    const saved = dailyTasks.filter(t => t.detailsLocked).length;
     return { total, completed, inProgress, pending, saved };
   };
 
@@ -753,9 +748,9 @@ export default function DailyTaskComponent() {
           <div className="col-6 col-lg-3">
             <div className="card border-0 shadow-sm h-100">
               <div className="card-body text-center p-2 p-md-3">
-                <i className="bi bi-save fs-3 fs-md-1 text-info"></i>
+                <i className="bi bi-lock fs-3 fs-md-1 text-info"></i>
                 <h3 className="mt-1 mt-md-2 mb-0 fs-5 fs-md-3">{stats.saved}</h3>
-                <p className="text-muted mb-0 small">Saved Tasks</p>
+                <p className="text-muted mb-0 small">Locked Tasks</p>
               </div>
             </div>
           </div>
@@ -908,7 +903,13 @@ export default function DailyTaskComponent() {
                               <textarea
                                 className={`form-control form-control-sm ${validationErrors[`details_${idx}`] ? 'is-invalid' : ''}`}
                                 value={task.details}
-                                onChange={(e) => handleChange(idx, "details", e.target.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  // Allow only alphabets and spaces
+                                  if (/^[a-zA-Z ]*$/.test(value)) {
+                                    handleChange(idx, "details", value);
+                                  }
+                                }}
                                 onKeyDown={(e) => {
                                   if ((e.key === 'Tab' || e.key === 'Enter') && (!task.details || task.details.trim() === '')) {
                                     e.preventDefault();
@@ -916,8 +917,8 @@ export default function DailyTaskComponent() {
                                     setTimeout(() => setError(''), 3000);
                                   }
                                 }}
-                                disabled={task.isSaved}
-                                placeholder={task.isSaved ? "Task details locked" : "Enter task details (Required - Min 25 characters)"}
+                                disabled={task.detailsLocked}
+                                placeholder={task.detailsLocked ? "Task details locked" : "Enter task details (Only alphabets and spaces - Min 25 characters)"}
                                 rows="2"
                                 required
                               />
@@ -931,7 +932,6 @@ export default function DailyTaskComponent() {
                                 className={`form-control form-control-sm ${validationErrors[`startTime_${idx}`] ? 'is-invalid' : ''}`}
                                 value={task.startTime}
                                 disabled
-                                title="Start time is automatically set"
                               />
                               {validationErrors[`startTime_${idx}`] && (
                                 <div className="invalid-feedback">{validationErrors[`startTime_${idx}`]}</div>
@@ -943,7 +943,6 @@ export default function DailyTaskComponent() {
                                 className={`form-control form-control-sm ${validationErrors[`endTime_${idx}`] ? 'is-invalid' : ''}`}
                                 value={task.endTime}
                                 disabled
-                                title="End time is automatically set when you add next task or save"
                               />
                               {validationErrors[`endTime_${idx}`] && (
                                 <div className="invalid-feedback">{validationErrors[`endTime_${idx}`]}</div>
@@ -973,7 +972,6 @@ export default function DailyTaskComponent() {
                                 className="form-control form-control-sm"
                                 value={task.remarks}
                                 onChange={(e) => handleChange(idx, "remarks", e.target.value)}
-                                disabled={task.isSaved}
                                 placeholder="Add remarks"
                                 rows="2"
                               />
@@ -983,7 +981,6 @@ export default function DailyTaskComponent() {
                                 className="form-control form-control-sm"
                                 value={task.link}
                                 onChange={(e) => handleChange(idx, "link", e.target.value)}
-                                disabled={task.isSaved}
                                 placeholder="Add link"
                               />
                               {task.link && (
@@ -997,13 +994,12 @@ export default function DailyTaskComponent() {
                                 className="form-control form-control-sm"
                                 value={task.feedback}
                                 onChange={(e) => handleChange(idx, "feedback", e.target.value)}
-                                disabled={task.isSaved}
                                 placeholder="Add feedback"
                                 rows="2"
                               />
                             </td>
                             <td className="text-center">
-                              {!task.isSaved && (
+                              {!task.detailsLocked && (
                                 <button
                                   className="btn btn-sm btn-danger"
                                   onClick={() => deleteTask(idx)}
@@ -1012,7 +1008,7 @@ export default function DailyTaskComponent() {
                                   <i className="bi bi-trash"></i>
                                 </button>
                               )}
-                              {task.isSaved && (
+                              {task.detailsLocked && (
                                 <span className="badge bg-success">
                                   <i className="bi bi-lock-fill"></i>
                                 </span>

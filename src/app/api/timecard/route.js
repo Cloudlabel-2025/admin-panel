@@ -579,6 +579,32 @@ async function handlePUT(req) {
               endTime: lastBreak.breakOut
             })
           });
+          
+          const { createEmployeeModel } = require('@/models/Employee');
+          const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+          let employeeName = timecard.employeeId;
+          
+          for (const dept of departments) {
+            const EmployeeModel = createEmployeeModel(dept);
+            const emp = await EmployeeModel.findOne({ employeeId: timecard.employeeId });
+            if (emp) {
+              employeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+              break;
+            }
+          }
+          
+          await fetch(`${BASE_URL}/api/daily-task`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employeeId: timecard.employeeId,
+              employeeName: employeeName,
+              date: timecard.date,
+              task: `Break started at ${lastBreak.breakOut}`,
+              status: 'In Progress',
+              isLunchOut: true
+            })
+          });
         } catch (err) {
           console.error('Failed to update task end time on break out:', err);
         }

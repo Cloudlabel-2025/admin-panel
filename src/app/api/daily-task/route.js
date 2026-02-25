@@ -135,10 +135,16 @@ export async function POST(req) {
     
     // Validate task names (except for system entries)
     if (data.tasks && !data.isLogout && !data.isLunchOut && !data.isLunchIn && !data.isPermission) {
-      const invalidTasks = data.tasks.filter(t => !t.isLogout && !t.isLunchOut && !t.isPermission && (!t.details || t.details.trim() === ''));
+      const invalidTasks = data.tasks.filter(t => {
+        if (t.isLogout || t.isLunchOut || t.isPermission || t.details === 'Lunch break') return false;
+        if (!t.details || t.details.trim() === '') return true;
+        const alphabetCount = (t.details.match(/[a-zA-Z]/g) || []).length;
+        if (alphabetCount < 25) return true;
+        return false;
+      });
       if (invalidTasks.length > 0) {
         return NextResponse.json({ 
-          error: "All tasks must have task names. Please enter task details for all tasks." 
+          error: "All tasks must have at least 25 alphabetic characters. Lunch break and system entries are exempt." 
         }, { status: 400 });
       }
     }
@@ -189,7 +195,7 @@ export async function POST(req) {
                 status: 'In Progress',
                 startTime: lunchInTime,
                 endTime: '',
-                isSaved: false
+                detailsLocked: false
               });
             }
             
@@ -226,7 +232,7 @@ export async function POST(req) {
           status: data.status || (data.isLunchOut ? 'In Progress' : 'Completed'),
           startTime: timeFromTask,
           endTime: '',
-          isSaved: data.isPermission ? true : false,
+          detailsLocked: true,
           isLogout: data.isLogout || false,
           isLunchOut: data.isLunchOut || false,
           isPermission: data.isPermission || false
@@ -254,7 +260,10 @@ export async function POST(req) {
         $set: {
           employeeName: data.employeeName,
           designation: data.designation,
-          tasks: data.tasks,
+          tasks: data.tasks.map(t => ({
+            ...t,
+            detailsLocked: t.details && t.details.trim() !== '' ? true : t.detailsLocked
+          })),
           updatedAt: new Date()
         },
         $setOnInsert: {
@@ -325,7 +334,7 @@ export async function PUT(req) {
           status: 'In Progress',
           startTime: body.startTime,
           endTime: '',
-          isSaved: false
+          detailsLocked: false
         });
         
         await dailyTask.save();
@@ -366,7 +375,7 @@ export async function PUT(req) {
             status: 'In Progress',
             startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
             endTime: '',
-            isSaved: false
+            detailsLocked: false
           }]
         });
         console.log('Created new daily task:', dailyTask);
@@ -393,7 +402,7 @@ export async function PUT(req) {
         status: 'In Progress',
         startTime: body.task.match(/\d{2}:\d{2}/)?.[0] || '',
         endTime: '',
-        isSaved: false
+        detailsLocked: false
       });
       await dailyTask.save();
       return NextResponse.json({ message: 'First entry created', dailyTask });
@@ -412,7 +421,7 @@ export async function PUT(req) {
         },
         {
           $set: {
-            'tasks.$[].isSaved': true,
+            'tasks.$[].detailsLocked': true,
             'tasks.$[elem].endTime': body.logoutTime
           }
         },
