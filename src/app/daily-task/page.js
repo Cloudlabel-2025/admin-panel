@@ -190,6 +190,12 @@ export default function DailyTaskComponent() {
         setTimeout(() => setError(''), 3000);
         return;
       }
+      // Check if last task is saved/updated
+      if (!lastTask.detailsLocked) {
+        setError('Please save or update the current task before adding a new one.');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
     }
 
     // Prevent adding tasks during active permission
