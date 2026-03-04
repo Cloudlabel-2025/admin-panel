@@ -153,19 +153,24 @@ export default function DailyTaskComponent() {
   // Validate task before saving
   const validateTask = (task, index) => {
     const errors = {};
+    // Skip validation for system entries (lunch, break, logout, permission)
+    const isSystemEntry = task.isLogout || task.isLunchOut || task.isBreak || task.isPermission || task.details === 'Lunch break' || task.details?.startsWith('Break started') || task.details?.startsWith('Logged in') || task.details?.startsWith('Logged out') || task.details?.startsWith('Permission:');
+    if (isSystemEntry) return errors;
+
     if (!task.details || task.details.trim() === "") {
       errors[`details_${index}`] = "Task details are required";
-    } else {
+    } else if (!task.detailsLocked) {
       const alphabetCount = (task.details.match(/[a-zA-Z]/g) || []).length;
-      if (alphabetCount < 25) {
-        errors[`details_${index}`] = `Task must have at least 25 alphabetic characters (current: ${alphabetCount})`;
+      if (alphabetCount < 19) {
+        errors[`details_${index}`] = `Task must have at least 19 alphabetic characters (current: ${alphabetCount})`;
       }
     }
     if (!task.startTime) {
       errors[`startTime_${index}`] = "Start time is required";
     }
-    if (!task.endTime) {
-      errors[`endTime_${index}`] = "End time is required";
+    // End time is optional for In Progress tasks
+    if (task.status === "Completed" && !task.endTime) {
+      errors[`endTime_${index}`] = "End time is required for completed tasks";
     }
     const isLoginLogout = task.details?.includes('Logged in at') || task.details?.includes('Logged out at') || task.isLogout;
     if (!isLoginLogout && task.startTime && task.endTime && task.startTime >= task.endTime) {
@@ -176,25 +181,51 @@ export default function DailyTaskComponent() {
 
   // Add new task
   const addTask = () => {
-    // Check if last task has task name entered with minimum 25 alphabetic characters
+    // Block adding tasks after logout
+    if (timecard.logOut) {
+      setError('Cannot add tasks after logout.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    // Block adding tasks during active lunch break
+    if (timecard.lunchOut && !timecard.lunchIn) {
+      setError('Complete your lunch break before adding a new task.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    // Block adding tasks during active break
+    if (timecard.breaks && timecard.breaks.some(b => b.breakOut && !b.breakIn)) {
+      setError('Complete your break before adding a new task.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    // Check if last task has task name entered with minimum 19 alphabetic characters
     if (dailyTasks.length > 0) {
       const lastTask = dailyTasks[dailyTasks.length - 1];
-      if (!lastTask.details || lastTask.details.trim() === '') {
-        setError('Please enter task name for the current task before adding a new one.');
-        setTimeout(() => setError(''), 3000);
-        return;
-      }
-      const alphabetCount = (lastTask.details.match(/[a-zA-Z]/g) || []).length;
-      if (alphabetCount < 25) {
-        setError(`Task name must have at least 25 alphabetic characters. Current task has only ${alphabetCount} letters.`);
-        setTimeout(() => setError(''), 3000);
-        return;
-      }
-      // Check if last task is saved/updated
-      if (!lastTask.detailsLocked) {
-        setError('Please save or update the current task before adding a new one.');
-        setTimeout(() => setError(''), 3000);
-        return;
+      // Skip validation for system entries
+      const isSystemEntry = lastTask.isLogout || lastTask.isLunchOut || lastTask.isBreak || lastTask.isPermission || lastTask.details === 'Lunch break' || lastTask.details?.startsWith('Break started') || lastTask.details?.startsWith('Logged in') || lastTask.details?.startsWith('Logged out') || lastTask.details?.startsWith('Permission:');
+
+      if (!isSystemEntry) {
+        if (!lastTask.details || lastTask.details.trim() === '') {
+          setError('Please enter task name for the current task before adding a new one.');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+        const alphabetCount = (lastTask.details.match(/[a-zA-Z]/g) || []).length;
+        if (alphabetCount < 19) {
+          setError(`Task name must have at least 19 alphabetic characters. Current task has only ${alphabetCount} letters.`);
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+        // Check if last task is saved/updated
+        if (!lastTask.detailsLocked) {
+          setError('Please save or update the current task before adding a new one.');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
       }
     }
 
@@ -248,14 +279,16 @@ export default function DailyTaskComponent() {
       return;
     }
 
-    // Check if all tasks have task names with minimum 25 alphabetic characters
+    // Check if all NEW (unlocked) tasks have task names with minimum 19 alphabetic characters
     const invalidTasks = dailyTasks.filter(t => {
+      // Skip system entries and already-locked tasks
+      if (t.detailsLocked || t.isLogout || t.isLunchOut || t.isBreak || t.isPermission || t.details === 'Lunch break' || t.details?.startsWith('Break started') || t.details?.startsWith('Logged in') || t.details?.startsWith('Logged out') || t.details?.startsWith('Permission:')) return false;
       if (!t.details || t.details.trim() === '') return true;
       const alphabetCount = (t.details.match(/[a-zA-Z]/g) || []).length;
-      return alphabetCount < 25;
+      return alphabetCount < 19;
     });
     if (invalidTasks.length > 0) {
-      setError('Cannot update. All tasks must have at least 25 alphabetic characters.');
+      setError('Cannot update. New tasks must have at least 19 alphabetic characters.');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -324,10 +357,20 @@ export default function DailyTaskComponent() {
         hour: '2-digit',
         minute: '2-digit'
       });
-      
+
       // Use previous task's end time or current time
       if (index > 0 && updated[index - 1].endTime) {
         updated[index].startTime = updated[index - 1].endTime;
+      } else if (index > 0) {
+        // If previous task doesn't have an end time, set it to current time now
+        const currentTime = new Date().toLocaleTimeString('en-GB', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        updated[index - 1].endTime = currentTime;
+        updated[index - 1].status = 'Completed';
+        updated[index].startTime = currentTime;
       } else {
         updated[index].startTime = currentTime;
       }
@@ -379,14 +422,16 @@ export default function DailyTaskComponent() {
         return;
       }
 
-      // Check if all tasks have task names with minimum 25 alphabetic characters
+      // Check if all NEW (unlocked) tasks have task names with minimum 19 alphabetic characters
       const invalidTasks = dailyTasks.filter(t => {
+        // Skip system entries and already-locked tasks
+        if (t.detailsLocked || t.isLogout || t.isLunchOut || t.isBreak || t.isPermission || t.details === 'Lunch break' || t.details?.startsWith('Break started') || t.details?.startsWith('Logged in') || t.details?.startsWith('Logged out') || t.details?.startsWith('Permission:')) return false;
         if (!t.details || t.details.trim() === '') return true;
         const alphabetCount = (t.details.match(/[a-zA-Z]/g) || []).length;
-        return alphabetCount < 25;
+        return alphabetCount < 19;
       });
       if (invalidTasks.length > 0) {
-        setError('Cannot save. All tasks must have at least 25 alphabetic characters.');
+        setError('Cannot save. New tasks must have at least 19 alphabetic characters.');
         setTimeout(() => setError(''), 3000);
         return;
       }
@@ -405,16 +450,9 @@ export default function DailyTaskComponent() {
         return;
       }
 
-      // Set end time for unsaved tasks
-      const currentTime = new Date().toLocaleTimeString('en-GB', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
       const tasksToSave = dailyTasks.map(t => ({
         ...t,
-        endTime: t.endTime || currentTime,
+        endTime: t.endTime || "",
         detailsLocked: t.details && t.details.trim() !== '' ? true : false
       }));
 
@@ -587,8 +625,8 @@ export default function DailyTaskComponent() {
     if (timecard.breaks && Array.isArray(timecard.breaks)) {
       timecard.breaks.forEach(b => {
         if (b.breakOut && b.breakIn) {
-          const breakDuration = ((b.breakIn.split(':').map(Number)[0] * 60 + b.breakIn.split(':').map(Number)[1]) - 
-                                (b.breakOut.split(':').map(Number)[0] * 60 + b.breakOut.split(':').map(Number)[1]));
+          const breakDuration = ((b.breakIn.split(':').map(Number)[0] * 60 + b.breakIn.split(':').map(Number)[1]) -
+            (b.breakOut.split(':').map(Number)[0] * 60 + b.breakOut.split(':').map(Number)[1]));
           totalBreakMinutes += breakDuration;
           if (breakDuration > 30) {
             unaccountedBreakTime += breakDuration - 30;
@@ -621,7 +659,7 @@ export default function DailyTaskComponent() {
     const standardLunchTime = Math.min(lunchMinutes, 60);
     const standardBreakTime = Math.min(totalBreakMinutes, 30);
     const effectiveWorkMinutes = totalWorkMinutes - standardLunchTime - standardBreakTime - permissionMinutes;
-    
+
     // Unaccounted time = effective work - (task time + gaps) + excess lunch + excess break + excess permission
     const accountedMinutes = totalTaskMinutes + totalGapMinutes;
     const unaccountedMinutes = Math.max(0, effectiveWorkMinutes - accountedMinutes + unaccountedLunchTime + unaccountedBreakTime + excessPermissionTime);
@@ -714,13 +752,7 @@ export default function DailyTaskComponent() {
           </div>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="alert alert-danger alert-dismissible fade show" role="alert">
-            <i className="bi bi-exclamation-triangle-fill me-2"></i>{error}
-            <button type="button" className="btn-close" onClick={() => setError('')}></button>
-          </div>
-        )}
+        {/* Error Alert - removed from here, moved above task table */}
 
         {/* Statistics Cards */}
         <div className="row mb-3 mb-md-4 g-2 g-md-3">
@@ -870,6 +902,13 @@ export default function DailyTaskComponent() {
         {/* Task Table */}
         <div className="row mb-3">
           <div className="col-12">
+            {/* Error Alert - positioned above task table */}
+            {error && (
+              <div className="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                <i className="bi bi-exclamation-triangle-fill me-2"></i>{error}
+                <button type="button" className="btn-close" onClick={() => setError('')}></button>
+              </div>
+            )}
             <div className="card border-0 shadow-sm">
               <div className="card-header bg-white p-3">
                 <h5 className="mb-0 fs-6 fs-md-5"><i className="bi bi-table me-2"></i>Task List</h5>
@@ -924,7 +963,7 @@ export default function DailyTaskComponent() {
                                   }
                                 }}
                                 disabled={task.detailsLocked}
-                                placeholder={task.detailsLocked ? "Task details locked" : "Enter task details (Only alphabets and spaces - Min 25 characters)"}
+                                placeholder={task.detailsLocked ? "Task details locked" : "Enter task details (Only alphabets and spaces - Min 19 characters)"}
                                 rows="2"
                                 required
                               />

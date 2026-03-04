@@ -20,7 +20,7 @@ function timeToHours(timeStr) {
 // Helper: check if login is late
 async function checkLateLogin(loginTime) {
   if (!loginTime) return { isLate: false, lateBy: 0 };
-  
+
   try {
     const Settings = mongoose.models.Settings || mongoose.model('Settings', new mongoose.Schema({
       key: { type: String, required: true, unique: true },
@@ -28,17 +28,17 @@ async function checkLateLogin(loginTime) {
       updatedBy: { type: String },
       updatedAt: { type: Date, default: Date.now }
     }));
-    
+
     const setting = await Settings.findOne({ key: 'REQUIRED_LOGIN_TIME' });
     const standardTime = setting?.value || "10:00";
     const gracePeriod = 15;
-    
+
     const [loginH, loginM] = loginTime.split(':').map(Number);
     const [stdH, stdM] = standardTime.split(':').map(Number);
-    
+
     const loginMinutes = loginH * 60 + loginM;
     const standardMinutes = stdH * 60 + stdM + gracePeriod;
-    
+
     const lateBy = loginMinutes - standardMinutes;
     return { isLate: lateBy > 0, lateBy: Math.max(0, lateBy) };
   } catch (err) {
@@ -52,23 +52,23 @@ async function isWeekend(date) {
   try {
     const checkDate = new Date(date);
     checkDate.setHours(0, 0, 0, 0);
-    
+
     // Priority 1: Manual override (highest priority)
     const override = await WeekendOverride.findOne({ date: checkDate });
     if (override) return override.isWeekend;
-    
+
     // Priority 2: Automatic weekend detection
     const dayOfWeek = checkDate.getDay();
-    
+
     // Sunday is always weekend
     if (dayOfWeek === 0) return true;
-    
+
     // Saturday: check if 2nd or 4th
     if (dayOfWeek === 6) {
       const weekOfMonth = Math.ceil(checkDate.getDate() / 7);
       return weekOfMonth === 2 || weekOfMonth === 4;
     }
-    
+
     return false;
   } catch (err) {
     console.error('Error checking weekend:', err);
@@ -81,10 +81,10 @@ async function isHoliday(date, department = null) {
   try {
     const Holiday = mongoose.models.Holiday;
     if (!Holiday) return null;
-    
+
     const checkDate = new Date(date);
     checkDate.setHours(0, 0, 0, 0);
-    
+
     const holiday = await Holiday.findOne({
       date: checkDate,
       $or: [
@@ -94,7 +94,7 @@ async function isHoliday(date, department = null) {
         { department: department }
       ]
     });
-    
+
     return holiday;
   } catch (err) {
     console.error('Error checking holiday:', err);
@@ -106,11 +106,11 @@ async function isHoliday(date, department = null) {
 function calculateAttendance(totalHours, permissionHours, hasLogout = true) {
   // If no logout time, mark as logout missing
   if (!hasLogout) return "Logout Missing";
-  
+
   const effectiveHours = totalHours + Math.min(permissionHours, 2);
   if (effectiveHours >= 8) return "Present";
   if (effectiveHours >= 4) return "Half Day";
-  return "Absent";
+  return "Leave";
 }
 
 // Calculate status based on login/logout
@@ -122,20 +122,20 @@ function getAttendanceStatus(loginTime, logoutTime, totalHours, permissionHours,
     recordDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (recordDate >= today) {
       return "In Office";
     }
-    
+
     // Past date without logout = Logout Missing
     return "Logout Missing";
   }
-  
+
   // If logged out, calculate based on hours
   if (logoutTime && logoutTime.trim() !== "") {
     return calculateAttendance(totalHours, permissionHours, true);
   }
-  
+
   // No login = Absent
   return "Absent";
 }
@@ -146,17 +146,19 @@ async function getEmployeeData(employeeId) {
     const departmentModels = Object.keys(mongoose.models).filter(name =>
       name.endsWith("_department")
     );
-    
+
     for (const modelName of departmentModels) {
       const Model = mongoose.models[modelName];
       const employee = await Model.findOne({ employeeId });
       if (employee) {
         // Extract department name properly by removing '_department' suffix
-        const departmentName = modelName.replace("_department", "").replace(/([A-Z])/g, ' $1').trim();
+        const departmentName = modelName.replace("_department", "");
+        // Capitalize first letter
+        const formattedDept = departmentName.charAt(0).toUpperCase() + departmentName.slice(1);
         return {
           name: `${employee.firstName} ${employee.lastName}`,
           email: employee.email || 'N/A',
-          department: departmentName.charAt(0).toUpperCase() + departmentName.slice(1)
+          department: formattedDept
         };
       }
     }
@@ -190,15 +192,15 @@ export async function GET(req) {
     } else if (employeeId && isAdmin) {
       query.employeeId = employeeId;
     }
-    
+
     if (status) {
       query.status = status;
     }
-    
+
     // Filter by department for team roles
     let departmentEmployeeIds = [];
     const filterDepartment = department || ((userRole === "Team-Lead" || userRole === "Team-admin") ? userDepartment : null);
-    
+
     if ((isAdmin && department) || (userRole === "Team-Lead" || userRole === "Team-admin")) {
       try {
         const employeeRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/Employee/search?department=${filterDepartment}`);
@@ -237,55 +239,59 @@ export async function GET(req) {
     if (departmentEmployeeIds.length > 0) {
       query.employeeId = { $in: departmentEmployeeIds };
     }
-    
+
     // First try to get from attendance records
     let attendanceRecords = [];
-    
+
     // Get total count for pagination
     let totalRecords = await Attendance.countDocuments(query);
     let totalPages = Math.ceil(totalRecords / limit);
-    
+
     // Fetch paginated records
     attendanceRecords = await Attendance.find(query).sort({ date: -1 }).skip(skip).limit(limit);
-    
-    // Update old "In Office" records to "Logout Missing"
+
+    // Update old "In Office" records to "Logout Missing" for past dates
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(23, 59, 59, 999);
-    
+
     await Attendance.updateMany(
       { status: "In Office", date: { $lt: yesterday } },
       { $set: { status: "Logout Missing" } }
     );
-    
+
+    // Refetch records after update
+    attendanceRecords = await Attendance.find(query).sort({ date: -1 }).skip(skip).limit(limit);
+
     // Populate employee names for all records
     const attendanceData = [];
     for (const record of attendanceRecords) {
       let employeeName = record.employeeName;
       let department = record.department;
-      
-      // If still no name, fetch employee data
-      if (!employeeName || employeeName === "Unknown") {
-        const employeeData = await getEmployeeData(record.employeeId);
-        if (employeeData) {
-          employeeName = employeeData.name;
-          department = employeeData.department;
-          
+
+      // Always fetch fresh employee data for accuracy
+      const employeeData = await getEmployeeData(record.employeeId);
+      if (employeeData) {
+        employeeName = employeeData.name;
+        department = employeeData.department;
+
+        // Update database if name is missing or incorrect
+        if (!record.employeeName || record.employeeName === "Unknown" || record.employeeName !== employeeData.name) {
           await Attendance.findByIdAndUpdate(record._id, {
             employeeName: employeeData.name,
             department: employeeData.department
           });
         }
       }
-      
+
       attendanceData.push({
         date: record.date,
         employeeId: record.employeeId,
         employeeName: employeeName || record.employeeId,
         department: department || "Unknown",
-        totalHours: record.totalHours || 0,
-        permissionHours: record.permissionHours || 0,
-        overtimeHours: record.overtimeHours || 0,
+        totalHours: parseFloat((record.totalHours || 0).toFixed(2)),
+        permissionHours: parseFloat((record.permissionHours || 0).toFixed(2)),
+        overtimeHours: parseFloat((record.overtimeHours || 0).toFixed(2)),
         loginTime: record.loginTime || "",
         logoutTime: record.logoutTime || "",
         status: record.status,
@@ -316,37 +322,37 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await connectMongoose();
-    
+
     // Check if this is an automated cron job
     const { searchParams } = new URL(req.url);
     const isAutomated = searchParams.get("automated") === "true";
     const cronKey = searchParams.get("key");
-    
+
     // Handle automated daily generation
     if (isAutomated) {
       if (cronKey !== process.env.CRON_SECRET_KEY && cronKey !== "manual-trigger") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      
+
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(0, 0, 0, 0);
-      
+
       const endOfYesterday = new Date(yesterday);
       endOfYesterday.setHours(23, 59, 59, 999);
-      
+
       const timecards = await Timecard.find({
         date: { $gte: yesterday, $lte: endOfYesterday }
       });
-      
+
       let processed = 0, updated = 0, errors = 0;
-      
+
       for (const tc of timecards) {
         try {
           const employeeData = await getEmployeeData(tc.employeeId);
           const holiday = await isHoliday(new Date(tc.date), employeeData.department);
           const isWeekendDay = await isWeekend(new Date(tc.date));
-          
+
           // Priority: Holiday > Weekend (but if weekend is overridden as working day and has login, treat as normal)
           if (holiday) {
             await Attendance.findOneAndUpdate(
@@ -382,9 +388,9 @@ export async function POST(req) {
             const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
             const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
             const overtimeHours = Math.max(0, totalHours - 8);
-            
+
             const lateCheck = await checkLateLogin(tc.logIn);
-            
+
             await Attendance.findOneAndUpdate(
               { employeeId: tc.employeeId, date: tc.date },
               {
@@ -406,14 +412,14 @@ export async function POST(req) {
               { upsert: true, new: true }
             );
           }
-          
+
           existing ? updated++ : processed++;
         } catch (err) {
           console.error(`Error processing ${tc.employeeId}:`, err);
           errors++;
         }
       }
-      
+
       return NextResponse.json({
         success: true,
         message: "Automated attendance generation completed",
@@ -421,7 +427,7 @@ export async function POST(req) {
         processedDate: yesterday.toISOString().split('T')[0]
       });
     }
-    
+
     // Manual generation
     const body = await req.json();
     const { startDate, endDate, employeeId } = body;
@@ -447,20 +453,20 @@ export async function POST(req) {
 
     const timecards = await Timecard.find(query).sort({ date: -1 });
     const attendanceData = [];
-    
+
     for (const tc of timecards) {
       const totalHours = timeToHours(tc.totalHours || "00:00");
       const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
       const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
       const employeeData = await getEmployeeData(tc.employeeId);
-      
+
       // Calculate lunch duration and overtime
-      const lunchDuration = tc.lunchOut && tc.lunchIn ? 
+      const lunchDuration = tc.lunchOut && tc.lunchIn ?
         Math.abs(new Date(`1970-01-01T${tc.lunchIn}:00`) - new Date(`1970-01-01T${tc.lunchOut}:00`)) / (1000 * 60) : 0;
       const overtimeHours = Math.max(0, totalHours - 8);
-      
+
       const lateCheck = await checkLateLogin(tc.logIn);
-      
+
       await Attendance.findOneAndUpdate(
         { employeeId: tc.employeeId, date: tc.date },
         {
@@ -483,7 +489,7 @@ export async function POST(req) {
         },
         { upsert: true, new: true }
       );
-      
+
       attendanceData.push({
         date: tc.date,
         employeeId: tc.employeeId,
@@ -514,7 +520,7 @@ export async function PUT(req) {
     await connectMongoose();
     const body = await req.json();
     const { _id, action, approvedBy, approverRemarks, ...updates } = body;
-    
+
     // Handle regularization requests
     if (action === "regularize") {
       const Regularization = mongoose.models.Regularization || mongoose.model('Regularization', new mongoose.Schema({
@@ -539,12 +545,12 @@ export async function PUT(req) {
         createdAt: { type: Date, default: Date.now },
         updatedAt: { type: Date, default: Date.now }
       }));
-      
+
       const attendance = await Attendance.findById(body.attendanceId);
       if (!attendance) {
         return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
       }
-      
+
       const regularization = await Regularization.create({
         employeeId: body.employeeId,
         employeeName: body.employeeName,
@@ -566,41 +572,41 @@ export async function PUT(req) {
           changes: { status: "Pending" }
         }]
       });
-      
+
       return NextResponse.json({ success: true, regularization });
     }
-    
+
     // Handle regularization approval/rejection
     if (action === "approve-regularization" || action === "reject-regularization") {
       const Regularization = mongoose.models.Regularization;
       if (!Regularization) {
         return NextResponse.json({ error: "Regularization model not found" }, { status: 500 });
       }
-      
+
       const regularization = await Regularization.findById(_id);
       if (!regularization) {
         return NextResponse.json({ error: "Regularization request not found" }, { status: 404 });
       }
-      
+
       if (action === "approve-regularization") {
         const attendance = await Attendance.findById(regularization.attendanceId);
         if (!attendance) {
           return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
         }
-        
+
         const oldData = {
           status: attendance.status,
           loginTime: attendance.loginTime,
           logoutTime: attendance.logoutTime
         };
-        
+
         attendance.status = regularization.requestedStatus;
         if (regularization.requestedLoginTime) attendance.loginTime = regularization.requestedLoginTime;
         if (regularization.requestedLogoutTime) attendance.logoutTime = regularization.requestedLogoutTime;
         attendance.remarks = `Regularized: ${regularization.reason}`;
         attendance.updatedAt = new Date();
         await attendance.save();
-        
+
         regularization.status = "Approved";
         regularization.approvedBy = approvedBy;
         regularization.approvalDate = new Date();
@@ -609,11 +615,13 @@ export async function PUT(req) {
           action: "Approved",
           performedBy: approvedBy,
           timestamp: new Date(),
-          changes: { from: oldData, to: {
-            status: regularization.requestedStatus,
-            loginTime: regularization.requestedLoginTime,
-            logoutTime: regularization.requestedLogoutTime
-          }}
+          changes: {
+            from: oldData, to: {
+              status: regularization.requestedStatus,
+              loginTime: regularization.requestedLoginTime,
+              logoutTime: regularization.requestedLogoutTime
+            }
+          }
         });
       } else {
         regularization.status = "Rejected";
@@ -627,19 +635,19 @@ export async function PUT(req) {
           changes: { reason: approverRemarks }
         });
       }
-      
+
       await regularization.save();
       return NextResponse.json({ success: true, regularization });
     }
-    
+
     // Regular attendance update
     updates.updatedAt = new Date();
     const attendance = await Attendance.findByIdAndUpdate(_id, updates, { new: true });
-    
+
     if (!attendance) {
       return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json({ success: true, attendance });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });

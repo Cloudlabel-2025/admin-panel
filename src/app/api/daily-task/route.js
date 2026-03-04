@@ -22,24 +22,24 @@ export async function GET(req) {
       const start = new Date(today + 'T00:00:00.000Z');
       const end = new Date(today + 'T23:59:59.999Z');
       const department = searchParams.get("department");
-      
+
       let query = { date: { $gte: start, $lte: end } };
-      
+
       // If department filter is provided, filter by department
       if (department) {
         try {
           const mongoose = await import('mongoose');
-          const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+          const collections = Object.keys(mongoose.default.connection.collections).filter(name =>
             name.endsWith('_department')
           );
-          
+
           let employeeIds = [];
           for (const collName of collections) {
             const collection = mongoose.default.connection.collections[collName];
             const employees = await collection.find({ department }).toArray();
             employeeIds.push(...employees.map(emp => emp.employeeId));
           }
-          
+
           if (employeeIds.length > 0) {
             query.employeeId = { $in: employeeIds };
           }
@@ -47,19 +47,19 @@ export async function GET(req) {
           console.error('Error filtering by department:', err);
         }
       }
-      
+
       const tasks = await DailyTask.find(query).sort({ employeeId: 1, date: -1 }).lean();
-      
+
       // Add employee names to tasks if missing using direct database query
       const tasksWithNames = await Promise.all(
         tasks.map(async (task) => {
           if (!task.employeeName && task.employeeId) {
             try {
               const mongoose = await import('mongoose');
-              const collections = Object.keys(mongoose.default.connection.collections).filter(name => 
+              const collections = Object.keys(mongoose.default.connection.collections).filter(name =>
                 name.endsWith('_department')
               );
-              
+
               let employee = null;
               for (const collName of collections) {
                 const collection = mongoose.default.connection.collections[collName];
@@ -69,7 +69,7 @@ export async function GET(req) {
                   break;
                 }
               }
-              
+
               return {
                 ...task,
                 employeeName: employee ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
@@ -86,7 +86,7 @@ export async function GET(req) {
           };
         })
       );
-      
+
       return NextResponse.json(tasksWithNames, { status: 200 });
     }
 
@@ -128,128 +128,148 @@ export async function POST(req) {
   try {
     await connectMongoose();
     const data = await req.json();
-    
+
     if (!data.employeeId) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
     }
-    
+
     // Validate task names (except for system entries)
-    if (data.tasks && !data.isLogout && !data.isLunchOut && !data.isLunchIn && !data.isPermission) {
+    if (data.tasks && !data.isLogout && !data.isLunchOut && !data.isLunchIn && !data.isPermission && !data.isBreak) {
       const invalidTasks = data.tasks.filter(t => {
-        if (t.isLogout || t.isLunchOut || t.isPermission || t.details === 'Lunch break') return false;
+        if (t.isLogout || t.isLunchOut || t.isPermission || t.isBreak || t.details === 'Lunch break') return false;
+        if (t.detailsLocked) return false; // Skip validation for already-saved tasks
         if (!t.details || t.details.trim() === '') return true;
         const alphabetCount = (t.details.match(/[a-zA-Z]/g) || []).length;
-        if (alphabetCount < 25) return true;
+        if (alphabetCount < 19) return true;
         return false;
       });
       if (invalidTasks.length > 0) {
-        return NextResponse.json({ 
-          error: "All tasks must have at least 25 alphabetic characters. Lunch break and system entries are exempt." 
+        return NextResponse.json({
+          error: "All tasks must have at least 19 alphabetic characters. Lunch break and system entries are exempt."
         }, { status: 400 });
       }
     }
-    
-    // Handle lunch and logout entries
-    if (data.isLogout || data.isLunchOut || data.isLunchIn || data.isPermission) {
-      console.log('=== LUNCH/LOGOUT/PERMISSION ENTRY ===');
+
+    // Handle lunch, break, and logout entries
+    if (data.isLogout || data.isLunchOut || data.isLunchIn || data.isPermission || data.isBreak) {
+      console.log('=== LUNCH/BREAK/LOGOUT/PERMISSION ENTRY ===');
       console.log('isLogout:', data.isLogout);
       console.log('isLunchOut:', data.isLunchOut);
       console.log('isLunchIn:', data.isLunchIn);
       console.log('isPermission:', data.isPermission);
+      console.log('isBreak:', data.isBreak);
       console.log('Task:', data.task);
-      
+
       const taskDate = data.date ? new Date(data.date) : new Date();
       const startOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
       const endOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), 23, 59, 59);
-      
+
       const dailyTask = await DailyTask.findOne({
         employeeId: data.employeeId,
         date: { $gte: startOfDay, $lte: endOfDay }
       });
-      
+
       if (dailyTask) {
-        // If lunch in, only update the existing lunch out entry
-        if (data.isLunchIn) {
-          console.log('Processing lunch in...');
+        // If lunch in or break in, update the existing entry
+        if (data.isLunchIn || data.isBreakIn) {
+          console.log(`Processing ${data.isLunchIn ? 'lunch' : 'break'} in...`);
           console.log('Total tasks:', dailyTask.tasks.length);
-          const lunchOutEntry = dailyTask.tasks.slice().reverse().find(t => 
-            (t.isLunchOut || t.details === 'Lunch break') && !t.endTime
+
+          const entryToUpdate = dailyTask.tasks.slice().reverse().find(t =>
+            (data.isLunchIn ? (t.isLunchOut || t.details === 'Lunch break') : (t.isBreak && !t.isLunchOut)) && !t.endTime
           );
-          console.log('Found lunch out entry:', lunchOutEntry ? 'YES' : 'NO');
-          if (lunchOutEntry) {
-            console.log('Updating lunch out entry with end time');
-            const lunchInTime = data.task.match(/\d{2}:\d{2}/)?.[0] || '';
-            lunchOutEntry.endTime = lunchInTime;
-            lunchOutEntry.status = 'Completed';
-            
-            // Add new task with lunch in time as start time (only if different from end time)
-            const maxSerial = dailyTask.tasks.length > 0 
+
+          console.log('Found entry to update:', entryToUpdate ? 'YES' : 'NO');
+          if (entryToUpdate) {
+            console.log('Updating entry with end time');
+            const inTime = data.task.match(/\d{2}:\d{2}/)?.[0] || '';
+            entryToUpdate.endTime = inTime;
+            entryToUpdate.status = 'Completed';
+            if (data.isLunchIn) entryToUpdate.isLunchIn = true;
+            if (data.isBreakIn) entryToUpdate.isBreakIn = true;
+
+            // Add new task with in time as start time
+            const maxSerial = dailyTask.tasks.length > 0
               ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
               : 0;
-            
-            // Only add new task if lunch in time is different from lunch out time
-            if (lunchInTime !== lunchOutEntry.startTime) {
+
+            if (inTime !== entryToUpdate.startTime) {
               dailyTask.tasks.push({
                 Serialno: maxSerial + 1,
                 details: '',
                 status: 'In Progress',
-                startTime: lunchInTime,
+                startTime: inTime,
                 endTime: '',
                 detailsLocked: false
               });
             }
-            
+
             dailyTask.updatedAt = new Date();
             await dailyTask.save();
-            console.log('Lunch entry updated and new task added');
-            return NextResponse.json({ message: "Lunch entry updated", dailyTask }, { status: 200 });
+            return NextResponse.json({ message: "Entry updated and new task added", dailyTask }, { status: 200 });
           }
-          console.log('No lunch out entry found to update');
-          return NextResponse.json({ error: "No lunch out entry found" }, { status: 404 });
+
+          console.log('No matching entry found to update');
+          return NextResponse.json({ error: "No matching open entry found" }, { status: 404 });
         }
-        
+
         // Add new entry only for lunch out or logout or permission
         console.log('Adding new entry for lunch out or logout or permission');
-        const maxSerial = dailyTask.tasks.length > 0 
+
+        const timeFromTask = data.task.match(/\d{2}:\d{2}/)?.[0] || '';
+
+        // ATOMIC: Close previous open task if it exists
+        if (dailyTask.tasks.length > 0 && timeFromTask) {
+          const lastTask = dailyTask.tasks[dailyTask.tasks.length - 1];
+          if (!lastTask.endTime || lastTask.endTime === '') {
+            console.log('Closing previous open task:', lastTask.Serialno);
+            lastTask.endTime = timeFromTask;
+            lastTask.status = 'Completed';
+            lastTask.detailsLocked = true;
+          }
+        }
+
+        const maxSerial = dailyTask.tasks.length > 0
           ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
           : 0;
-        
-        const timeFromTask = data.task.match(/\d{2}:\d{2}/)?.[0] || '';
-        
+
         // For permission, calculate duration display
         let taskDetails = data.task;
         if (data.isPermission) {
           const hours = Math.floor(data.permissionMinutes / 60);
           const mins = data.permissionMinutes % 60;
           taskDetails = `Permission: ${hours}h ${mins}m`;
-        } else if (data.isLunchOut) {
+        } else if (data.isLunchOut && !data.isBreak) {
           taskDetails = 'Lunch break';
+        } else if (data.isBreak) {
+          taskDetails = data.task || 'In Break';
         }
-        
+
         dailyTask.tasks.push({
           Serialno: maxSerial + 1,
           details: taskDetails,
-          status: data.status || (data.isLunchOut ? 'In Progress' : 'Completed'),
+          status: data.status || ((data.isLunchOut || data.isBreak) ? 'In Progress' : 'Completed'),
           startTime: timeFromTask,
           endTime: '',
           detailsLocked: true,
           isLogout: data.isLogout || false,
           isLunchOut: data.isLunchOut || false,
-          isPermission: data.isPermission || false
+          isPermission: data.isPermission || false,
+          isBreak: data.isBreak || false
         });
         dailyTask.updatedAt = new Date();
         await dailyTask.save();
-        console.log('New entry added successfully');
+        console.log('New entry added successfully and previous task closed if open');
         return NextResponse.json({ message: "Entry added", dailyTask }, { status: 200 });
       }
-      
+
       return NextResponse.json({ error: "No daily task found" }, { status: 404 });
     }
-    
+
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-    
+
     // Find existing task for today or create new one
     const existingTask = await DailyTask.findOneAndUpdate(
       {
@@ -273,7 +293,7 @@ export async function POST(req) {
       },
       { upsert: true, new: true }
     );
-    
+
     return NextResponse.json({ message: "Daily Task saved", dailyTask: existingTask }, { status: 200 });
   } catch (err) {
     console.error('POST daily-task error:', err);
@@ -286,18 +306,18 @@ export async function PUT(req) {
   try {
     await connectMongoose();
     const body = await req.json();
-    
+
     // Handle timeline updates for current task end time
     if (body.action === 'update_current_task_end') {
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
+
       const dailyTask = await DailyTask.findOne({
         employeeId: body.employeeId,
         date: { $gte: startOfDay, $lte: endOfDay }
       });
-      
+
       if (dailyTask && dailyTask.tasks.length > 0) {
         // Find the last task without an end time
         const lastTask = dailyTask.tasks.slice().reverse().find(t => !t.endTime || t.endTime === '');
@@ -308,26 +328,26 @@ export async function PUT(req) {
           return NextResponse.json({ message: 'Current task end time updated', dailyTask });
         }
       }
-      
+
       return NextResponse.json({ message: 'No current task to update' });
     }
-    
+
     // Handle adding new task after break
     if (body.action === 'add_task_after_break') {
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
+
       const dailyTask = await DailyTask.findOne({
         employeeId: body.employeeId,
         date: { $gte: startOfDay, $lte: endOfDay }
       });
-      
+
       if (dailyTask) {
-        const maxSerial = dailyTask.tasks.length > 0 
+        const maxSerial = dailyTask.tasks.length > 0
           ? Math.max(...dailyTask.tasks.map(t => t.Serialno || 0))
           : 0;
-        
+
         dailyTask.tasks.push({
           Serialno: maxSerial + 1,
           details: '',
@@ -336,32 +356,32 @@ export async function PUT(req) {
           endTime: '',
           detailsLocked: false
         });
-        
+
         await dailyTask.save();
         return NextResponse.json({ message: 'Task added after break', dailyTask });
       }
-      
+
       return NextResponse.json({ message: 'No daily task found' });
     }
-    
+
     // Handle first entry update on login
     if (body.action === 'update_first_entry') {
       console.log('=== DAILY TASK API: Received update_first_entry action ===');
       console.log('Body:', JSON.stringify(body));
-      
+
       const taskDate = body.date ? new Date(body.date) : new Date();
       const startOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
       const endOfDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), 23, 59, 59);
-      
+
       console.log('Searching for task between:', startOfDay, 'and', endOfDay);
-      
+
       let dailyTask = await DailyTask.findOne({
         employeeId: body.employeeId,
         date: { $gte: startOfDay, $lte: endOfDay }
       });
-      
+
       console.log('Found daily task:', dailyTask ? 'YES' : 'NO');
-      
+
       // Create daily task if it doesn't exist
       if (!dailyTask) {
         console.log('Creating new daily task with login entry');
@@ -381,9 +401,9 @@ export async function PUT(req) {
         console.log('Created new daily task:', dailyTask);
         return NextResponse.json({ message: 'Daily task created with login entry', dailyTask });
       }
-      
+
       if (!dailyTask.tasks) dailyTask.tasks = [];
-      
+
       if (dailyTask.tasks.length > 0) {
         console.log('First task before update:', dailyTask.tasks[0]);
         dailyTask.tasks[0].details = body.task;
@@ -394,7 +414,7 @@ export async function PUT(req) {
         console.log('First task after update:', dailyTask.tasks[0]);
         return NextResponse.json({ message: 'First entry updated', dailyTask });
       }
-      
+
       console.log('No tasks, creating first entry');
       dailyTask.tasks.push({
         Serialno: 1,
@@ -407,13 +427,13 @@ export async function PUT(req) {
       await dailyTask.save();
       return NextResponse.json({ message: 'First entry created', dailyTask });
     }
-    
+
     // Handle logout completion
     if (body.action === 'complete_on_logout') {
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
+
       const dailyTask = await DailyTask.findOneAndUpdate(
         {
           employeeId: body.employeeId,
@@ -430,10 +450,10 @@ export async function PUT(req) {
           new: true
         }
       );
-      
+
       return NextResponse.json({ message: 'Tasks completed on logout', dailyTask });
     }
-    
+
     // Regular update
     const { _id, ...updates } = body;
     if (!_id) {

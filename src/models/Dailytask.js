@@ -19,7 +19,11 @@ const DailyTaskSchema = new mongoose.Schema({
       isNewTask: { type: Boolean, default: false },
       isLogout: { type: Boolean, default: false },
       isLunchOut: { type: Boolean, default: false },
-      isPermission: { type: Boolean, default: false }
+      isLunchIn: { type: Boolean, default: false },
+      isPermission: { type: Boolean, default: false },
+      isBreak: { type: Boolean, default: false },
+      isBreakIn: { type: Boolean, default: false },
+      detailsLocked: { type: Boolean, default: false }
     },
   ],
 
