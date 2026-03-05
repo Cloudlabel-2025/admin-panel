@@ -33,14 +33,30 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get("employeeId");
     const admin = searchParams.get("admin");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 10;
+    const skip = (page - 1) * limit;
 
     let query = {};
     if (employeeId && !admin) {
       query.employeeId = employeeId;
     }
 
-    const tasks = await Task.find(query).sort({ createdAt: -1 });
-    return NextResponse.json(tasks, { status: 200 });
+    const totalTasks = await Task.countDocuments(query);
+    const tasks = await Task.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return NextResponse.json({
+      tasks,
+      pagination: {
+        totalTasks,
+        totalPages: Math.ceil(totalTasks / limit),
+        currentPage: page,
+        limit
+      }
+    }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }

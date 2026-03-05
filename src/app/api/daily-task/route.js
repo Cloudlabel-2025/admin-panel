@@ -48,7 +48,16 @@ export async function GET(req) {
         }
       }
 
-      const tasks = await DailyTask.find(query).sort({ employeeId: 1, date: -1 }).lean();
+      const page = parseInt(searchParams.get("page")) || 1;
+      const limit = parseInt(searchParams.get("limit")) || 10;
+      const skip = (page - 1) * limit;
+
+      const totalTasks = await DailyTask.countDocuments(query);
+      const tasks = await DailyTask.find(query)
+        .sort({ employeeId: 1, date: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
 
       // Add employee names to tasks if missing using direct database query
       const tasksWithNames = await Promise.all(
@@ -87,7 +96,15 @@ export async function GET(req) {
         })
       );
 
-      return NextResponse.json(tasksWithNames, { status: 200 });
+      return NextResponse.json({
+        tasks: tasksWithNames,
+        pagination: {
+          totalTasks,
+          totalPages: Math.ceil(totalTasks / limit),
+          currentPage: page,
+          limit
+        }
+      }, { status: 200 });
     }
 
     // Monthly report

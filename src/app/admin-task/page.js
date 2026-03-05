@@ -32,6 +32,12 @@ export default function AdminTaskPage() {
     remarks: ""
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalTasks: 0,
+    limit: 10
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -44,13 +50,14 @@ export default function AdminTaskPage() {
     fetchEmployees();
   }, [router]);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (page = 1, limit = 10) => {
     try {
-      const response = await fetch("/api/task?admin=true");
+      const response = await fetch(`/api/task?admin=true&page=${page}&limit=${limit}`);
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched tasks:", data);
-        setTasks(data);
+        setTasks(data.tasks);
+        setPagination(data.pagination);
       } else {
         setError("Failed to fetch tasks");
       }
@@ -59,10 +66,16 @@ export default function AdminTaskPage() {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchTasks(newPage, pagination.limit);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchTasks();
+      await fetchTasks(pagination.currentPage, pagination.limit);
       await fetchEmployees();
     } finally {
       setRefreshing(false);
@@ -724,7 +737,7 @@ export default function AdminTaskPage() {
           <div className="col-12">
             <div className="card border-0 shadow-sm">
               <div className="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 className="mb-0"><i className="bi bi-list-task me-2"></i>All Tasks ({tasks.length})</h5>
+                <h5 className="mb-0"><i className="bi bi-list-task me-2"></i>All Tasks ({pagination.totalTasks})</h5>
                 <div>
                   <button className="btn btn-sm btn-success" onClick={() => setShowReportModal(true)}>
                     <i className="bi bi-file-earmark-excel me-1"></i>Report
@@ -819,6 +832,34 @@ export default function AdminTaskPage() {
                   </div>
                 )}
               </div>
+              {pagination.totalPages > 1 && (
+                <div className="card-footer bg-white border-0 py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="text-muted small">
+                      Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to {Math.min(pagination.currentPage * pagination.limit, pagination.totalTasks)} of {pagination.totalTasks} tasks
+                    </div>
+                    <nav>
+                      <ul className="pagination pagination-sm mb-0">
+                        <li className={`page-item ${pagination.currentPage === 1 ? 'disabled' : ''}`}>
+                          <button className="page-link shadow-none" onClick={() => handlePageChange(pagination.currentPage - 1)}>
+                            <i className="bi bi-chevron-left"></i>
+                          </button>
+                        </li>
+                        {[...Array(pagination.totalPages)].map((_, i) => (
+                          <li key={i + 1} className={`page-item ${pagination.currentPage === i + 1 ? 'active' : ''}`}>
+                            <button className="page-link shadow-none" onClick={() => handlePageChange(i + 1)}>{i + 1}</button>
+                          </li>
+                        ))}
+                        <li className={`page-item ${pagination.currentPage === pagination.totalPages ? 'disabled' : ''}`}>
+                          <button className="page-link shadow-none" onClick={() => handlePageChange(pagination.currentPage + 1)}>
+                            <i className="bi bi-chevron-right"></i>
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
