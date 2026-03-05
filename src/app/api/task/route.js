@@ -25,11 +25,11 @@ async function findEmployeeByIdAndDepartment(employeeId, department) {
 export async function GET(req) {
   try {
     await connectMongoose();
-    
+
     if (mongoose.connection.readyState !== 1) {
       await new Promise((resolve) => mongoose.connection.once('connected', resolve));
     }
-    
+
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get("employeeId");
     const admin = searchParams.get("admin");
@@ -53,77 +53,99 @@ export async function POST(req) {
     const body = await req.json();
     const { tasks, singleTask, assignedBy, assignerRole } = body;
 
-    // Handle single task assignment
+    // Handle single task assignment (potentially to multiple employees)
     if (singleTask) {
-      const { employeeId, taskName, client, module, topic, startDate, expectedendDate, remarks } = singleTask;
+      const { employeeIds, taskName, client, module, topic, startDate, expectedendDate, remarks } = singleTask;
 
-      if (!employeeId || !taskName) {
-        return NextResponse.json({ error: "Employee ID and Task Name are required" }, { status: 400 });
+      if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0 || !taskName) {
+        return NextResponse.json({ error: "Employee IDs (array) and Task Name are required" }, { status: 400 });
       }
 
-      // Get employee details
-      const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
-      let employee = null;
-      for (const dept of departments) {
-        employee = await findEmployeeByIdAndDepartment(employeeId, dept);
-        if (employee) break;
-      }
-
-      if (!employee) {
-        return NextResponse.json({ error: "Employee not found" }, { status: 404 });
-      }
-
-      // Role-based assignment validation
-      const employeeRole = employee.role?.toLowerCase();
-      const assignerRoleLower = assignerRole?.toLowerCase();
-
-      if (assignerRoleLower === 'team-lead') {
-        if (!['team-admin', 'employee', 'intern'].includes(employeeRole)) {
-          return NextResponse.json({ error: "Team-Lead can only assign tasks to Team-Admin, Employee, or Intern" }, { status: 403 });
-        }
-      } else if (assignerRoleLower === 'team-admin') {
-        if (!['employee', 'intern'].includes(employeeRole)) {
-          return NextResponse.json({ error: "Team-Admin can only assign tasks to Employee or Intern" }, { status: 403 });
-        }
-      }
-
-      const taskData = {
-        employeeId,
-        department: employee.department,
-        name: `${employee.firstName} ${employee.lastName}`,
-        client: client || "",
-        module: module || "",
-        topic: topic || "",
-        taskName,
-        startDate: startDate ? new Date(startDate) : new Date(),
-        expectedendDate: expectedendDate ? new Date(expectedendDate) : null,
-        assignedBy: assignedBy || "Admin",
-        status: "Yet to start",
-        remarks: remarks || ""
+      const results = {
+        successful: [],
+        failed: []
       };
 
-      const task = await Task.create(taskData);
+      const notifications = [];
 
-      // Send notification
-      try {
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/notifications`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notifications: [{
-              employeeId,
-              title: 'New Task Assigned',
-              message: `You have been assigned a new task: ${taskName} by ${assignedBy}`,
-              type: 'info',
-              isRead: false
-            }]
-          })
-        });
-      } catch (err) {
-        console.log('Notification failed');
+      for (const employeeId of employeeIds) {
+        try {
+          // Get employee details
+          const departments = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
+          let employee = null;
+          for (const dept of departments) {
+            employee = await findEmployeeByIdAndDepartment(employeeId, dept);
+            if (employee) break;
+          }
+
+          if (!employee) {
+            results.failed.push({ employeeId, reason: "Employee not found" });
+            continue;
+          }
+
+          // Role-based assignment validation
+          const employeeRole = employee.role?.toLowerCase();
+          const assignerRoleLower = assignerRole?.toLowerCase();
+
+          if (assignerRoleLower === 'team-lead') {
+            if (!['team-admin', 'employee', 'intern'].includes(employeeRole)) {
+              results.failed.push({ employeeId, reason: "Team-Lead can only assign tasks to Team-Admin, Employee, or Intern" });
+              continue;
+            }
+          } else if (assignerRoleLower === 'team-admin') {
+            if (!['employee', 'intern'].includes(employeeRole)) {
+              results.failed.push({ employeeId, reason: "Team-Admin can only assign tasks to Employee or Intern" });
+              continue;
+            }
+          }
+
+          const taskData = {
+            employeeId,
+            department: employee.department,
+            name: `${employee.firstName} ${employee.lastName}`,
+            client: client || "",
+            module: module || "",
+            topic: topic || "",
+            taskName,
+            startDate: startDate ? new Date(startDate) : new Date(),
+            expectedendDate: expectedendDate ? new Date(expectedendDate) : null,
+            assignedBy: assignedBy || "Admin",
+            status: "Yet to start",
+            remarks: remarks || ""
+          };
+
+          const task = await Task.create(taskData);
+          results.successful.push({ employeeId, taskId: task._id });
+
+          notifications.push({
+            employeeId,
+            title: 'New Task Assigned',
+            message: `You have been assigned a new task: ${taskName} by ${assignedBy}`,
+            type: 'info',
+            isRead: false
+          });
+        } catch (err) {
+          results.failed.push({ employeeId, reason: err.message });
+        }
       }
 
-      return NextResponse.json({ task, message: "Task assigned successfully" }, { status: 201 });
+      // Send notifications in bulk if any
+      if (notifications.length > 0) {
+        try {
+          await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/notifications`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notifications })
+          });
+        } catch (err) {
+          console.error('Bulk notification failed:', err);
+        }
+      }
+
+      return NextResponse.json({
+        results,
+        message: `${results.successful.length} tasks assigned, ${results.failed.length} failed`
+      }, { status: 201 });
     }
 
     // Handle bulk Excel upload (existing code)
@@ -172,7 +194,7 @@ export async function POST(req) {
         };
 
         const startDate = parseDate(row.startDate);
-        
+
         // Check for duplicates
         const existingTask = await Task.findOne({
           employeeId: row.employeeId,
@@ -265,7 +287,7 @@ export async function PUT(req) {
   try {
     await connectMongoose();
     const { _id, ...updates } = await req.json();
-    
+
     if (!_id) {
       return NextResponse.json({ error: "Task ID required" }, { status: 400 });
     }
