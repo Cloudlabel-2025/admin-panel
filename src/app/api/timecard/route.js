@@ -43,6 +43,17 @@ const calculateWorkMinutes = (timecard) => {
     total -= deductibleLunch;
   }
 
+  if (timecard.breaks && Array.isArray(timecard.breaks)) {
+    timecard.breaks.forEach(b => {
+      if (b.breakOut && b.breakIn) {
+        const breakDuration = timeToMinutes(b.breakIn) - timeToMinutes(b.breakOut);
+        if (breakDuration > 0) {
+          total -= breakDuration;
+        }
+      }
+    });
+  }
+
   return Math.max(0, total);
 };
 

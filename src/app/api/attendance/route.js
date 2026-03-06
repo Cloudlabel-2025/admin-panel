@@ -341,81 +341,97 @@ export async function POST(req) {
       const endOfYesterday = new Date(yesterday);
       endOfYesterday.setHours(23, 59, 59, 999);
 
-      const timecards = await Timecard.find({
-        date: { $gte: yesterday, $lte: endOfYesterday }
-      });
+      // Get all employees from all departments
+      const departmentCollections = Object.keys(mongoose.models).filter(name =>
+        name.endsWith("_department")
+      );
+
+      let allEmployees = [];
+      for (const collName of departmentCollections) {
+        const Model = mongoose.models[collName];
+        const employees = await Model.find();
+        allEmployees = allEmployees.concat(employees);
+      }
 
       let processed = 0, updated = 0, errors = 0;
 
-      for (const tc of timecards) {
+      for (const emp of allEmployees) {
         try {
-          const employeeData = await getEmployeeData(tc.employeeId);
-          const holiday = await isHoliday(new Date(tc.date), employeeData.department);
-          const isWeekendDay = await isWeekend(new Date(tc.date));
+          // Check for existing attendance record (priority)
+          const existingAttendance = await Attendance.findOne({
+            employeeId: emp.employeeId,
+            date: yesterday
+          });
 
-          // Priority: Holiday > Weekend (but if weekend is overridden as working day and has login, treat as normal)
-          if (holiday) {
-            await Attendance.findOneAndUpdate(
-              { employeeId: tc.employeeId, date: tc.date },
-              {
-                employeeId: tc.employeeId,
-                employeeName: employeeData.name,
-                department: employeeData.department,
-                date: tc.date,
-                status: "Holiday",
-                remarks: `Holiday: ${holiday.name} (${holiday.type})`,
-                updatedAt: new Date()
-              },
-              { upsert: true, new: true }
-            );
-          } else if (isWeekendDay && !tc.logIn) {
-            // Weekend without login = Weekend status
-            await Attendance.findOneAndUpdate(
-              { employeeId: tc.employeeId, date: tc.date },
-              {
-                employeeId: tc.employeeId,
-                employeeName: employeeData.name,
-                department: employeeData.department,
-                date: tc.date,
-                status: "Weekend",
-                remarks: "Weekend",
-                updatedAt: new Date()
-              },
-              { upsert: true, new: true }
-            );
-          } else {
+          // Check for timecard
+          const tc = await Timecard.findOne({
+            employeeId: emp.employeeId,
+            date: { $gte: yesterday, $lte: endOfYesterday }
+          });
+
+          // Fetch fresh employee data for department info
+          const employeeData = {
+            name: `${emp.firstName} ${emp.lastName}`,
+            department: emp.role === "super-admin" ? "Management" : (emp.department || "Unknown"), // fallback
+          };
+
+          const holiday = await isHoliday(yesterday, emp.department);
+          const isWeekendDay = await isWeekend(yesterday);
+
+          let finalStatus = "Absent";
+          let remarks = "";
+
+          // Status Priority Logic:
+          // 1. Existing "Leave" status from Absence module
+          // 2. Holiday
+          // 3. Weekend (if no login)
+          // 4. Timecard based (Present/Half Day/Absent)
+
+          if (existingAttendance && existingAttendance.status === "Leave") {
+            finalStatus = "Leave";
+            remarks = existingAttendance.remarks || "Leave";
+          } else if (holiday) {
+            finalStatus = "Holiday";
+            remarks = `Holiday: ${holiday.name} (${holiday.type})`;
+          } else if (isWeekendDay && (!tc || !tc.logIn)) {
+            finalStatus = "Weekend";
+            remarks = "Weekend";
+          } else if (tc && tc.logIn) {
             const totalHours = timeToHours(tc.totalHours || "00:00");
             const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
-            const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
-            const overtimeHours = Math.max(0, totalHours - 8);
-
-            const lateCheck = await checkLateLogin(tc.logIn);
-
-            await Attendance.findOneAndUpdate(
-              { employeeId: tc.employeeId, date: tc.date },
-              {
-                employeeId: tc.employeeId,
-                employeeName: employeeData.name,
-                department: employeeData.department,
-                date: tc.date,
-                status,
-                totalHours,
-                permissionHours,
-                loginTime: tc.logIn || "",
-                logoutTime: tc.logOut || "",
-                overtimeHours,
-                isLateLogin: lateCheck.isLate,
-                lateByMinutes: lateCheck.lateBy,
-                remarks: tc.reason || "",
-                updatedAt: new Date()
-              },
-              { upsert: true, new: true }
-            );
+            finalStatus = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
+            remarks = tc.reason || tc.autoLogoutReason || "";
           }
 
-          existing ? updated++ : processed++;
+          const totalHours = tc ? timeToHours(tc.totalHours || "00:00") : 0;
+          const permissionHours = tc ? Math.min(timeToHours(tc.permission || "00:00"), 2) : 0;
+          const overtimeHours = Math.max(0, totalHours - 8);
+          const lateCheck = tc ? await checkLateLogin(tc.logIn) : { isLate: false, lateBy: 0 };
+
+          await Attendance.findOneAndUpdate(
+            { employeeId: emp.employeeId, date: yesterday },
+            {
+              employeeId: emp.employeeId,
+              employeeName: `${emp.firstName} ${emp.lastName}`,
+              department: emp.department || "Unknown",
+              date: yesterday,
+              status: finalStatus,
+              totalHours,
+              permissionHours,
+              loginTime: tc?.logIn || "",
+              logoutTime: tc?.logOut || "",
+              overtimeHours,
+              isLateLogin: lateCheck.isLate,
+              lateByMinutes: lateCheck.lateBy,
+              remarks,
+              updatedAt: new Date()
+            },
+            { upsert: true, new: true }
+          );
+
+          existingAttendance ? updated++ : processed++;
         } catch (err) {
-          console.error(`Error processing ${tc.employeeId}:`, err);
+          console.error(`Error processing ${emp.employeeId}:`, err);
           errors++;
         }
       }
@@ -423,7 +439,7 @@ export async function POST(req) {
       return NextResponse.json({
         success: true,
         message: "Automated attendance generation completed",
-        stats: { totalTimecards: timecards.length, newRecords: processed, updatedRecords: updated, errors },
+        stats: { totalEmployees: allEmployees.length, newRecords: processed, updatedRecords: updated, errors },
         processedDate: yesterday.toISOString().split('T')[0]
       });
     }

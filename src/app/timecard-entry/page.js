@@ -275,13 +275,12 @@ export default function TimecardPage() {
     const checkAutoLogout = () => {
       const now = new Date();
       const currentTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const loginMinutes = timeToMinutes(current.logIn);
-      const requiredMinutes = timeToMinutes(requiredLoginTime);
       const maxLogoutTime = '20:30';
       const currentMinutes = timeToMinutes(currentTime);
       const maxLogoutMinutes = timeToMinutes(maxLogoutTime);
 
-      if (loginMinutes <= requiredMinutes && currentMinutes >= maxLogoutMinutes) {
+      // Auto-logout anyone still in office after 20:30
+      if (currentMinutes >= maxLogoutMinutes) {
         let logMessage = `Auto-logout at ${maxLogoutTime}. `;
 
         if (!current?.lunchIn) {
