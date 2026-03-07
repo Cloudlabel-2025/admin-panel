@@ -123,7 +123,8 @@ export default function Layout({ children }) {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/");
+    setShowProfileDropdown(false);
+    window.location.href = "/";
   };
 
   const navigate = (path) => {

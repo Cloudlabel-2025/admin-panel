@@ -63,7 +63,7 @@ export default function EmployeeAttendancePage() {
     const totalHours = data.reduce((sum, a) => sum + (a.totalHours || 0), 0);
     const avgHours = totalDays > 0 ? totalHours / totalDays : 0;
     const attendancePercentage = totalDays > 0 ? (presentDays + halfDays * 0.5) / totalDays * 100 : 0;
-    
+
     setStats({
       totalDays,
       presentDays,
@@ -79,14 +79,14 @@ export default function EmployeeAttendancePage() {
     const wsData = attendance.map(a => ({
       Date: new Date(a.date).toLocaleDateString(),
       Status: a.status,
-      LoginTime: a.loginTime || "-",
-      LogoutTime: a.logoutTime || "-",
+      PunchInTime: a.loginTime || "-",
+      PunchOutTime: a.logoutTime || "-",
       TotalHours: a.totalHours?.toFixed(2) || 0,
       PermissionHours: a.permissionHours?.toFixed(2) || 0,
       OvertimeHours: a.overtimeHours?.toFixed(2) || 0,
       Remarks: a.remarks || "-"
     }));
-    
+
     const ws = XLSX.utils.json_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "My Attendance");
@@ -196,8 +196,8 @@ export default function EmployeeAttendancePage() {
                     <tr>
                       <th>Date</th>
                       <th>Status</th>
-                      <th>Login Time</th>
-                      <th>Logout Time</th>
+                      <th>Punch In Time</th>
+                      <th>Punch Out Time</th>
                       <th>Total Hours</th>
                       <th>Permission Hours</th>
                       <th>Overtime Hours</th>
@@ -215,12 +215,11 @@ export default function EmployeeAttendancePage() {
                       <tr key={idx}>
                         <td>{new Date(a.date).toLocaleDateString()}</td>
                         <td>
-                          <span className={`badge ${
-                            a.status === 'Present' ? 'bg-success' : 
+                          <span className={`badge ${a.status === 'Present' ? 'bg-success' :
                             a.status === 'In Office' ? 'bg-primary' :
-                            a.status === 'Half Day' ? 'bg-warning' : 
-                            a.status === 'Logout Missing' ? 'bg-warning' : 'bg-danger'
-                          }`}>
+                              a.status === 'Half Day' ? 'bg-warning' :
+                                a.status === 'Logout Missing' ? 'bg-warning' : 'bg-danger'
+                            }`}>
                             {a.status}
                           </span>
                         </td>

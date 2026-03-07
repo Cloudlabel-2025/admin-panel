@@ -25,18 +25,18 @@ export default function MonitorEmployees() {
     }
     setUserRole(role);
     fetchAllData();
-    
+
     // Auto-refresh every 5 minutes for real-time monitoring
     const refreshInterval = setInterval(() => {
       fetchAllData();
       setCountdown(300);
     }, 300000);
-    
+
     // Countdown timer
     const countdownInterval = setInterval(() => {
       setCountdown(prev => prev > 0 ? prev - 1 : 300);
     }, 1000);
-    
+
     return () => {
       clearInterval(refreshInterval);
       clearInterval(countdownInterval);
@@ -54,9 +54,9 @@ export default function MonitorEmployees() {
       const today = new Date().toISOString().split("T")[0];
       const userRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
-      
+
       let url = `/api/daily-task?admin=true&date=${today}&_t=${Date.now()}`;
-      
+
       // For team roles, add department filter
       if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
         const token = localStorage.getItem('token');
@@ -70,7 +70,7 @@ export default function MonitorEmployees() {
           url += `&department=${userData.department}`;
         }
       }
-      
+
       const token = localStorage.getItem('token');
       console.log('Fetching daily tasks from URL:', url);
       const res = await fetch(url, {
@@ -101,9 +101,9 @@ export default function MonitorEmployees() {
       const userRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
       const employeeName = localStorage.getItem("name");
-      
+
       let url = `/api/timecard?admin=true&date=${today}&_t=${Date.now()}`;
-      
+
       // For team roles, add department filter
       if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
         const token = localStorage.getItem('token');
@@ -117,7 +117,7 @@ export default function MonitorEmployees() {
           url += `&department=${userData.department}`;
         }
       }
-      
+
       const token = localStorage.getItem('token');
       console.log('Fetching timecards from URL:', url);
       const res = await fetch(url, {
@@ -151,7 +151,7 @@ export default function MonitorEmployees() {
 
   return (
     <Layout>
-      <div className="card border-0 shadow-sm mb-4" style={{background: 'linear-gradient(135deg, #2c3e50 0%, #1a252f 100%)'}}>
+      <div className="card border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #2c3e50 0%, #1a252f 100%)' }}>
         <div className="card-body">
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
@@ -186,18 +186,18 @@ export default function MonitorEmployees() {
 
       {/* Timecards Section */}
       <div className="card mb-4 shadow-sm border-0">
-        <div className="card-header text-white border-0" style={{background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)'}}>
+        <div className="card-header text-white border-0" style={{ background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)' }}>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
             <h5 className="mb-0">
               <i className="bi bi-clock-history me-2"></i>
-              Today&apos;s Timecards <span className="badge bg-light text-dark ms-2">{timecards.filter(tc => 
+              Today&apos;s Timecards <span className="badge bg-light text-dark ms-2">{timecards.filter(tc =>
                 tc.employeeId?.toLowerCase().includes(timecardSearch.toLowerCase()) ||
                 tc.employeeName?.toLowerCase().includes(timecardSearch.toLowerCase())
               ).length}</span>
             </h5>
             <div className="d-flex align-items-center">
               {showTimecardSearch ? (
-                <div className="input-group" style={{width: '250px', transition: 'all 0.3s ease'}}>
+                <div className="input-group" style={{ width: '250px', transition: 'all 0.3s ease' }}>
                   <input
                     type="text"
                     className="form-control form-control-sm"
@@ -207,8 +207,8 @@ export default function MonitorEmployees() {
                     onBlur={() => !timecardSearch && setShowTimecardSearch(false)}
                     autoFocus
                   />
-                  <button 
-                    className="btn btn-outline-light btn-sm" 
+                  <button
+                    className="btn btn-outline-light btn-sm"
                     onClick={() => {
                       setTimecardSearch('');
                       setShowTimecardSearch(false);
@@ -218,8 +218,8 @@ export default function MonitorEmployees() {
                   </button>
                 </div>
               ) : (
-                <button 
-                  className="btn btn-light btn-sm" 
+                <button
+                  className="btn btn-light btn-sm"
                   onClick={() => setShowTimecardSearch(true)}
                 >
                   <i className="bi bi-search"></i>
@@ -231,7 +231,7 @@ export default function MonitorEmployees() {
         <div className="card-body">
           {loading ? (
             <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status" style={{width: '3rem', height: '3rem'}}>
+              <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
                 <span className="visually-hidden">Loading...</span>
               </div>
               <p className="mt-3 text-muted">Loading timecard data...</p>
@@ -243,8 +243,8 @@ export default function MonitorEmployees() {
                   <tr>
                     <th><i className="bi bi-person-badge me-1"></i>Employee ID</th>
                     <th><i className="bi bi-person me-1"></i>Employee Name</th>
-                    <th><i className="bi bi-box-arrow-in-right me-1"></i>Log In</th>
-                    <th><i className="bi bi-box-arrow-right me-1"></i>Log Out</th>
+                    <th><i className="bi bi-box-arrow-in-right me-1"></i>Punch In</th>
+                    <th><i className="bi bi-box-arrow-right me-1"></i>Punch Out</th>
                     <th><i className="bi bi-cup-hot me-1"></i>Lunch Out</th>
                     <th><i className="bi bi-cup-hot-fill me-1"></i>Lunch In</th>
                     <th><i className="bi bi-clock me-1"></i>Permission</th>
@@ -253,7 +253,7 @@ export default function MonitorEmployees() {
                   </tr>
                 </thead>
                 <tbody>
-                  {timecards.filter(tc => 
+                  {timecards.filter(tc =>
                     tc.employeeId?.toLowerCase().includes(timecardSearch.toLowerCase()) ||
                     tc.employeeName?.toLowerCase().includes(timecardSearch.toLowerCase())
                   ).map((tc, idx) => (
@@ -265,7 +265,7 @@ export default function MonitorEmployees() {
                       <td>{tc.lunchOut || '-'}</td>
                       <td>{tc.lunchIn || '-'}</td>
                       <td>{tc.permission ? tc.permission + 'Hr' : '-'}</td>
-                      <td><small className="text-muted">{tc.reason|| '-'}</small></td>
+                      <td><small className="text-muted">{tc.reason || '-'}</small></td>
                       <td><span className="badge bg-info text-dark">{tc.totalHours ? (() => {
                         const [h, m] = (tc.totalHours || '0:0').split(':').map(Number);
                         const hours = h + (m || 0) / 60;
@@ -278,7 +278,7 @@ export default function MonitorEmployees() {
             </div>
           ) : (
             <div className="text-center py-5">
-              <i className="bi bi-clock-history text-muted" style={{fontSize: '4rem'}}></i>
+              <i className="bi bi-clock-history text-muted" style={{ fontSize: '4rem' }}></i>
               <p className="text-muted mb-0 mt-3">No timecard data for today</p>
             </div>
           )}
@@ -310,18 +310,18 @@ export default function MonitorEmployees() {
 
       {/* Daily Tasks Section */}
       <div className="card shadow-sm border-0">
-        <div className="card-header text-white border-0" style={{background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)'}}>
+        <div className="card-header text-white border-0" style={{ background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)' }}>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
             <h5 className="mb-0">
               <i className="bi bi-list-task me-2"></i>
-              Today&apos;s Employee Tasks <span className="badge bg-light text-dark ms-2">{dailyTasks.filter(task => 
+              Today&apos;s Employee Tasks <span className="badge bg-light text-dark ms-2">{dailyTasks.filter(task =>
                 task.employeeId?.toLowerCase().includes(taskSearch.toLowerCase()) ||
                 task.employeeName?.toLowerCase().includes(taskSearch.toLowerCase())
               ).length}</span>
             </h5>
             <div className="d-flex align-items-center">
               {showTaskSearch ? (
-                <div className="input-group" style={{width: '250px', transition: 'all 0.3s ease'}}>
+                <div className="input-group" style={{ width: '250px', transition: 'all 0.3s ease' }}>
                   <input
                     type="text"
                     className="form-control form-control-sm"
@@ -331,8 +331,8 @@ export default function MonitorEmployees() {
                     onBlur={() => !taskSearch && setShowTaskSearch(false)}
                     autoFocus
                   />
-                  <button 
-                    className="btn btn-outline-light btn-sm" 
+                  <button
+                    className="btn btn-outline-light btn-sm"
                     onClick={() => {
                       setTaskSearch('');
                       setShowTaskSearch(false);
@@ -342,8 +342,8 @@ export default function MonitorEmployees() {
                   </button>
                 </div>
               ) : (
-                <button 
-                  className="btn btn-light btn-sm" 
+                <button
+                  className="btn btn-light btn-sm"
                   onClick={() => setShowTaskSearch(true)}
                 >
                   <i className="bi bi-search"></i>
@@ -353,77 +353,76 @@ export default function MonitorEmployees() {
           </div>
         </div>
         <div className="card-body">
-          {dailyTasks.filter(task => 
+          {dailyTasks.filter(task =>
             task.employeeId?.toLowerCase().includes(taskSearch.toLowerCase()) ||
             task.employeeName?.toLowerCase().includes(taskSearch.toLowerCase())
           ).length > 0 ? (
             <div className="row">
-              {dailyTasks.filter(task => 
+              {dailyTasks.filter(task =>
                 task.employeeId?.toLowerCase().includes(taskSearch.toLowerCase()) ||
                 task.employeeName?.toLowerCase().includes(taskSearch.toLowerCase())
               ).map((employeeTask, idx) => {
                 return (
-                <div key={idx} className="col-12 mb-3">
-                  <div className="border rounded p-3" style={{borderRadius: '8px', background: '#f8f9fa'}}>
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
-                      <h6 className="mb-0 text-dark">
-                        <i className="bi bi-person-circle me-2 text-primary"></i>
-                        <span className="fw-bold">{employeeTask.employeeName || 'Unknown'}</span> 
-                        <span className="badge bg-secondary ms-2">{employeeTask.employeeId || 'N/A'}</span>
-                        <span className="badge bg-info text-dark ms-2">{employeeTask.designation || 'N/A'}</span>
-                      </h6>
-                      <small className="text-muted"><i className="bi bi-clock me-1"></i>Last updated: {new Date(employeeTask.updatedAt || employeeTask.createdAt).toLocaleTimeString()}</small>
-                    </div>
-                    {employeeTask.tasks && employeeTask.tasks.length > 0 ? (
-                      <div className="table-responsive">
-                        <table className="table table-sm mb-0">
-                          <thead className="table-dark">
-                            <tr>
-                              <th>#</th>
-                              <th>Task Details</th>
-                              <th>Start Time</th>
-                              <th>End Time</th>
-                              <th>Status</th>
-                              <th>Saved</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {employeeTask.tasks.map((task, taskIdx) => (
-                              <tr key={taskIdx} style={{background: task.isSaved ? '#fff' : '#fff3cd'}}>
-                                <td><span className="badge bg-secondary">{task.Serialno}</span></td>
-                                <td>{task.details || <em className="text-muted">Entering...</em>}</td>
-                                <td><span className="badge bg-success">{task.startTime || '-'}</span></td>
-                                <td>{task.endTime ? <span className="badge bg-danger">{task.endTime}</span> : <em className="text-muted">In progress...</em>}</td>
-                                <td>
-                                  <span className={`badge ${
-                                    task.status === 'Completed' ? 'bg-success' :
-                                    task.status === 'In Progress' ? 'bg-warning text-dark' : 'bg-secondary'
-                                  }`}>
-                                    {task.status}
-                                  </span>
-                                </td>
-                                <td>
-                                  {task.isSaved ? 
-                                    <span className="badge bg-success"><i className="bi bi-check-circle me-1"></i>Saved</span> : 
-                                    <span className="badge bg-warning text-dark"><i className="bi bi-pencil me-1"></i>Draft</span>
-                                  }
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  <div key={idx} className="col-12 mb-3">
+                    <div className="border rounded p-3" style={{ borderRadius: '8px', background: '#f8f9fa' }}>
+                      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
+                        <h6 className="mb-0 text-dark">
+                          <i className="bi bi-person-circle me-2 text-primary"></i>
+                          <span className="fw-bold">{employeeTask.employeeName || 'Unknown'}</span>
+                          <span className="badge bg-secondary ms-2">{employeeTask.employeeId || 'N/A'}</span>
+                          <span className="badge bg-info text-dark ms-2">{employeeTask.designation || 'N/A'}</span>
+                        </h6>
+                        <small className="text-muted"><i className="bi bi-clock me-1"></i>Last updated: {new Date(employeeTask.updatedAt || employeeTask.createdAt).toLocaleTimeString()}</small>
                       </div>
-                    ) : (
-                      <p className="text-muted mb-0 text-center py-3"><i className="bi bi-inbox me-2"></i>No tasks added today</p>
-                    )}
+                      {employeeTask.tasks && employeeTask.tasks.length > 0 ? (
+                        <div className="table-responsive">
+                          <table className="table table-sm mb-0">
+                            <thead className="table-dark">
+                              <tr>
+                                <th>#</th>
+                                <th>Task Details</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Status</th>
+                                <th>Saved</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {employeeTask.tasks.map((task, taskIdx) => (
+                                <tr key={taskIdx} style={{ background: task.isSaved ? '#fff' : '#fff3cd' }}>
+                                  <td><span className="badge bg-secondary">{task.Serialno}</span></td>
+                                  <td>{task.details || <em className="text-muted">Entering...</em>}</td>
+                                  <td><span className="badge bg-success">{task.startTime || '-'}</span></td>
+                                  <td>{task.endTime ? <span className="badge bg-danger">{task.endTime}</span> : <em className="text-muted">In progress...</em>}</td>
+                                  <td>
+                                    <span className={`badge ${task.status === 'Completed' ? 'bg-success' :
+                                        task.status === 'In Progress' ? 'bg-warning text-dark' : 'bg-secondary'
+                                      }`}>
+                                      {task.status}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {task.isSaved ?
+                                      <span className="badge bg-success"><i className="bi bi-check-circle me-1"></i>Saved</span> :
+                                      <span className="badge bg-warning text-dark"><i className="bi bi-pencil me-1"></i>Draft</span>
+                                    }
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-muted mb-0 text-center py-3"><i className="bi bi-inbox me-2"></i>No tasks added today</p>
+                      )}
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
           ) : (
             <div className="text-center py-5">
-              <i className="bi bi-list-task text-muted" style={{fontSize: '4rem'}}></i>
+              <i className="bi bi-list-task text-muted" style={{ fontSize: '4rem' }}></i>
               <p className="text-muted mb-0 mt-3">
                 {taskSearch ? `No tasks found matching "${taskSearch}"` : 'No employee tasks found for today'}
               </p>

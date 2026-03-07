@@ -802,10 +802,10 @@ export default function DailyTaskComponent() {
                 <h6 className="mb-3 fs-6"><i className="bi bi-clock-history me-2"></i>Today&apos;s Timecard</h6>
                 <div className="d-flex flex-wrap gap-2">
                   <span className="badge bg-primary p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
-                    <i className="bi bi-box-arrow-in-right me-1"></i>Log In: {timecard.logIn || "--:--"}
+                    <i className="bi bi-box-arrow-in-right me-1"></i>Punch In: {timecard.logIn || "--:--"}
                   </span>
                   <span className="badge bg-success p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
-                    <i className="bi bi-box-arrow-right me-1"></i>Log Out: {timecard.logOut || "--:--"}
+                    <i className="bi bi-box-arrow-right me-1"></i>Punch Out: {timecard.logOut || "--:--"}
                   </span>
                   <span className="badge bg-warning text-dark p-2 flex-grow-1 flex-sm-grow-0" style={{ fontSize: '0.85rem' }}>
                     <i className="bi bi-cup-hot me-1"></i>Lunch Out: {timecard.lunchOut || "--:--"}

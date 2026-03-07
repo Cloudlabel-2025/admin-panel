@@ -35,18 +35,18 @@ export default function AttendancePage() {
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const empId = localStorage.getItem("employeeId") || "";
-    
+
     setUserRole(role);
     // Only super-admin and admin get full admin access
     // Team roles get personal view by default
     setIsAdmin(role === "super-admin" || role === "Super-admin" || role === "admin");
     setEmployeeId(empId);
-    
+
     // For team roles, show their personal attendance by default
     if (role === "Team-Lead" || role === "Team-admin") {
       setSelectedEmployee(empId);
     }
-    
+
     fetchEmployees();
   }, []);
 
@@ -54,9 +54,9 @@ export default function AttendancePage() {
     try {
       const userRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
-      
+
       let url = "/api/Employee/search";
-      
+
       // For team roles, filter by department
       if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
         // Get current user's department first
@@ -66,7 +66,7 @@ export default function AttendancePage() {
           url += `?department=${userData.department}`;
         }
       }
-      
+
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -83,16 +83,16 @@ export default function AttendancePage() {
       const params = new URLSearchParams();
       const currentUserRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
-      
+
       params.append("page", page);
       params.append("limit", limit);
-      
+
       if (currentUserRole) params.append("userRole", currentUserRole);
-      
+
       if (!isAdmin && employeeId) {
         params.append("employeeId", employeeId);
       }
-      
+
       if (isAdmin || currentUserRole === "Team-Lead" || currentUserRole === "Team-admin") {
         params.append("admin", "true");
         if (startDate) params.append("startDate", startDate);
@@ -101,7 +101,7 @@ export default function AttendancePage() {
           params.append("employeeId", selectedEmployee);
         }
         if (statusFilter) params.append("status", statusFilter);
-        
+
         if ((currentUserRole === "Team-Lead" || currentUserRole === "Team-admin") && empId) {
           try {
             const userRes = await fetch(`/api/Employee/${empId}`);
@@ -122,7 +122,7 @@ export default function AttendancePage() {
       setCurrentPage(result.pagination?.currentPage || 1);
       setTotalPages(result.pagination?.totalPages || 1);
       setTotalRecords(result.pagination?.totalRecords || 0);
-      
+
       if (selectedEmployee) {
         calculateStats(attendanceData);
       } else {
@@ -139,19 +139,19 @@ export default function AttendancePage() {
   const calculateStats = (data) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const todayRecords = data.filter(a => {
       const recordDate = new Date(a.date);
       recordDate.setHours(0, 0, 0, 0);
       return recordDate.getTime() === today.getTime();
     });
-    
+
     const totalPresent = todayRecords.filter(a => a.status === "Present").length;
     const totalAbsent = todayRecords.filter(a => a.status === "Absent").length;
     const totalHalfDay = todayRecords.filter(a => a.status === "Half Day").length;
     const totalInOffice = todayRecords.filter(a => a.status === "In Office").length;
     const avgHours = data.length > 0 ? data.reduce((sum, a) => sum + (a.totalHours || 0), 0) / data.length : 0;
-    
+
     setStats({ totalPresent, totalAbsent, totalHalfDay, totalInOffice, avgHours });
   };
 
@@ -160,7 +160,7 @@ export default function AttendancePage() {
   const exportToExcel = () => {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-    
+
     // Group by employee for monthly summary
     const employeeMap = {};
     attendance.forEach(a => {
@@ -187,13 +187,13 @@ export default function AttendancePage() {
       emp.totalHours += a.totalHours || 0;
       emp.totalOvertime += a.overtimeHours || 0;
     });
-    
+
     const summaryData = Object.values(employeeMap).map(emp => {
       const totalDays = new Date(currentYear, currentMonth, 0).getDate();
-      const attendancePercentage = totalDays > 0 
+      const attendancePercentage = totalDays > 0
         ? ((emp.present + emp.halfDay * 0.5) / totalDays * 100).toFixed(2)
         : 0;
-      
+
       return {
         EmployeeID: emp.employeeId,
         EmployeeName: emp.employeeName,
@@ -208,7 +208,7 @@ export default function AttendancePage() {
         AttendancePercentage: attendancePercentage + '%'
       };
     });
-    
+
     const detailData = attendance.map(a => ({
       Date: new Date(a.date).toLocaleDateString(),
       EmployeeID: a.employeeId,
@@ -223,14 +223,14 @@ export default function AttendancePage() {
       Late: a.isLateLogin ? `${a.lateByMinutes}m` : 'On Time',
       Remarks: a.remarks || "-"
     }));
-    
+
     const wb = XLSX.utils.book_new();
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
     const wsDetail = XLSX.utils.json_to_sheet(detailData);
-    
+
     XLSX.utils.book_append_sheet(wb, wsSummary, "Monthly Summary");
     XLSX.utils.book_append_sheet(wb, wsDetail, "Detailed Records");
-    
+
     XLSX.writeFile(wb, `Attendance_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
@@ -242,7 +242,7 @@ export default function AttendancePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startDate, endDate, employeeId: selectedEmployee })
       });
-      
+
       if (res.ok) {
         setSuccessMessage("Attendance generated from timecard data");
         setShowSuccess(true);
@@ -272,7 +272,7 @@ export default function AttendancePage() {
   const checkMonthlyReports = () => {
     const today = new Date();
     const isFirstDayOfMonth = today.getDate() === 1;
-    
+
     if (isFirstDayOfMonth) {
       const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const monthName = lastMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -285,11 +285,11 @@ export default function AttendancePage() {
       const lastMonth = monthlyReports[0].date;
       const startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
       const endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
-      
+
       const res = await fetch(`/api/attendance?admin=true&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
       const result = await res.json();
       const data = result.data || [];
-      
+
       const employeeMap = {};
       data.forEach(a => {
         if (!employeeMap[a.employeeId]) {
@@ -315,7 +315,7 @@ export default function AttendancePage() {
         emp.totalHours += a.totalHours || 0;
         emp.totalOvertime += a.overtimeHours || 0;
       });
-      
+
       const reportData = Object.values(employeeMap).map(emp => ({
         EmployeeID: emp.employeeId,
         EmployeeName: emp.employeeName,
@@ -327,12 +327,12 @@ export default function AttendancePage() {
         TotalHours: emp.totalHours.toFixed(2),
         TotalOvertime: emp.totalOvertime.toFixed(2)
       }));
-      
+
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(reportData);
       XLSX.utils.book_append_sheet(wb, ws, "Monthly Report");
       XLSX.writeFile(wb, `Monthly_Attendance_${monthlyReports[0].month.replace(' ', '_')}.xlsx`);
-      
+
       setMonthlyReports([]);
       setShowReportsModal(false);
       setSuccessMessage("Monthly report downloaded successfully");
@@ -348,20 +348,20 @@ export default function AttendancePage() {
   const getEmployeeStats = () => {
     if (!isAdmin && employeeId) {
       const employeeAttendance = attendance.filter(a => a.employeeId === employeeId);
-      
+
       // Calculate total days in current month
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth();
       const currentYear = currentDate.getFullYear();
       const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      
+
       const presentDays = employeeAttendance.filter(a => a.status === "Present").length;
       const absentDays = employeeAttendance.filter(a => a.status === "Absent").length;
       const halfDays = employeeAttendance.filter(a => a.status === "Half Day").length;
       const totalHours = employeeAttendance.reduce((sum, a) => sum + (a.totalHours || 0), 0);
       const avgHours = employeeAttendance.length > 0 ? totalHours / employeeAttendance.length : 0;
       const attendancePercentage = totalDaysInMonth > 0 ? (presentDays + halfDays * 0.5) / totalDaysInMonth * 100 : 0;
-      
+
       return {
         actualDays: totalDaysInMonth,
         totalDays: presentDays + halfDays + absentDays,
@@ -381,15 +381,15 @@ export default function AttendancePage() {
   return (
     <Layout>
       {showSuccess && (
-        <SuccessMessage 
-          message={successMessage} 
-          onClose={() => setShowSuccess(false)} 
+        <SuccessMessage
+          message={successMessage}
+          onClose={() => setShowSuccess(false)}
         />
       )}
       <div className="container-fluid p-4">
         <div className="row align-items-center mb-4">
           <div className="col-md-6 mb-3 mb-md-0">
-            <h1 className="mb-0 d-flex align-items-center" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: '700'}}>
+            <h1 className="mb-0 d-flex align-items-center" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: '700' }}>
               <i className="bi bi-calendar-check me-2"></i>
               {isAdmin ? "Attendance Management" : "My Attendance"}
             </h1>
@@ -398,37 +398,37 @@ export default function AttendancePage() {
             </small>
           </div>
           <div className="col-md-6 text-md-end">
-          <div className="d-flex gap-2 justify-content-md-end align-items-center">
-            {monthlyReports.length > 0 && (
-              <div className="position-relative">
-                <button 
-                  className="btn btn-warning position-relative"
-                  onClick={() => setShowReportsModal(true)}
-                  style={{fontWeight: '600'}}
-                >
-                  <i className="bi bi-bell-fill me-1"></i>
-                  Monthly Report
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    {monthlyReports.length}
-                  </span>
+            <div className="d-flex gap-2 justify-content-md-end align-items-center">
+              {monthlyReports.length > 0 && (
+                <div className="position-relative">
+                  <button
+                    className="btn btn-warning position-relative"
+                    onClick={() => setShowReportsModal(true)}
+                    style={{ fontWeight: '600' }}
+                  >
+                    <i className="bi bi-bell-fill me-1"></i>
+                    Monthly Report
+                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                      {monthlyReports.length}
+                    </span>
+                  </button>
+                </div>
+              )}
+              {isAdmin ? (
+                <>
+                  <button className="btn export-btn" onClick={exportToExcel} style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease' }}>
+                    <i className="bi bi-file-earmark-excel me-1"></i> Export Excel
+                  </button>
+                  <button className="btn generate-btn" onClick={generateAttendance} style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease' }}>
+                    <i className="bi bi-arrow-repeat me-1"></i> Generate from Timecard
+                  </button>
+                </>
+              ) : (
+                <button className="btn export-btn" onClick={exportToExcel} style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease' }}>
+                  <i className="bi bi-file-earmark-excel me-1"></i> Export My Attendance
                 </button>
-              </div>
-            )}
-            {isAdmin ? (
-              <>
-                <button className="btn export-btn" onClick={exportToExcel} style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease'}}>
-                  <i className="bi bi-file-earmark-excel me-1"></i> Export Excel
-                </button>
-                <button className="btn generate-btn" onClick={generateAttendance} style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
-                  <i className="bi bi-arrow-repeat me-1"></i> Generate from Timecard
-                </button>
-              </>
-            ) : (
-              <button className="btn export-btn" onClick={exportToExcel} style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600', border: 'none', transition: 'all 0.3s ease'}}>
-                <i className="bi bi-file-earmark-excel me-1"></i> Export My Attendance
-              </button>
-            )}
-          </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -440,7 +440,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-success text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-check-circle-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-check-circle-fill"></i></div>
                     <h4 className="mb-1">{stats.totalPresent}</h4>
                     <small>Present</small>
                   </div>
@@ -449,7 +449,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-primary text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-building-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-building-fill"></i></div>
                     <h4 className="mb-1">{stats.totalInOffice}</h4>
                     <small>In Office</small>
                   </div>
@@ -458,7 +458,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-warning text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-clock-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-clock-fill"></i></div>
                     <h4 className="mb-1">{stats.totalHalfDay}</h4>
                     <small>Half Day</small>
                   </div>
@@ -467,7 +467,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-danger text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-x-circle-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-x-circle-fill"></i></div>
                     <h4 className="mb-1">{stats.totalAbsent}</h4>
                     <small>Absent</small>
                   </div>
@@ -476,7 +476,7 @@ export default function AttendancePage() {
               <div className="col-lg-4 col-md-8 col-sm-12 mb-3">
                 <div className="card bg-info text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-stopwatch-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-stopwatch-fill"></i></div>
                     <h4 className="mb-1">{stats.avgHours.toFixed(1)}h</h4>
                     <small>Average Hours</small>
                   </div>
@@ -489,7 +489,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-primary text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-calendar-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-calendar-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.totalDays}</h4>
                     <small>Total Days</small>
                   </div>
@@ -498,7 +498,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-success text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-check-circle-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-check-circle-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.presentDays}</h4>
                     <small>Present</small>
                   </div>
@@ -507,7 +507,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-danger text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-x-circle-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-x-circle-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.absentDays}</h4>
                     <small>Absent</small>
                   </div>
@@ -516,7 +516,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-warning text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-clock-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-clock-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.halfDays}</h4>
                     <small>Half Day</small>
                   </div>
@@ -525,7 +525,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-info text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-stopwatch-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-stopwatch-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.totalHours}h</h4>
                     <small>Total Hours</small>
                   </div>
@@ -534,7 +534,7 @@ export default function AttendancePage() {
               <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
                 <div className="card bg-secondary text-white shadow-sm h-100">
                   <div className="card-body text-center p-3">
-                    <div className="mb-2" style={{fontSize: '2rem'}}><i className="bi bi-bar-chart-fill"></i></div>
+                    <div className="mb-2" style={{ fontSize: '2rem' }}><i className="bi bi-bar-chart-fill"></i></div>
                     <h4 className="mb-1">{employeeStats.attendancePercentage}%</h4>
                     <small>Attendance</small>
                   </div>
@@ -546,8 +546,8 @@ export default function AttendancePage() {
 
         {/* Filters */}
         {isAdmin && (
-          <div className="card shadow-sm mb-4" style={{borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37'}}>
-            <div className="card-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
+          <div className="card shadow-sm mb-4" style={{ borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37' }}>
+            <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
               <h5 className="mb-0"><i className="bi bi-funnel me-2"></i>Filter Options</h5>
             </div>
             <div className="card-body">
@@ -599,7 +599,7 @@ export default function AttendancePage() {
                   </select>
                 </div>
                 <div className="col-lg-3 col-md-4 d-flex align-items-end">
-                  <button className="btn filter-btn w-100" onClick={() => fetchAttendance(1)} style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease'}}>
+                  <button className="btn filter-btn w-100" onClick={() => fetchAttendance(1)} style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', color: '#d4af37', border: '2px solid #d4af37', transition: 'all 0.3s ease' }}>
                     <i className="bi bi-search me-1"></i> Apply Filters
                   </button>
                 </div>
@@ -611,11 +611,11 @@ export default function AttendancePage() {
 
 
         {/* Attendance Table */}
-        <div className="card shadow-sm" style={{borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37'}}>
-          <div className="card-header text-white" style={{background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37'}}>
+        <div className="card shadow-sm" style={{ borderRadius: '12px', overflow: 'hidden', border: '2px solid #d4af37' }}>
+          <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
             <div className="d-flex justify-content-between align-items-center py-2">
               <h5 className="mb-0"><i className="bi bi-table me-2"></i>Attendance Records</h5>
-              <div className="badge fs-6 px-3 py-2" style={{background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600'}}>
+              <div className="badge fs-6 px-3 py-2" style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%)', color: '#000', fontWeight: '600' }}>
                 Page {currentPage} of {totalPages} ({totalRecords} Records)
               </div>
             </div>
@@ -631,15 +631,15 @@ export default function AttendancePage() {
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover align-middle mb-0">
-                  <thead style={{background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)', borderBottom: '2px solid #d4af37'}}>
+                  <thead style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)', borderBottom: '2px solid #d4af37' }}>
                     <tr>
                       <th><i className="bi bi-calendar-event me-1"></i>Date</th>
                       <th><i className="bi bi-person-badge me-1"></i>Employee ID</th>
                       <th><i className="bi bi-person me-1"></i>Employee Name</th>
                       <th><i className="bi bi-building me-1"></i>Department</th>
                       <th><i className="bi bi-bar-chart me-1"></i>Status</th>
-                      <th><i className="bi bi-box-arrow-in-right me-1"></i>Login</th>
-                      <th><i className="bi bi-box-arrow-right me-1"></i>Logout</th>
+                      <th><i className="bi bi-box-arrow-in-right me-1"></i>Punch In</th>
+                      <th><i className="bi bi-box-arrow-right me-1"></i>Punch Out</th>
                       <th><i className="bi bi-clock me-1"></i>Total Hours</th>
                       <th><i className="bi bi-door-open me-1"></i>Permission</th>
                       <th><i className="bi bi-clock-history me-1"></i>Overtime</th>
@@ -651,13 +651,13 @@ export default function AttendancePage() {
                     {attendance.length === 0 && (
                       <tr>
                         <td colSpan={12} className="text-center py-5">
-                          <div style={{fontSize: '3rem'}}><i className="bi bi-clipboard-x text-muted"></i></div>
+                          <div style={{ fontSize: '3rem' }}><i className="bi bi-clipboard-x text-muted"></i></div>
                           <p className="text-muted mt-2 mb-0">No attendance records found.</p>
                         </td>
                       </tr>
                     )}
                     {attendance.map((a, idx) => (
-                      <tr key={idx} style={{transition: 'all 0.2s ease'}}>
+                      <tr key={idx} style={{ transition: 'all 0.2s ease' }}>
                         <td>
                           <div className="fw-semibold">{new Date(a.date).toLocaleDateString()}</div>
                         </td>
@@ -671,13 +671,12 @@ export default function AttendancePage() {
                           <span className="badge bg-secondary">{a.department || "Unknown"}</span>
                         </td>
                         <td>
-                          <span className={`badge ${
-                            a.status === 'Present' ? 'bg-success' : 
-                            a.status === 'Half Day' ? 'bg-warning text-dark' : 
-                            a.status === 'Logout Missing' ? 'bg-warning text-dark' :
-                            a.status === 'In Office' ? 'bg-primary' : 
-                            a.status === 'Weekend' ? 'bg-dark' : 'bg-danger'
-                          }`}>
+                          <span className={`badge ${a.status === 'Present' ? 'bg-success' :
+                            a.status === 'Half Day' ? 'bg-warning text-dark' :
+                              a.status === 'Logout Missing' ? 'bg-warning text-dark' :
+                                a.status === 'In Office' ? 'bg-primary' :
+                                  a.status === 'Weekend' ? 'bg-dark' : 'bg-danger'
+                            }`}>
                             {a.status}
                           </span>
                         </td>
@@ -716,7 +715,7 @@ export default function AttendancePage() {
           {totalPages > 1 && (
             <div className="card-footer bg-white border-top">
               <div className="d-flex justify-content-between align-items-center">
-                <button 
+                <button
                   className="btn btn-outline-dark"
                   onClick={() => fetchAttendance(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -726,7 +725,7 @@ export default function AttendancePage() {
                 <span className="text-muted">
                   Page {currentPage} of {totalPages}
                 </span>
-                <button 
+                <button
                   className="btn btn-outline-dark"
                   onClick={() => fetchAttendance(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -738,10 +737,10 @@ export default function AttendancePage() {
           )}
         </div>
       </div>
-      
+
       {/* Monthly Report Modal */}
       {showReportsModal && (
-        <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
@@ -766,7 +765,7 @@ export default function AttendancePage() {
           </div>
         </div>
       )}
-      
+
       <style jsx>{`
         .table-hover tbody tr:hover {
           background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(255, 255, 255, 0.05) 100%);

@@ -379,7 +379,7 @@ export default function TimecardPage() {
     if (success) {
       const status = current?.attendanceStatus || 'Present';
       const reason = current?.statusReason || '';
-      setSuccessMessage(`Logged out - Status: ${status}${reason ? ' (' + reason + ')' : ''}. ${logMessage}`);
+      setSuccessMessage(`Punched out - Status: ${status}${reason ? ' (' + reason + ')' : ''}. ${logMessage}`);
       setShowSuccess(true);
     }
   };
@@ -746,21 +746,21 @@ export default function TimecardPage() {
               <div className="col-md-6">
                 <div className="card h-100" style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', border: '2px solid #d4af37' }}>
                   <div className="card-body">
-                    <h6 className="fw-bold mb-3">Login / Logout</h6>
+                    <h6 className="fw-bold mb-3">Punch In / Punch Out</h6>
                     <div className="row g-3">
                       <div className="col-6">
-                        <label className="form-label fw-bold">Login Time</label>
+                        <label className="form-label fw-bold">Punch In Time</label>
                         <input type="text" className="form-control text-center mb-2" value={current?.logIn || "-"} readOnly />
                         {lateLogin && <small className="text-danger d-block mt-1">Late Login</small>}
                         <button onClick={handleLogin} disabled={hasLoggedIn || isLoggingIn || current?.logIn} className="btn btn-success btn-sm w-100">
-                          <i className="bi bi-box-arrow-in-left me-1"></i>{isLoggingIn ? 'Logging in...' : 'Login'}
+                          <i className="bi bi-box-arrow-in-left me-1"></i>{isLoggingIn ? 'Punching in...' : 'Punch In'}
                         </button>
                       </div>
                       <div className="col-6">
                         <label className="form-label fw-bold">Logout Time</label>
                         <input type="text" className="form-control text-center mb-2" value={current?.logOut || "-"} readOnly />
                         <button onClick={handleLogOut} disabled={!!current?.logOut || !hasLoggedIn} className="btn btn-danger btn-sm w-100">
-                          <i className="bi bi-box-arrow-right me-1"></i>Logout
+                          <i className="bi bi-box-arrow-right me-1"></i>Punch Out
                         </button>
                       </div>
                     </div>
