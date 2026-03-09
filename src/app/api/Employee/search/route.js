@@ -8,30 +8,34 @@ import mongoose from "mongoose";
 export async function GET(req) {
   try {
     await connectMongoose();
-    
+
     const { searchParams } = new URL(req.url);
     const department = searchParams.get('department');
-    
-    const departmentCollections = Object.keys(mongoose.models).filter(name =>
-      name.endsWith("_department")
-    );
-    
+
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    const departmentCollections = collections
+      .map(c => c.name)
+      .filter(name => name.endsWith("_department"));
+
     let allEmployees = [];
-    
+
+    const { createEmployeeModel } = await import("@/models/Employee");
+
     for (const collName of departmentCollections) {
+      const departmentName = collName.replace("_department", "");
+
       // If department filter is specified, only get from that department
       if (department) {
-        const expectedCollectionName = `${department.toLowerCase()}_department`;
-        if (collName.toLowerCase() !== expectedCollectionName) {
+        if (departmentName.toLowerCase() !== department.toLowerCase()) {
           continue;
         }
       }
-      
-      const Model = mongoose.models[collName];
+
+      const Model = createEmployeeModel(departmentName);
       const employees = await Model.find();
       allEmployees = allEmployees.concat(employees);
     }
-    
+
     return NextResponse.json({ employees: allEmployees }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -48,12 +52,16 @@ export async function POST(req) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
     }
 
-    const departmentCollections = Object.keys(mongoose.models).filter(name =>
-      name.endsWith("_department")
-    );
-    
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    const departmentCollections = collections
+      .map(c => c.name)
+      .filter(name => name.endsWith("_department"));
+
+    const { createEmployeeModel } = await import("@/models/Employee");
+
     for (const collName of departmentCollections) {
-      const Model = mongoose.models[collName];
+      const departmentName = collName.replace("_department", "");
+      const Model = createEmployeeModel(departmentName);
       const employee = await Model.findOne({ employeeId });
       if (employee) {
         return NextResponse.json({ employee }, { status: 200 });

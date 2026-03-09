@@ -143,17 +143,19 @@ function getAttendanceStatus(loginTime, logoutTime, totalHours, permissionHours,
 // Get employee data using the Employee API approach
 async function getEmployeeData(employeeId) {
   try {
-    const departmentModels = Object.keys(mongoose.models).filter(name =>
-      name.endsWith("_department")
-    );
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    const departmentCollections = collections
+      .map(c => c.name)
+      .filter(name => name.endsWith("_department"));
 
-    for (const modelName of departmentModels) {
-      const Model = mongoose.models[modelName];
+    const { createEmployeeModel } = await import("@/models/Employee");
+
+    for (const collName of departmentCollections) {
+      const departmentName = collName.replace("_department", "");
+      const Model = createEmployeeModel(departmentName);
       const employee = await Model.findOne({ employeeId });
       if (employee) {
-        // Extract department name properly by removing '_department' suffix
-        const departmentName = modelName.replace("_department", "");
-        // Capitalize first letter
+        // Capitalize first letter of department
         const formattedDept = departmentName.charAt(0).toUpperCase() + departmentName.slice(1);
         return {
           name: `${employee.firstName} ${employee.lastName}`,

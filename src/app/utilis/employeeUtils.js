@@ -1,38 +1,41 @@
 import mongoose from "mongoose";
 import { createEmployeeModel } from "../models/Employee.js";
 
-// Get all department collection names
-export function getDepartmentCollections() {
-  return Object.keys(mongoose.models).filter(name => 
-    name.endsWith("_department")
-  );
+// Get all department collection names from the database
+export async function getDepartmentCollections() {
+  const collections = await mongoose.connection.db.listCollections().toArray();
+  return collections
+    .map(c => c.name)
+    .filter(name => name.endsWith("_department"));
 }
 
 // Get all employees from all departments
 export async function getAllEmployees() {
-  const departmentCollections = getDepartmentCollections();
+  const departmentCollections = await getDepartmentCollections();
   let allEmployees = [];
-  
+
   for (const collName of departmentCollections) {
-    const Model = mongoose.models[collName];
+    const departmentName = collName.replace("_department", "");
+    const Model = createEmployeeModel(departmentName);
     const employees = await Model.find();
     allEmployees = allEmployees.concat(employees);
   }
-  
+
   return allEmployees;
 }
 
 // Find employee across all departments
 export async function findEmployeeById(employeeId) {
-  const departmentCollections = getDepartmentCollections();
-  
+  const departmentCollections = await getDepartmentCollections();
+
   for (const collName of departmentCollections) {
-    const Model = mongoose.models[collName];
+    const departmentName = collName.replace("_department", "");
+    const Model = createEmployeeModel(departmentName);
     const employee = await Model.findOne({ employeeId });
     if (employee) {
       return {
         employee,
-        department: collName.replace("_department", "")
+        department: departmentName
       };
     }
   }
