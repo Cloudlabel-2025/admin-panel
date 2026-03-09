@@ -172,6 +172,9 @@ const TimecardSchema = new mongoose.Schema({
 TimecardSchema.pre("save", function (next) {
   try {
     this.updatedAt = new Date();
+    if (this.date) {
+      this.date.setUTCHours(0, 0, 0, 0);
+    }
     if (this.logOut) {
       this.totalHours = calculatedTotalHours(
         this.logIn,

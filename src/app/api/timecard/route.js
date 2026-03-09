@@ -334,7 +334,7 @@ async function handlePOST(req) {
       try {
         const Attendance = (await import('@/models/Attendance')).default;
         const attendanceDate = new Date(timecard.date);
-        attendanceDate.setHours(0, 0, 0, 0);
+        attendanceDate.setUTCHours(0, 0, 0, 0);
 
         const existing = await Attendance.findOne({
           employeeId: data.employeeId,
@@ -766,25 +766,22 @@ async function handlePUT(req) {
     }
 
     if (updates.logOut) {
-      const totalTime = timeToMinutes(updates.logOut) - timeToMinutes(timecard.logIn);
-      const lunchTime = (timecard.lunchOut && timecard.lunchIn)
-        ? timeToMinutes(timecard.lunchIn) - timeToMinutes(timecard.lunchOut)
-        : 0;
-      const workTime = totalTime - lunchTime;
+      // Calculate work minutes using the helper function to ensure consistency (handles lunch and breaks)
+      const workTime = calculateWorkMinutes({ ...timecard.toObject(), ...updates });
       const permissionTime = updates.permissionMinutes !== undefined ? updates.permissionMinutes : (timecard.permissionMinutes || 0);
+
+      // Status logic: workTime + up to 2 hours of permission
+      const effectiveMinutes = workTime + Math.min(permissionTime, 120);
 
       let attendanceStatus = 'Present';
       let statusReason = '';
 
-      if (workTime < LEAVE_THRESHOLD) {
+      if (effectiveMinutes < LEAVE_THRESHOLD) {
         attendanceStatus = 'Leave';
-        statusReason = `Work time ${Math.floor(workTime / 60)}h ${workTime % 60}m < 4 hours`;
-      } else if (workTime < HALF_DAY_THRESHOLD) {
+        statusReason = `Effective work time ${Math.floor(effectiveMinutes / 60)}h ${effectiveMinutes % 60}m < 4 hours`;
+      } else if (effectiveMinutes < HALF_DAY_THRESHOLD) {
         attendanceStatus = 'Half Day';
-        statusReason = `Work time ${Math.floor(workTime / 60)}h ${workTime % 60}m < 8 hours`;
-      } else if (permissionTime > PERMISSION_LIMIT) {
-        attendanceStatus = 'Half Day';
-        statusReason = `Permission ${permissionTime} min > 2 hours`;
+        statusReason = `Effective work time ${Math.floor(effectiveMinutes / 60)}h ${effectiveMinutes % 60}m < 8 hours`;
       }
 
       timecard.logOut = updates.logOut;
@@ -862,17 +859,31 @@ async function handlePUT(req) {
         await fetch(`${BASE_URL}/api/attendance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employeeId: timecard.employeeId })
+          body: JSON.stringify({
+            employeeId: timecard.employeeId,
+            startDate: timecard.date,
+            endDate: timecard.date
+          })
         });
 
         // Update attendance record with logout
         const Attendance = (await import('@/models/Attendance')).default;
         const attendanceDate = new Date(timecard.date);
-        attendanceDate.setHours(0, 0, 0, 0);
+        attendanceDate.setUTCHours(0, 0, 0, 0);
+
+        // Search for record on the exact normalized date +/- 12 hours to catch local/UTC discrepancies
+        const searchStart = new Date(attendanceDate);
+        searchStart.setUTCHours(searchStart.getUTCHours() - 12);
+        const searchEnd = new Date(attendanceDate);
+        searchEnd.setUTCHours(searchEnd.getUTCHours() + 12);
+
         const totalHours = timecard.workMinutes / 60;
 
         await Attendance.findOneAndUpdate(
-          { employeeId: timecard.employeeId, date: attendanceDate },
+          {
+            employeeId: timecard.employeeId,
+            date: { $gte: searchStart, $lte: searchEnd }
+          },
           {
             status: timecard.attendanceStatus,
             logoutTime: updates.logOut,

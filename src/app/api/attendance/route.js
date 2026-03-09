@@ -51,7 +51,7 @@ async function checkLateLogin(loginTime) {
 async function isWeekend(date) {
   try {
     const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
+    checkDate.setUTCHours(0, 0, 0, 0);
 
     // Priority 1: Manual override (highest priority)
     const override = await WeekendOverride.findOne({ date: checkDate });
@@ -83,7 +83,7 @@ async function isHoliday(date, department = null) {
     if (!Holiday) return null;
 
     const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
+    checkDate.setUTCHours(0, 0, 0, 0);
 
     const holiday = await Holiday.findOne({
       date: checkDate,
@@ -119,9 +119,9 @@ function getAttendanceStatus(loginTime, logoutTime, totalHours, permissionHours,
   if (loginTime && (!logoutTime || logoutTime.trim() === "")) {
     // Check if date is today or future = In Office
     const recordDate = new Date(date);
-    recordDate.setHours(0, 0, 0, 0);
+    recordDate.setUTCHours(0, 0, 0, 0);
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     if (recordDate >= today) {
       return "In Office";
@@ -225,12 +225,12 @@ export async function GET(req) {
       query.date = {};
       if (startDate) {
         const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
+        start.setUTCHours(0, 0, 0, 0);
         query.date.$gte = start;
       }
       if (endDate) {
         const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        end.setUTCHours(23, 59, 59, 999);
         query.date.$lte = end;
       }
     }
@@ -252,8 +252,8 @@ export async function GET(req) {
 
     // Update old "In Office" records to "Logout Missing" for past dates
     const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(23, 59, 59, 999);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    yesterday.setUTCHours(23, 59, 59, 999);
 
     await Attendance.updateMany(
       { status: "In Office", date: { $lt: yesterday } },
@@ -336,10 +336,10 @@ export async function POST(req) {
 
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
+      yesterday.setUTCHours(0, 0, 0, 0);
 
       const endOfYesterday = new Date(yesterday);
-      endOfYesterday.setHours(23, 59, 59, 999);
+      endOfYesterday.setUTCHours(23, 59, 59, 999);
 
       // Get all employees from all departments
       const departmentCollections = Object.keys(mongoose.models).filter(name =>
@@ -482,9 +482,11 @@ export async function POST(req) {
       const overtimeHours = Math.max(0, totalHours - 8);
 
       const lateCheck = await checkLateLogin(tc.logIn);
+      const normalizedDate = new Date(tc.date);
+      normalizedDate.setUTCHours(0, 0, 0, 0);
 
       await Attendance.findOneAndUpdate(
-        { employeeId: tc.employeeId, date: tc.date },
+        { employeeId: tc.employeeId, date: normalizedDate },
         {
           employeeId: tc.employeeId,
           employeeName: employeeData.name,

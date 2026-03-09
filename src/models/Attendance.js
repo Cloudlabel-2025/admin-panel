@@ -23,4 +23,23 @@ const AttendanceSchema = new mongoose.Schema({
 
 AttendanceSchema.index({ employeeId: 1, date: 1 }, { unique: true });
 
+AttendanceSchema.pre("save", function (next) {
+  if (this.date) {
+    this.date.setUTCHours(0, 0, 0, 0);
+  }
+  this.updatedAt = new Date();
+  next();
+});
+
+AttendanceSchema.pre(["findOneAndUpdate", "updateOne"], function (next) {
+  const update = this.getUpdate();
+  if (update.date) {
+    const d = new Date(update.date);
+    d.setUTCHours(0, 0, 0, 0);
+    update.date = d;
+  }
+  update.updatedAt = new Date();
+  next();
+});
+
 export default mongoose.models.Attendance || mongoose.model("Attendance", AttendanceSchema);
