@@ -777,7 +777,7 @@ async function handlePUT(req) {
       let statusReason = '';
 
       if (effectiveMinutes < LEAVE_THRESHOLD) {
-        attendanceStatus = 'Leave';
+        attendanceStatus = 'Absent';
         statusReason = `Effective work time ${Math.floor(effectiveMinutes / 60)}h ${effectiveMinutes % 60}m < 4 hours`;
       } else if (effectiveMinutes < HALF_DAY_THRESHOLD) {
         attendanceStatus = 'Half Day';

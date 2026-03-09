@@ -110,7 +110,7 @@ function calculateAttendance(totalHours, permissionHours, hasLogout = true) {
   const effectiveHours = totalHours + Math.min(permissionHours, 2);
   if (effectiveHours >= 8) return "Present";
   if (effectiveHours >= 4) return "Half Day";
-  return "Leave";
+  return "Absent";
 }
 
 // Calculate status based on login/logout
