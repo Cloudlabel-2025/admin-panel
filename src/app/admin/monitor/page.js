@@ -19,20 +19,19 @@ export default function MonitorEmployees() {
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "Team-Lead" || role === "Team-admin")) {
+    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "developer" || role === "Team-Lead" || role === "Team-admin")) {
       router.push("/");
       return;
     }
     setUserRole(role);
     fetchAllData();
 
-    // Auto-refresh every 5 minutes for real-time monitoring
+    // Auto-refresh every 5 minutes
     const refreshInterval = setInterval(() => {
       fetchAllData();
       setCountdown(300);
     }, 300000);
 
-    // Countdown timer
     const countdownInterval = setInterval(() => {
       setCountdown(prev => prev > 0 ? prev - 1 : 300);
     }, 1000);
@@ -44,35 +43,20 @@ export default function MonitorEmployees() {
   }, [router]);
 
   const fetchAllData = async () => {
+    setLoading(true);
     await Promise.all([fetchAllDailyTasks(), fetchAllTimecards()]);
     setLastFetchTime(new Date().toLocaleTimeString());
     setCountdown(300);
+    setLoading(false);
   };
 
   const fetchAllDailyTasks = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const userRole = localStorage.getItem("userRole");
-      const empId = localStorage.getItem("employeeId");
-
+      const token = localStorage.getItem('token');
+      // Backend handles role-based filtering when admin=true is passed with a valid token
       let url = `/api/daily-task?admin=true&date=${today}&_t=${Date.now()}`;
 
-      // For team roles, add department filter
-      if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
-        const token = localStorage.getItem('token');
-        const userRes = await fetch(`/api/Employee/${empId}?_t=${Date.now()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          url += `&department=${userData.department}`;
-        }
-      }
-
-      const token = localStorage.getItem('token');
-      console.log('Fetching daily tasks from URL:', url);
       const res = await fetch(url, {
         cache: 'no-store',
         headers: {
@@ -80,13 +64,10 @@ export default function MonitorEmployees() {
           'Authorization': `Bearer ${token}`
         }
       });
-      console.log('Daily tasks response status:', res.status);
       const data = await res.json();
-      console.log('Daily tasks response data:', data);
       if (res.ok) {
-        setDailyTasks(Array.isArray(data) ? data : []);
+        setDailyTasks(Array.isArray(data.tasks) ? data.tasks : (Array.isArray(data) ? data : []));
       } else {
-        console.error('Daily tasks API error - Status:', res.status, 'Data:', data);
         setDailyTasks([]);
       }
     } catch (err) {
@@ -95,31 +76,12 @@ export default function MonitorEmployees() {
   };
 
   const fetchAllTimecards = async () => {
-    setLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
-      const userRole = localStorage.getItem("userRole");
-      const empId = localStorage.getItem("employeeId");
-      const employeeName = localStorage.getItem("name");
-
+      const token = localStorage.getItem('token');
+      // Backend handles role-based filtering when admin=true is passed with a valid token
       let url = `/api/timecard?admin=true&date=${today}&_t=${Date.now()}`;
 
-      // For team roles, add department filter
-      if ((userRole === "Team-Lead" || userRole === "Team-admin") && empId) {
-        const token = localStorage.getItem('token');
-        const userRes = await fetch(`/api/Employee/${empId}?_t=${Date.now()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          url += `&department=${userData.department}`;
-        }
-      }
-
-      const token = localStorage.getItem('token');
-      console.log('Fetching timecards from URL:', url);
       const res = await fetch(url, {
         cache: 'no-store',
         headers: {
@@ -127,19 +89,14 @@ export default function MonitorEmployees() {
           'Authorization': `Bearer ${token}`
         }
       });
-      console.log('Timecard response status:', res.status);
       const data = await res.json();
-      console.log('Timecard response data:', data);
       if (res.ok) {
         setTimecards(Array.isArray(data) ? data : []);
       } else {
-        console.error('Timecards API error - Status:', res.status, 'Data:', data);
         setTimecards([]);
       }
     } catch (err) {
       console.error("Error fetching timecards:", err);
-    } finally {
-      setLoading(false);
     }
   };
 

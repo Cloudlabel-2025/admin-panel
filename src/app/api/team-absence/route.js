@@ -53,7 +53,13 @@ export async function GET(req) {
       // Team roles see only their department's absences
       const departmentModel = mongoose.models[`${currentUser.department}_department`];
       if (departmentModel) {
-        const departmentEmployees = await departmentModel.find({});
+        // For Team-admin, exclude Team-Leads
+        const queryFilter = { department: currentUser.department };
+        if (currentUser.role === "Team-admin") {
+          queryFilter.role = { $ne: "Team-Lead" };
+        }
+        
+        const departmentEmployees = await departmentModel.find(queryFilter);
         const employeeIds = departmentEmployees.map(emp => emp.employeeId);
         absences = await Absence.find({ 
           employeeId: { $in: employeeIds },

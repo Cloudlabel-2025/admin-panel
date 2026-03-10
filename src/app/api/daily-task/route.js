@@ -1,14 +1,16 @@
 import connectMongoose from "../../utilis/connectMongoose";
-
-
 import DailyTask from "../../../models/Dailytask";
 import { NextResponse } from "next/server";
+import { getDateRangeForMonth } from "@/app/utilis/employeeUtils";
+import mongoose from "mongoose";
+import { requireAuth } from "../../utilis/authMiddleware";
 
 // GET: fetch daily tasks or monthly report
-export async function GET(req) {
+async function handleGET(req) {
   try {
     await connectMongoose();
     const { searchParams } = new URL(req.url);
+    const currentUser = req.user;
 
     const employeeId = searchParams.get("employeeId");
     const dateParam = searchParams.get("date");
@@ -21,27 +23,42 @@ export async function GET(req) {
       const today = dateParam || new Date().toISOString().split("T")[0];
       const start = new Date(today + 'T00:00:00.000Z');
       const end = new Date(today + 'T23:59:59.999Z');
-      const department = searchParams.get("department");
+      
+      const userRole = currentUser.role;
+      const userDepartment = currentUser.department;
 
       let query = { date: { $gte: start, $lte: end } };
 
-      // If department filter is provided, filter by department
-      if (department) {
+      // Determine target department for filtering
+      const targetDepartment = (userRole === "Team-Lead" || userRole === "Team-admin") ? userDepartment : searchParams.get("department");
+
+      if (targetDepartment) {
         try {
-          const mongoose = await import('mongoose');
-          const collections = Object.keys(mongoose.default.connection.collections).filter(name =>
+          const collections = Object.keys(mongoose.connection.collections).filter(name =>
             name.endsWith('_department')
           );
 
           let employeeIds = [];
           for (const collName of collections) {
-            const collection = mongoose.default.connection.collections[collName];
-            const employees = await collection.find({ department }).toArray();
+            const collection = mongoose.connection.collections[collName];
+            
+            // Filter by department
+            const empFilter = { department: targetDepartment };
+            
+            // For Team-admin, exclude Team-Leads
+            if (userRole === "Team-admin") {
+              empFilter.role = { $ne: "Team-Lead" };
+            }
+            
+            const employees = await collection.find(empFilter).toArray();
             employeeIds.push(...employees.map(emp => emp.employeeId));
           }
 
           if (employeeIds.length > 0) {
             query.employeeId = { $in: employeeIds };
+          } else {
+            // No matching employees found for this role/department
+            query.employeeId = "NONE"; 
           }
         } catch (err) {
           console.error('Error filtering by department:', err);
@@ -109,8 +126,14 @@ export async function GET(req) {
 
     // Monthly report
     if (month && year) {
-      const start = new Date(year, month - 1, 1);
-      const end = new Date(year, month, 0, 23, 59, 59);
+      // Fetch dynamic month start day from settings
+      const Settings = mongoose.models.Settings || mongoose.model('Settings', new mongoose.Schema({ key: String, value: String }));
+      const msdSetting = await Settings.findOne({ key: 'MONTH_START_DAY' });
+      const monthStartDay = parseInt(msdSetting?.value || "26");
+
+      const range = getDateRangeForMonth(year, month, monthStartDay);
+      const start = range.startDate;
+      const end = range.endDate;
       let query = { date: { $gte: start, $lte: end } };
       if (employeeId) query.employeeId = employeeId;
 
@@ -139,6 +162,8 @@ export async function GET(req) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }
+
+export const GET = requireAuth(handleGET);
 
 // POST: create or update DailyTask (upsert)
 export async function POST(req) {

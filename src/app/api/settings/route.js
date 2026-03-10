@@ -20,7 +20,10 @@ async function handleGET(req) {
     
     if (key) {
       const setting = await Settings.findOne({ key });
-      return NextResponse.json({ value: setting?.value || "10:00" });
+      let defaultValue = "10:00";
+      if (key === 'MONTH_START_DAY') defaultValue = "26";
+      
+      return NextResponse.json({ value: setting?.value || defaultValue });
     }
     
     const settings = await Settings.find({});

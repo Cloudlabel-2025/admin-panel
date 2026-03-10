@@ -7,6 +7,7 @@ import Attendance from "@/models/Attendance";
 import WeekendOverride from "@/models/WeekendOverride";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
+import { calculateAttendanceStatus, getDateRangeForMonth } from "@/app/utilis/employeeUtils";
 
 // Helper: convert "HH:mm" to decimal hours
 function timeToHours(timeStr) {
@@ -102,42 +103,13 @@ async function isHoliday(date, department = null) {
   }
 }
 
-// Calculate attendance status
-function calculateAttendance(totalHours, permissionHours, hasLogout = true) {
-  // If no logout time, mark as logout missing
-  if (!hasLogout) return "Logout Missing";
-
-  const effectiveHours = totalHours + Math.min(permissionHours, 2);
-  if (effectiveHours >= 8) return "Present";
-  if (effectiveHours >= 4) return "Half Day";
-  return "Absent";
-}
-
 // Calculate status based on login/logout
 function getAttendanceStatus(loginTime, logoutTime, totalHours, permissionHours, date) {
-  // If logged in but not logged out
-  if (loginTime && (!logoutTime || logoutTime.trim() === "")) {
-    // Check if date is today or future = In Office
-    const recordDate = new Date(date);
-    recordDate.setUTCHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    if (recordDate >= today) {
-      return "In Office";
-    }
-
-    // Past date without logout = Logout Missing
-    return "Logout Missing";
-  }
-
-  // If logged out, calculate based on hours
-  if (logoutTime && logoutTime.trim() !== "") {
-    return calculateAttendance(totalHours, permissionHours, true);
-  }
-
-  // No login = Absent
-  return "Absent";
+  const hasLogout = !!(logoutTime && logoutTime.toString().trim() !== "");
+  const totalWorkMinutes = (totalHours || 0) * 60;
+  const pMinutes = (permissionHours || 0) * 60;
+  
+  return calculateAttendanceStatus(totalWorkMinutes, pMinutes, hasLogout, date);
 }
 
 // Get employee data using the Employee API approach
@@ -209,9 +181,12 @@ export async function GET(req) {
         if (employeeRes.ok) {
           const employeeData = await employeeRes.json();
           // For team roles, exclude other team-leads from the results
-          if (userRole === "Team-Lead" || userRole === "Team-admin") {
+          if (userRole === "Team-admin") {
             departmentEmployeeIds = employeeData.employees
-              .filter(emp => emp.role !== "Team-Lead" || emp.employeeId === employeeId)
+              .filter(emp => emp.role !== "Team-Lead")
+              .map(emp => emp.employeeId);
+          } else if (userRole === "Team-Lead") {
+            departmentEmployeeIds = employeeData.employees
               .map(emp => emp.employeeId);
           } else {
             departmentEmployeeIds = employeeData.employees.map(emp => emp.employeeId);
@@ -253,12 +228,16 @@ export async function GET(req) {
     attendanceRecords = await Attendance.find(query).sort({ date: -1 }).skip(skip).limit(limit);
 
     // Update old "In Office" records to "Logout Missing" for past dates
-    const yesterday = new Date();
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    yesterday.setUTCHours(23, 59, 59, 999);
+    // Only update if the date is strictly before today (local time)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     await Attendance.updateMany(
-      { status: "In Office", date: { $lt: yesterday } },
+      { 
+        status: "In Office", 
+        date: { $lt: todayStart },
+        logoutTime: { $in: [null, ""] } // Double check logoutTime is actually empty
+      },
       { $set: { status: "Logout Missing" } }
     );
 
@@ -448,7 +427,19 @@ export async function POST(req) {
 
     // Manual generation
     const body = await req.json();
-    const { startDate, endDate, employeeId } = body;
+    let { startDate, endDate, month, year, employeeId } = body;
+
+    // Fetch dynamic month start day from settings
+    const Settings = mongoose.models.Settings || mongoose.model('Settings', new mongoose.Schema({ key: String, value: String }));
+    const msdSetting = await Settings.findOne({ key: 'MONTH_START_DAY' });
+    const monthStartDay = parseInt(msdSetting?.value || "26");
+
+    // If month/year provided, calculate range dynamically
+    if (month && year) {
+      const range = getDateRangeForMonth(parseInt(year), parseInt(month), monthStartDay);
+      startDate = range.startDate.toISOString();
+      endDate = range.endDate.toISOString();
+    }
 
 
 
@@ -474,7 +465,10 @@ export async function POST(req) {
 
     for (const tc of timecards) {
       const totalHours = timeToHours(tc.totalHours || "00:00");
-      const permissionHours = Math.min(timeToHours(tc.permission || "00:00"), 2);
+      // Handle permissionMinutes (Number) vs permission (legacy field)
+      const pMins = tc.permissionMinutes || (typeof tc.permission === 'number' ? tc.permission : 0);
+      const permissionHours = Math.min(pMins / 60, 2);
+      
       const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
       const employeeData = await getEmployeeData(tc.employeeId);
 

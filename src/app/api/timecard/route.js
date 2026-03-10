@@ -4,6 +4,7 @@ import { createEmployeeModel } from "@/models/Employee";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../utilis/authMiddleware";
 import mongoose from "mongoose";
+import { calculateAttendanceStatus } from "@/app/utilis/employeeUtils";
 
 const SettingsSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true },
@@ -356,22 +357,30 @@ async function handlePOST(req) {
             }
           }
 
-          await Attendance.create({
-            employeeId: data.employeeId,
-            employeeName: employeeName,
-            department: employeeDepartment,
-            date: attendanceDate,
-            status: 'In Office',
-            loginTime: timecard.logIn,
-            logoutTime: '',
-            totalHours: 0,
-            permissionHours: 0,
-            overtimeHours: 0,
-            isLateLogin: data.lateLogin || false,
-            lateByMinutes: data.lateLoginMinutes || 0,
-            remarks: ''
-          });
-          console.log('Attendance created for', data.employeeId, 'Name:', employeeName, 'Dept:', employeeDepartment);
+          await Attendance.findOneAndUpdate(
+            {
+              employeeId: data.employeeId,
+              date: attendanceDate
+            },
+            {
+              employeeId: data.employeeId,
+              employeeName: employeeName,
+              department: employeeDepartment,
+              date: attendanceDate,
+              status: 'In Office',
+              loginTime: timecard.logIn,
+              logoutTime: '',
+              totalHours: 0,
+              permissionHours: 0,
+              overtimeHours: 0,
+              isLateLogin: data.lateLogin || false,
+              lateByMinutes: data.lateLoginMinutes || 0,
+              remarks: '',
+              updatedAt: new Date()
+            },
+            { upsert: true, new: true }
+          );
+          console.log('Attendance created/updated for', data.employeeId, 'Name:', employeeName, 'Dept:', employeeDepartment);
         } else {
           // Update existing attendance with proper name/department if missing
           if (!existing.employeeName || existing.employeeName === existing.employeeId || existing.department === 'Unknown') {
@@ -450,13 +459,18 @@ async function handlePOST(req) {
 
 export const POST = requireAuth(handlePOST);
 
-export async function GET(req) {
+async function handleGET(req) {
   try {
     await connectMongoose();
     const { searchParams } = new URL(req.url);
+    const currentUser = req.user;
+
     const employeeId = searchParams.get("employeeId");
-    const isAdmin = searchParams.get("admin");
+    const isAdmin = searchParams.get("admin") === "true";
     const dateParam = searchParams.get("date");
+
+    const userRole = currentUser.role;
+    const userDepartment = currentUser.department;
 
     let query = {};
     if (employeeId && !isAdmin) query.employeeId = employeeId;
@@ -465,6 +479,56 @@ export async function GET(req) {
       const start = new Date(dateParam + 'T00:00:00.000Z');
       const end = new Date(dateParam + 'T23:59:59.999Z');
       query.date = { $gte: start, $lte: end };
+
+      // Role-based filtering for monitoring
+      if (userRole === "Team-Lead" || userRole === "Team-admin") {
+        try {
+          const collections = Object.keys(mongoose.connection.collections).filter(name =>
+            name.endsWith('_department')
+          );
+
+          let departmentEmployeeIds = [];
+          for (const collName of collections) {
+            const collection = mongoose.connection.collections[collName];
+            
+            // Filter by current user's department
+            const empFilter = { department: userDepartment };
+            
+            // For Team-admin, exclude Team-Leads
+            if (userRole === "Team-admin") {
+              empFilter.role = { $ne: "Team-Lead" };
+            }
+            
+            const employees = await collection.find(empFilter).toArray();
+            departmentEmployeeIds.push(...employees.map(emp => emp.employeeId));
+          }
+
+          if (departmentEmployeeIds.length > 0) {
+            query.employeeId = { $in: departmentEmployeeIds };
+          } else {
+            query.employeeId = "NONE"; 
+          }
+        } catch (err) {
+          console.error('Error filtering by department:', err);
+        }
+      } else if (searchParams.get("department")) {
+        // Admin/Super Admin choosing a specific department
+        const targetDept = searchParams.get("department");
+        try {
+          const collections = Object.keys(mongoose.connection.collections).filter(name =>
+            name.endsWith('_department')
+          );
+          let deptEmpIds = [];
+          for (const collName of collections) {
+            const collection = mongoose.connection.collections[collName];
+            const employees = await collection.find({ department: targetDept }).toArray();
+            deptEmpIds.push(...employees.map(emp => emp.employeeId));
+          }
+          if (deptEmpIds.length > 0) query.employeeId = { $in: deptEmpIds };
+        } catch (err) {
+          console.error('Error filtering by department:', err);
+        }
+      }
     } else if (employeeId && !isAdmin) {
       // For employee view, get today's timecard only
       const today = new Date().toISOString().split('T')[0];
@@ -508,6 +572,8 @@ export async function GET(req) {
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }
+
+export const GET = requireAuth(handleGET);
 
 async function handlePUT(req) {
   try {
@@ -766,21 +832,18 @@ async function handlePUT(req) {
     }
 
     if (updates.logOut) {
-      // Calculate work minutes using the helper function to ensure consistency (handles lunch and breaks)
       const workTime = calculateWorkMinutes({ ...timecard.toObject(), ...updates });
       const permissionTime = updates.permissionMinutes !== undefined ? updates.permissionMinutes : (timecard.permissionMinutes || 0);
 
-      // Status logic: workTime + up to 2 hours of permission
-      const effectiveMinutes = workTime + Math.min(permissionTime, 120);
-
-      let attendanceStatus = 'Present';
+      // Status logic: Use centralized utility
+      const attendanceStatus = calculateAttendanceStatus(workTime, permissionTime, true);
+      
       let statusReason = '';
-
-      if (effectiveMinutes < LEAVE_THRESHOLD) {
-        attendanceStatus = 'Absent';
+      if (attendanceStatus === 'Absent') {
+        const effectiveMinutes = workTime + Math.min(permissionTime, 120);
         statusReason = `Effective work time ${Math.floor(effectiveMinutes / 60)}h ${effectiveMinutes % 60}m < 4 hours`;
-      } else if (effectiveMinutes < HALF_DAY_THRESHOLD) {
-        attendanceStatus = 'Half Day';
+      } else if (attendanceStatus === 'Half Day') {
+        const effectiveMinutes = workTime + Math.min(permissionTime, 120);
         statusReason = `Effective work time ${Math.floor(effectiveMinutes / 60)}h ${effectiveMinutes % 60}m < 8 hours`;
       }
 
@@ -878,19 +941,26 @@ async function handlePUT(req) {
         searchEnd.setUTCHours(searchEnd.getUTCHours() + 12);
 
         const totalHours = timecard.workMinutes / 60;
+        const permissionHours = (timecard.permissionMinutes || 0) / 60;
+        const normalizedDate = new Date(timecard.date);
+        normalizedDate.setUTCHours(0, 0, 0, 0);
 
         await Attendance.findOneAndUpdate(
           {
             employeeId: timecard.employeeId,
-            date: { $gte: searchStart, $lte: searchEnd }
+            date: normalizedDate
           },
           {
+            employeeId: timecard.employeeId, // redundant but safe for upsert
+            date: normalizedDate,            // CRITICAL for upsert
             status: timecard.attendanceStatus,
             logoutTime: updates.logOut,
             totalHours: totalHours,
+            permissionHours: permissionHours,
             overtimeHours: Math.max(0, totalHours - 8),
             updatedAt: new Date()
-          }
+          },
+          { upsert: true, new: true }
         );
       } catch (err) {
         console.error('Failed to update on logout:', err);

@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const [compensationDate, setCompensationDate] = useState("");
   const [compensationReason, setCompensationReason] = useState("");
   const [compensations, setCompensations] = useState([]);
+  const [monthStartDay, setMonthStartDay] = useState("26");
+  const [newMonthStartDay, setNewMonthStartDay] = useState("");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -36,6 +38,7 @@ export default function SettingsPage() {
     setUserRole(role);
     setEmployeeId(empId);
     fetchRequiredLoginTime();
+    fetchMonthStartDay();
     fetchSaturdayOverrides();
     fetchCompensations();
   }, [router]);
@@ -49,6 +52,21 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setRequiredLoginTime(data.value || "10:00");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchMonthStartDay = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/settings?key=MONTH_START_DAY', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMonthStartDay(data.value || "26");
       }
     } catch (err) {
       console.error(err);
@@ -102,6 +120,45 @@ export default function SettingsPage() {
       }
     } catch (err) {
       setSuccessMessage("Error updating login time");
+      setShowSuccess(true);
+    }
+  };
+
+  const updateMonthStartDay = async () => {
+    if (!newMonthStartDay || isNaN(newMonthStartDay) || newMonthStartDay < 1 || newMonthStartDay > 31) {
+      setSuccessMessage("Please enter a valid day (1-31)");
+      setShowSuccess(true);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          key: 'MONTH_START_DAY',
+          value: newMonthStartDay,
+          updatedBy: employeeId,
+          role: userRole
+        })
+      });
+
+      if (res.ok) {
+        setMonthStartDay(newMonthStartDay);
+        setSuccessMessage(`Monthly cycle will now start on day ${newMonthStartDay} of each month`);
+        setShowSuccess(true);
+        setNewMonthStartDay("");
+      } else {
+        const error = await res.json();
+        setSuccessMessage(error.error || "Update failed");
+        setShowSuccess(true);
+      }
+    } catch (err) {
+      setSuccessMessage("Error updating month start day");
       setShowSuccess(true);
     }
   };
@@ -178,9 +235,19 @@ export default function SettingsPage() {
 
     try {
       setGeneratingReport(true);
-      const [year, month] = selectedMonth.split('-');
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      const [y, m] = selectedMonth.split('-');
+      const year = parseInt(y);
+      const month = parseInt(m);
+      const startDay = parseInt(monthStartDay);
+      
+      let startDate, endDate;
+      if (startDay === 1) {
+        startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+        endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+      } else {
+        startDate = new Date(Date.UTC(year, month - 2, startDay, 0, 0, 0, 0));
+        endDate = new Date(Date.UTC(year, month - 1, startDay - 1, 23, 59, 59, 999));
+      }
 
       const res = await fetch('/api/attendance?admin=true&startDate=' + startDate.toISOString() + '&endDate=' + endDate.toISOString());
       const result = await res.json();
@@ -349,9 +416,38 @@ export default function SettingsPage() {
 
         <div className="card shadow-sm mb-4" style={{ border: '2px solid #d4af37' }}>
           <div className="card-header text-white" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)', borderBottom: '2px solid #d4af37' }}>
-            <h5 className="mb-0">Timecard Configuration</h5>
+            <h5 className="mb-0">Payroll & Monthly Cycle Configuration</h5>
           </div>
           <div className="card-body p-4">
+            <div className="row g-4 mb-4">
+              <div className="col-md-6">
+                <label className="form-label fw-bold">Current Monthly Start Day</label>
+                <input 
+                  type="text" 
+                  className="form-control form-control-lg text-center" 
+                  value={monthStartDay}
+                  readOnly
+                  style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#d4af37' }}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label fw-bold">Set New Start Day (1-31)</label>
+                <input 
+                  type="number" 
+                  className="form-control form-control-lg" 
+                  value={newMonthStartDay}
+                  onChange={(e) => setNewMonthStartDay(e.target.value)}
+                  placeholder="e.g., 26"
+                />
+              </div>
+            </div>
+            <button 
+              className="btn btn-warning btn-lg w-100"
+              onClick={updateMonthStartDay}
+            >
+              <i className="bi bi-calendar-range me-2"></i>Update Monthly Cycle Start Day
+            </button>
+            <hr className="my-4" />
             <div className="row g-4">
               <div className="col-md-6">
                 <label className="form-label fw-bold">Current Required Login Time</label>
@@ -383,7 +479,7 @@ export default function SettingsPage() {
             </div>
             <div className="alert alert-info mt-4 mb-0">
               <i className="bi bi-info-circle me-2"></i>
-              <strong>Note:</strong> This setting applies to all employees. Late logins will trigger notifications to Team Admin, Team Lead, Super Admin, and Developers.
+              <strong>Note:</strong> These settings apply to all employees. The Monthly Start Day affects all attendance reports and payroll calculations.
             </div>
           </div>
         </div>

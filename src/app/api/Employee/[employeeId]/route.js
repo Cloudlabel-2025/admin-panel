@@ -96,7 +96,7 @@ export const PATCH = requireRole(["super-admin"])(async function(req, { params }
 });
 
 // ✅ DELETE: Remove employee from department collection
-export const DELETE = requireRole(["super-admin"])(async function(req, { params }) {
+export const DELETE = requireRole(["developer"])(async function(req, { params }) {
   try {
     await connectMongoose();
     const { employeeId } = await params;
