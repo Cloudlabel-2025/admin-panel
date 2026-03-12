@@ -12,6 +12,33 @@ import { TIME_CONSTANTS } from '@/app/utilis/constants';
  */
 export const handleLogin = async (employeeId, date, logIn, userRole) => {
   try {
+    // RULE 6: Check if employee has approved leave for this date
+    const mongoose = await import('mongoose');
+    const Absence = mongoose.default.models.Absence;
+    
+    if (Absence) {
+      const dateStr = new Date(date).toISOString().split('T')[0];
+      const checkDate = new Date(dateStr + 'T00:00:00.000Z');
+      
+      const approvedLeave = await Absence.findOne({
+        employeeId,
+        status: "Approved",
+        startDate: { $lte: checkDate },
+        endDate: { $gte: checkDate }
+      });
+      
+      if (approvedLeave) {
+        console.log(`[BLOCKED] Login blocked for ${employeeId} - Approved leave exists`);
+        return {
+          success: false,
+          error: `You have approved leave from ${new Date(approvedLeave.startDate).toLocaleDateString()} to ${new Date(approvedLeave.endDate).toLocaleDateString()}. Login is not allowed on leave days.`,
+          blocked: true,
+          leaveInfo: approvedLeave,
+          status: 403
+        };
+      }
+    }
+    
     // Check for existing timecard with login
     const dateStr = new Date(date).toISOString().split('T')[0];
     const startOfDay = new Date(dateStr + 'T00:00:00.000Z');

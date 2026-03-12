@@ -183,11 +183,43 @@ export default function AbsencePage() {
         setShowSuccess(true);
         fetchAbsences();
       } else {
-        setSuccessMessage(`Failed to ${action} absence`);
+        const errorData = await res.json();
+        setSuccessMessage(errorData.error || `Failed to ${action} absence`);
         setShowSuccess(true);
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (!confirm("Are you sure you want to cancel this leave request?")) return;
+    
+    try {
+      const res = await fetch("/api/absence", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _id: id,
+          action: "cancel",
+          cancelledBy: localStorage.getItem("employeeId"),
+          cancellationReason: "Cancelled by employee"
+        })
+      });
+
+      if (res.ok) {
+        setSuccessMessage("Leave cancelled successfully. Attendance records updated.");
+        setShowSuccess(true);
+        fetchAbsences();
+      } else {
+        const errorData = await res.json();
+        setSuccessMessage(errorData.error || "Failed to cancel leave");
+        setShowSuccess(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setSuccessMessage("Error cancelling leave");
+      setShowSuccess(true);
     }
   };
 
@@ -200,7 +232,8 @@ export default function AbsencePage() {
     const colors = {
       Pending: "warning",
       Approved: "success",
-      Rejected: "danger"
+      Rejected: "danger",
+      Cancelled: "secondary"
     };
     return `badge bg-${colors[status] || "secondary"}`;
   };
@@ -274,6 +307,7 @@ export default function AbsencePage() {
                     type="date"
                     className="form-control"
                     value={form.startDate}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setForm({...form, startDate: e.target.value})}
                     required
                   />
@@ -284,6 +318,7 @@ export default function AbsencePage() {
                     type="date"
                     className="form-control"
                     value={form.endDate}
+                    min={form.startDate || new Date().toISOString().split('T')[0]}
                     onChange={(e) => setForm({...form, endDate: e.target.value})}
                     required
                   />
@@ -323,6 +358,7 @@ export default function AbsencePage() {
                   <option value="Pending">Pending</option>
                   <option value="Approved">Approved</option>
                   <option value="Rejected">Rejected</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
               <div className="col-md-2">
@@ -349,8 +385,7 @@ export default function AbsencePage() {
                     <th>Days</th>
                     <th>Reason</th>
                     <th>Status</th>
-
-                    {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") && <th>Actions</th>}
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -363,34 +398,18 @@ export default function AbsencePage() {
                       <td>{absence.totalDays}</td>
                       <td>{absence.reason}</td>
                       <td><span className={getStatusBadge(absence.status)}>{absence.status}</span></td>
-
-                      {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin" || userRole === "Team-Lead" || userRole === "Team-admin") && (
-                        <td>
-                          {absence.status === "Pending" ? (
-                            <>
-                              <button
-                                className="btn btn-success btn-sm me-1"
-                                onClick={() => handleApproval(absence._id, "approve")}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                className="btn btn-danger btn-sm"
-                                onClick={() => handleApproval(absence._id, "reject")}
-                              >
-                                Reject
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              className="btn btn-info btn-sm"
-                              onClick={() => viewAbsenceDetails(absence)}
-                            >
-                              View
-                            </button>
-                          )}
-                        </td>
-                      )}
+                      <td>
+                        {(absence.status === "Pending" || absence.status === "Approved") ? (
+                          <button
+                            className="btn btn-warning btn-sm"
+                            onClick={() => handleCancel(absence._id)}
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          <span className="text-muted">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

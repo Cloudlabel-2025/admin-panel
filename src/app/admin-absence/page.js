@@ -76,7 +76,8 @@ export default function AdminAbsencePage() {
     const colors = {
       Pending: "warning",
       Approved: "success",
-      Rejected: "danger"
+      Rejected: "danger",
+      Cancelled: "secondary"
     };
     return `badge bg-${colors[status] || "secondary"}`;
   };
@@ -107,6 +108,7 @@ export default function AdminAbsencePage() {
               <option value="Pending">Pending</option>
               <option value="Approved">Approved</option>
               <option value="Rejected">Rejected</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
           </div>
         </div>

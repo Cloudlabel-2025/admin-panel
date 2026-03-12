@@ -453,6 +453,11 @@ export default function Layout({ children }) {
                         <span className="nav-text">Team Absence</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/absence-records")}>
+                        <i className="bi bi-file-earmark-bar-graph me-2"></i>
+                        <span className="nav-text">Absence Records</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                         onClick={() => navigate("/calendar")}>
                         <i className="bi bi-calendar3 me-2"></i>
                         <span className="nav-text">Calendar</span>
@@ -626,6 +631,11 @@ export default function Layout({ children }) {
                         onClick={() => navigate("/absence")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">My Absence</span>
+                      </button>
+                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                        onClick={() => navigate("/absence-records")}>
+                        <i className="bi bi-file-earmark-bar-graph me-2"></i>
+                        <span className="nav-text">Absence Records</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                         onClick={() => navigate("/employee-calendar")}>

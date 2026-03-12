@@ -15,13 +15,24 @@ const absenceSchema = new mongoose.Schema({
   reason: { type: String, required: true },
   status: { 
     type: String, 
-    enum: ["Pending", "Approved", "Rejected"],
+    enum: ["Pending", "Approved", "Rejected", "Cancelled"],
     default: "Pending" 
   },
   approvedBy: { type: String, default: "" },
   approvalDate: { type: Date },
+  rejectedBy: { type: String, default: "" },
+  rejectionDate: { type: Date },
+  cancelledBy: { type: String, default: "" },
+  cancellationDate: { type: Date },
+  cancellationReason: { type: String, default: "" },
   comments: { type: String, default: "" },
   isLOP: { type: Boolean, default: false }, // Loss of Pay
+  actionHistory: [{
+    action: { type: String, enum: ["Applied", "Approved", "Rejected", "Cancelled"] },
+    actionBy: { type: String },
+    actionDate: { type: Date, default: Date.now },
+    remarks: { type: String, default: "" }
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
