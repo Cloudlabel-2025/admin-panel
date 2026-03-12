@@ -1,13 +1,14 @@
 // /api/attendance/route.js
 import connectMongoose from "@/app/utilis/connectMongoose";
-
-
 import Timecard from "@/models/Timecard";
 import Attendance from "@/models/Attendance";
 import WeekendOverride from "@/models/WeekendOverride";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { calculateAttendanceStatus, getDateRangeForMonth } from "@/app/utilis/employeeUtils";
+import { createEmployeeModel } from "@/models/Employee";
+
+const DEPARTMENTS = ['Technical', 'Functional', 'Production', 'OIC', 'Management'];
 
 // Helper: convert "HH:mm" to decimal hours
 function timeToHours(timeStr) {
@@ -112,27 +113,17 @@ function getAttendanceStatus(loginTime, logoutTime, totalHours, permissionHours,
   return calculateAttendanceStatus(totalWorkMinutes, pMinutes, hasLogout, date);
 }
 
-// Get employee data using the Employee API approach
-async function getEmployeeData(employeeId) {
+// Helper: Get employee data
+const getEmployeeData = async (employeeId) => {
   try {
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    const departmentCollections = collections
-      .map(c => c.name)
-      .filter(name => name.endsWith("_department"));
-
-    const { createEmployeeModel } = await import("@/models/Employee");
-
-    for (const collName of departmentCollections) {
-      const departmentName = collName.replace("_department", "");
-      const Model = createEmployeeModel(departmentName);
+    for (const dept of DEPARTMENTS) {
+      const Model = createEmployeeModel(dept);
       const employee = await Model.findOne({ employeeId });
       if (employee) {
-        // Capitalize first letter of department
-        const formattedDept = departmentName.charAt(0).toUpperCase() + departmentName.slice(1);
         return {
           name: `${employee.firstName} ${employee.lastName}`,
           email: employee.email || 'N/A',
-          department: formattedDept
+          department: dept.charAt(0).toUpperCase() + dept.slice(1)
         };
       }
     }
@@ -140,7 +131,7 @@ async function getEmployeeData(employeeId) {
     console.error('Error fetching employee data:', error);
   }
   return { name: "Unknown", email: "N/A", department: "Unknown" };
-}
+};
 
 // GET: fetch existing attendance (optional date range)
 export async function GET(req) {
@@ -247,29 +238,21 @@ export async function GET(req) {
     // Populate employee names for all records
     const attendanceData = [];
     for (const record of attendanceRecords) {
-      let employeeName = record.employeeName;
-      let department = record.department;
-
-      // Always fetch fresh employee data for accuracy
       const employeeData = await getEmployeeData(record.employeeId);
-      if (employeeData) {
-        employeeName = employeeData.name;
-        department = employeeData.department;
-
-        // Update database if name is missing or incorrect
-        if (!record.employeeName || record.employeeName === "Unknown" || record.employeeName !== employeeData.name) {
-          await Attendance.findByIdAndUpdate(record._id, {
-            employeeName: employeeData.name,
-            department: employeeData.department
-          });
-        }
+      
+      // Update database if name is missing or incorrect
+      if (!record.employeeName || record.employeeName === "Unknown" || record.employeeName !== employeeData.name) {
+        await Attendance.findByIdAndUpdate(record._id, {
+          employeeName: employeeData.name,
+          department: employeeData.department
+        });
       }
 
       attendanceData.push({
         date: record.date,
         employeeId: record.employeeId,
-        employeeName: employeeName || record.employeeId,
-        department: department || "Unknown",
+        employeeName: employeeData.name || record.employeeId,
+        department: employeeData.department || "Unknown",
         totalHours: parseFloat((record.totalHours || 0).toFixed(2)),
         permissionHours: parseFloat((record.permissionHours || 0).toFixed(2)),
         overtimeHours: parseFloat((record.overtimeHours || 0).toFixed(2)),
@@ -463,63 +446,59 @@ export async function POST(req) {
     const timecards = await Timecard.find(query).sort({ date: -1 });
     const attendanceData = [];
 
-    for (const tc of timecards) {
-      const totalHours = timeToHours(tc.totalHours || "00:00");
-      // Handle permissionMinutes (Number) vs permission (legacy field)
-      const pMins = tc.permissionMinutes || (typeof tc.permission === 'number' ? tc.permission : 0);
-      const permissionHours = Math.min(pMins / 60, 2);
-      
-      const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
-      const employeeData = await getEmployeeData(tc.employeeId);
+      for (const tc of timecards) {
+        const totalHours = timeToHours(tc.totalHours || "00:00");
+        const pMins = tc.permissionMinutes || (typeof tc.permission === 'number' ? tc.permission : 0);
+        const permissionHours = Math.min(pMins / 60, 2);
+        
+        const status = getAttendanceStatus(tc.logIn, tc.logOut, totalHours, permissionHours, tc.date);
+        const employeeData = await getEmployeeData(tc.employeeId);
 
-      // Calculate lunch duration and overtime
-      const lunchDuration = tc.lunchOut && tc.lunchIn ?
-        Math.abs(new Date(`1970-01-01T${tc.lunchIn}:00`) - new Date(`1970-01-01T${tc.lunchOut}:00`)) / (1000 * 60) : 0;
-      const overtimeHours = Math.max(0, totalHours - 8);
+        const lunchDuration = tc.lunchOut && tc.lunchIn ?
+          Math.abs(new Date(`1970-01-01T${tc.lunchIn}:00`) - new Date(`1970-01-01T${tc.lunchOut}:00`)) / (1000 * 60) : 0;
+        const overtimeHours = Math.max(0, totalHours - 8);
 
-      const lateCheck = await checkLateLogin(tc.logIn);
-      const normalizedDate = new Date(tc.date);
-      normalizedDate.setUTCHours(0, 0, 0, 0);
+        const lateCheck = await checkLateLogin(tc.logIn);
+        const normalizedDate = new Date(tc.date);
+        normalizedDate.setUTCHours(0, 0, 0, 0);
 
-      await Attendance.findOneAndUpdate(
-        { employeeId: tc.employeeId, date: normalizedDate },
-        {
+        await Attendance.findOneAndUpdate(
+          { employeeId: tc.employeeId, date: normalizedDate },
+          {
+            employeeId: tc.employeeId,
+            employeeName: employeeData.name,
+            department: employeeData.department || "-",
+            date: tc.date,
+            status,
+            totalHours,
+            permissionHours,
+            loginTime: tc.logIn || "",
+            logoutTime: tc.logOut || "",
+            lunchDuration,
+            overtimeHours,
+            isLateLogin: lateCheck.isLate,
+            lateByMinutes: lateCheck.lateBy,
+            remarks: tc.reason || "",
+            updatedAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+
+        attendanceData.push({
+          date: tc.date,
           employeeId: tc.employeeId,
           employeeName: employeeData.name,
           department: employeeData.department || "-",
-          date: tc.date,
-          status,
           totalHours,
           permissionHours,
           loginTime: tc.logIn || "",
           logoutTime: tc.logOut || "",
           lunchDuration,
           overtimeHours,
-          isLateLogin: lateCheck.isLate,
-          lateByMinutes: lateCheck.lateBy,
-          remarks: tc.reason || "",
-
-          updatedAt: new Date()
-        },
-        { upsert: true, new: true }
-      );
-
-      attendanceData.push({
-        date: tc.date,
-        employeeId: tc.employeeId,
-        employeeName: employeeData.name,
-        department: employeeData.department || "-",
-        totalHours,
-        permissionHours,
-        loginTime: tc.logIn || "",
-        logoutTime: tc.logOut || "",
-        lunchDuration,
-        overtimeHours,
-        status,
-
-        remarks: tc.reason || ""
-      });
-    }
+          status,
+          remarks: tc.reason || ""
+        });
+      }
 
     return NextResponse.json(attendanceData, { status: 200 });
   } catch (err) {

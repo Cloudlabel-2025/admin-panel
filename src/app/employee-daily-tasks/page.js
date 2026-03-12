@@ -32,8 +32,26 @@ export default function EmployeeDailyTasksPage() {
 
   const fetchTasks = async (page = 1, limit = 10) => {
     try {
+      // Validate date format (YYYY-MM-DD) to prevent SSRF
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(selectedDate)) {
+        console.error('Invalid date format');
+        return;
+      }
+
+      // Validate page and limit are positive integers
+      const validPage = Math.max(1, parseInt(page) || 1);
+      const validLimit = Math.max(1, Math.min(100, parseInt(limit) || 10));
+
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/daily-task?admin=true&date=${selectedDate}&page=${page}&limit=${limit}`, {
+      const params = new URLSearchParams({
+        admin: 'true',
+        date: selectedDate,
+        page: validPage.toString(),
+        limit: validLimit.toString()
+      });
+
+      const res = await fetch(`/api/daily-task?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -65,8 +83,9 @@ export default function EmployeeDailyTasksPage() {
           <div className="card-body">
             <div className="row mb-3">
               <div className="col-md-4">
-                <label className="form-label fw-bold">Select Date</label>
+                <label htmlFor="dateSelect" className="form-label fw-bold">Select Date</label>
                 <input
+                  id="dateSelect"
                   type="date"
                   className="form-control"
                   value={selectedDate}

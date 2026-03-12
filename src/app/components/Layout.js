@@ -1034,6 +1034,11 @@ export default function Layout({ children }) {
                       <span className="nav-text">My Attendance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
+                      onClick={() => navigate("/absence")}>
+                      <i className="bi bi-calendar-x-fill me-2"></i>
+                      <span className="nav-text">My Absence</span>
+                    </button>
+                    <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                       onClick={() => navigate("/my-skills")}>
                       <i className="bi bi-award-fill me-2"></i>
                       <span className="nav-text">My Skills</span>

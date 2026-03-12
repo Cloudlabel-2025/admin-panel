@@ -45,9 +45,31 @@ export default function DailyTaskComponent() {
 
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('Authentication token not found. Please login again.');
+        router.push('/');
+        return;
+      }
+      
       // 1️⃣ Fetch today's Timecard
-      const tcRes = await fetch(`/api/timecard?employeeId=${user.employeeId}`);
+      const tcRes = await fetch(`/api/timecard?employeeId=${user.employeeId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!tcRes.ok) {
+        console.error('Timecard fetch failed:', tcRes.status, tcRes.statusText);
+        if (tcRes.status === 401) {
+          setError('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          router.push('/');
+          return;
+        }
+      }
+      
       const tcData = await tcRes.json();
+      console.log('Timecard data fetched:', tcData);
       const todayTimecard = tcData.length ? tcData[0] : {};
       setTimecard({
         logIn: todayTimecard.logIn || "",
@@ -61,10 +83,25 @@ export default function DailyTaskComponent() {
 
       // 2️⃣ Fetch today's DailyTask
       const dtRes = await fetch(
-        `/api/daily-task?employeeId=${user.employeeId}`
+        `/api/daily-task?employeeId=${user.employeeId}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      
+      if (!dtRes.ok) {
+        console.error('Daily task fetch failed:', dtRes.status, dtRes.statusText);
+        if (dtRes.status === 401) {
+          setError('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          router.push('/');
+          return;
+        }
+      }
+      
       const dtData = await dtRes.json();
-      if (dtData.length && dtData[0].tasks) {
+      console.log('Daily task data fetched:', dtData);
+      
+      if (Array.isArray(dtData) && dtData.length > 0 && dtData[0].tasks) {
+        console.log('Setting daily tasks:', dtData[0].tasks.length, 'tasks found');
         setDailyTasks(
           dtData[0].tasks.map((t, i) => ({
             ...t,
@@ -73,10 +110,11 @@ export default function DailyTaskComponent() {
           }))
         );
       } else {
+        console.log('No daily tasks found, setting empty array');
         setDailyTasks([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Fetch data error:', err);
       setError("Failed to load tasks. Please refresh the page.");
     } finally {
       setLoading(false);
@@ -93,7 +131,10 @@ export default function DailyTaskComponent() {
     }
 
     // Fetch employee data
-    fetch(`/api/Employee/${employeeId}`)
+    const token = localStorage.getItem('token');
+    fetch(`/api/Employee/${employeeId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then((res) => {
         if (!res.ok) {
           if (res.status === 404) {
@@ -294,6 +335,7 @@ export default function DailyTaskComponent() {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const payload = {
         employeeId: user.employeeId,
         employeeName: user.name,
@@ -313,7 +355,10 @@ export default function DailyTaskComponent() {
 
       const response = await fetch("/api/daily-task", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -473,9 +518,13 @@ export default function DailyTaskComponent() {
         }))
       };
 
+      const token = localStorage.getItem('token');
       const res = await fetch("/api/daily-task", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -514,9 +563,12 @@ export default function DailyTaskComponent() {
   // Generate Monthly Excel Report
   const generateMonthlyReport = async () => {
     try {
+      const token = localStorage.getItem('token');
       const month = new Date().getMonth() + 1;
       const year = new Date().getFullYear();
-      const res = await fetch(`/api/daily-task?employeeId=${user.employeeId}&month=${month}&year=${year}`);
+      const res = await fetch(`/api/daily-task?employeeId=${user.employeeId}&month=${month}&year=${year}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (!res.ok) {
         setError('Failed to generate report');

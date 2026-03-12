@@ -166,7 +166,7 @@ async function handleGET(req) {
 export const GET = requireAuth(handleGET);
 
 // POST: create or update DailyTask (upsert)
-export async function POST(req) {
+async function handlePOST(req) {
   try {
     await connectMongoose();
     const data = await req.json();
@@ -344,7 +344,7 @@ export async function POST(req) {
 }
 
 // PUT: update existing DailyTask or handle logout completion
-export async function PUT(req) {
+async function handlePUT(req) {
   try {
     await connectMongoose();
     const body = await req.json();
@@ -513,3 +513,6 @@ export async function PUT(req) {
     return NextResponse.json({ error: err.message || "Failed to update" }, { status: 500 });
   }
 }
+
+export const POST = requireAuth(handlePOST);
+export const PUT = requireAuth(handlePUT);
