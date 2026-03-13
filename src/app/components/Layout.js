@@ -448,14 +448,9 @@ export default function Layout({ children }) {
                         <span className="nav-text">Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/admin-absence")}>
+                        onClick={() => navigate("/absence-management")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
-                        <span className="nav-text">Team Absence</span>
-                      </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/absence-records")}>
-                        <i className="bi bi-file-earmark-bar-graph me-2"></i>
-                        <span className="nav-text">Absence Records</span>
+                        <span className="nav-text">Absence Management</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                         onClick={() => navigate("/calendar")}>
@@ -628,14 +623,9 @@ export default function Layout({ children }) {
                         <span className="nav-text">My Projects</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/absence")}>
+                        onClick={() => navigate("/absence-management")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
-                        <span className="nav-text">My Absence</span>
-                      </button>
-                      <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/absence-records")}>
-                        <i className="bi bi-file-earmark-bar-graph me-2"></i>
-                        <span className="nav-text">Absence Records</span>
+                        <span className="nav-text">Absence Management</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                         onClick={() => navigate("/employee-calendar")}>
@@ -686,9 +676,9 @@ export default function Layout({ children }) {
                         <span className="nav-text">Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/admin-absence")}>
-                        <i className="bi bi-calendar-x me-2"></i>
-                        <span className="nav-text">Team Absence</span>
+                        onClick={() => navigate("/absence-management")}>
+                        <i className="bi bi-calendar-x-fill me-2"></i>
+                        <span className="nav-text">Absence Management</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
                         onClick={() => navigate("/calendar")}>
@@ -787,7 +777,7 @@ export default function Layout({ children }) {
                         <span className="nav-text">My Skills</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/absence")}>
+                        onClick={() => navigate("/absence-management")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">Employee Absence</span>
                       </button>
@@ -830,7 +820,7 @@ export default function Layout({ children }) {
                         <span className="nav-text">Team Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/admin-absence")}>
+                        onClick={() => navigate("/absence-management")}>
                         <i className="bi bi-calendar-x me-2"></i>
                         <span className="nav-text">Team Absence</span>
                       </button>
@@ -911,7 +901,7 @@ export default function Layout({ children }) {
                         <span className="nav-text">My Skills</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/absence")}>
+                        onClick={() => navigate("/absence-management")}>
                         <i className="bi bi-calendar-x-fill me-2"></i>
                         <span className="nav-text">Employee Absence</span>
                       </button>
@@ -954,7 +944,7 @@ export default function Layout({ children }) {
                         <span className="nav-text">Team Performance</span>
                       </button>
                       <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                        onClick={() => navigate("/admin-absence")}>
+                        onClick={() => navigate("/absence-management")}>
                         <i className="bi bi-calendar-x me-2"></i>
                         <span className="nav-text">Team Absence</span>
                       </button>
@@ -1044,7 +1034,7 @@ export default function Layout({ children }) {
                       <span className="nav-text">My Attendance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                      onClick={() => navigate("/absence")}>
+                      onClick={() => navigate("/absence-management")}>
                       <i className="bi bi-calendar-x-fill me-2"></i>
                       <span className="nav-text">My Absence</span>
                     </button>
@@ -1110,7 +1100,7 @@ export default function Layout({ children }) {
                       <span className="nav-text">My Attendance</span>
                     </button>
                     <button className="nav-link text-white btn btn-link text-start d-flex align-items-center w-100 px-4 py-2"
-                      onClick={() => navigate("/absence")}>
+                      onClick={() => navigate("/absence-management")}>
                       <i className="bi bi-calendar-x-fill me-2"></i>
                       <span className="nav-text">My Absence</span>
                     </button>

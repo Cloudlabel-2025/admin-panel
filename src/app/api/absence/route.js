@@ -29,7 +29,7 @@ async function getEmployeeData(employeeId) {
   return null;
 }
 
-// Helper to create notifications
+// Helper to create notifications based on role hierarchy
 async function createNotifications(employeeData, absence) {
   try {
     const Notification = mongoose.models.Notification;
@@ -39,53 +39,120 @@ async function createNotifications(employeeData, absence) {
     }
     
     const notifications = [];
-    console.log('Creating notifications for department:', employeeData.department);
+    const applicantRole = employeeData.role || 'Employee';
+    console.log('Creating notifications for:', employeeData.name, 'Role:', applicantRole);
     
-    // Get department team-lead and team-admin
-    const departmentModel = mongoose.models[`${employeeData.department}_department`];
-    if (departmentModel) {
-      const departmentUsers = await departmentModel.find({
-        role: { $in: ["Team-Lead", "Team-admin"] }
-      });
-      console.log('Department users found:', departmentUsers.length);
-      
-      for (const user of departmentUsers) {
-        console.log('Adding department notification for:', user.employeeId, user.email, user.role);
-        notifications.push({
-          recipientId: user.employeeId,
-          recipientEmail: user.email,
-          type: "leave_request",
-          title: "New Leave Request",
-          message: `${employeeData.name} has requested leave from ${absence.startDate} to ${absence.endDate}`,
-          relatedId: absence._id,
-          status: "unread"
-        });
-      }
-    }
-    
-    // Get admin and super-admin users
+    // Get all department models
     const allDepartmentModels = Object.keys(mongoose.models).filter(name =>
       name.endsWith("_department")
     );
     
-    for (const modelName of allDepartmentModels) {
-      const Model = mongoose.models[modelName];
-      const adminUsers = await Model.find({
-        role: { $in: ["admin", "super-admin"] }
-      });
-      console.log(`Admin users in ${modelName}:`, adminUsers.length);
+    // Role-based notification logic
+    if (applicantRole === 'admin' || applicantRole === 'admin-management') {
+      // admin/admin-management → super-admin only
+      for (const modelName of allDepartmentModels) {
+        const Model = mongoose.models[modelName];
+        const superAdmins = await Model.find({ role: { $in: ["super-admin", "Super-admin"] } });
+        
+        for (const user of superAdmins) {
+          notifications.push({
+            recipientId: user.employeeId,
+            recipientEmail: user.email,
+            type: "leave_request",
+            title: "Leave Request from Admin",
+            message: `${employeeData.name} (Admin) has requested leave from ${new Date(absence.startDate).toLocaleDateString()} to ${new Date(absence.endDate).toLocaleDateString()}`,
+            relatedId: absence._id,
+            status: "unread"
+          });
+        }
+      }
+    } else if (applicantRole === 'Teamlead' || applicantRole === 'Team-Lead') {
+      // Teamlead → super-admin + admin-management
+      for (const modelName of allDepartmentModels) {
+        const Model = mongoose.models[modelName];
+        const approvers = await Model.find({ role: { $in: ["super-admin", "Super-admin", "admin-management"] } });
+        
+        for (const user of approvers) {
+          notifications.push({
+            recipientId: user.employeeId,
+            recipientEmail: user.email,
+            type: "leave_request",
+            title: "Leave Request from Team Lead",
+            message: `${employeeData.name} (Team Lead) from ${employeeData.department} has requested leave from ${new Date(absence.startDate).toLocaleDateString()} to ${new Date(absence.endDate).toLocaleDateString()}`,
+            relatedId: absence._id,
+            status: "unread"
+          });
+        }
+      }
+    } else if (applicantRole === 'Team-admin' || applicantRole === 'Team Admin') {
+      // Team-admin → super-admin + admin-management + Team-lead (notification only)
+      for (const modelName of allDepartmentModels) {
+        const Model = mongoose.models[modelName];
+        const approvers = await Model.find({ role: { $in: ["super-admin", "Super-admin", "admin-management"] } });
+        
+        for (const user of approvers) {
+          notifications.push({
+            recipientId: user.employeeId,
+            recipientEmail: user.email,
+            type: "leave_request",
+            title: "Leave Request from Team Admin",
+            message: `${employeeData.name} (Team Admin) from ${employeeData.department} has requested leave from ${new Date(absence.startDate).toLocaleDateString()} to ${new Date(absence.endDate).toLocaleDateString()}`,
+            relatedId: absence._id,
+            status: "unread"
+          });
+        }
+      }
       
-      for (const user of adminUsers) {
-        console.log('Adding admin notification for:', user.employeeId, user.email, user.role);
-        notifications.push({
-          recipientId: user.employeeId,
-          recipientEmail: user.email,
-          type: "leave_request",
-          title: "New Leave Request",
-          message: `${employeeData.name} from ${employeeData.department} has requested leave from ${absence.startDate} to ${absence.endDate}`,
-          relatedId: absence._id,
-          status: "unread"
-        });
+      // Notify Team-lead in same department
+      const departmentModel = mongoose.models[`${employeeData.department}_department`];
+      if (departmentModel) {
+        const teamLeads = await departmentModel.find({ role: { $in: ["Teamlead", "Team-Lead"] } });
+        for (const user of teamLeads) {
+          notifications.push({
+            recipientId: user.employeeId,
+            recipientEmail: user.email,
+            type: "leave_notification",
+            title: "Team Admin Leave Request",
+            message: `${employeeData.name} (Team Admin) has requested leave from ${new Date(absence.startDate).toLocaleDateString()} to ${new Date(absence.endDate).toLocaleDateString()}`,
+            relatedId: absence._id,
+            status: "unread"
+          });
+        }
+      }
+    } else if (applicantRole === 'Employee' || applicantRole === 'Intern') {
+      // Employee/Intern → super-admin + admin-management + Team-admin + Team-lead (notification)
+      for (const modelName of allDepartmentModels) {
+        const Model = mongoose.models[modelName];
+        const approvers = await Model.find({ role: { $in: ["super-admin", "Super-admin", "admin-management"] } });
+        
+        for (const user of approvers) {
+          notifications.push({
+            recipientId: user.employeeId,
+            recipientEmail: user.email,
+            type: "leave_request",
+            title: `Leave Request from ${applicantRole}`,
+            message: `${employeeData.name} (${applicantRole}) from ${employeeData.department} has requested leave from ${new Date(absence.startDate).toLocaleDateString()} to ${new Date(absence.endDate).toLocaleDateString()}`,
+            relatedId: absence._id,
+            status: "unread"
+          });
+        }
+      }
+      
+      // Notify Team-admin and Team-lead in same department
+      const departmentModel = mongoose.models[`${employeeData.department}_department`];
+      if (departmentModel) {
+        const teamManagers = await departmentModel.find({ role: { $in: ["Teamlead", "Team-Lead", "Team-admin", "Team Admin"] } });
+        for (const user of teamManagers) {
+          notifications.push({
+            recipientId: user.employeeId,
+            recipientEmail: user.email,
+            type: "leave_notification",
+            title: `${applicantRole} Leave Request`,
+            message: `${employeeData.name} (${applicantRole}) has requested leave from ${new Date(absence.startDate).toLocaleDateString()} to ${new Date(absence.endDate).toLocaleDateString()}`,
+            relatedId: absence._id,
+            status: "unread"
+          });
+        }
       }
     }
     

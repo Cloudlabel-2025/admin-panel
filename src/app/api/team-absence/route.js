@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-
-
 import Absence from "@/models/Absence";
 import connectMongoose from "@/app/utilis/connectMongoose";
 import mongoose from "mongoose";
@@ -41,29 +39,61 @@ export async function GET(req) {
 
     const currentUser = await getEmployeeData(employeeId);
     if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      console.log('Employee not found:', employeeId);
+      return NextResponse.json([]);
     }
 
     let absences = [];
 
-    if (currentUser.role === "super-admin" || currentUser.role === "admin") {
-      // Admin sees all absences
+    if (currentUser.role === "super-admin" || currentUser.role === "Super-admin") {
+      // Super-admin sees all absences
       absences = await Absence.find({}).sort({ createdAt: -1 });
-    } else if (currentUser.role === "Team-Lead" || currentUser.role === "Team-admin") {
-      // Team roles see only their department's absences
+    } else if (currentUser.role === "admin" || currentUser.role === "admin-management") {
+      // admin/admin-management sees all except super-admin and their own
+      const allDepartmentModels = Object.keys(mongoose.models).filter(name =>
+        name.endsWith("_department")
+      );
+      
+      const employeeIds = [];
+      for (const modelName of allDepartmentModels) {
+        const Model = mongoose.models[modelName];
+        const employees = await Model.find({ 
+          role: { $nin: ["super-admin", "Super-admin"] },
+          employeeId: { $ne: employeeId }
+        });
+        employeeIds.push(...employees.map(emp => emp.employeeId));
+      }
+      
+      absences = await Absence.find({ 
+        employeeId: { $in: employeeIds }
+      }).sort({ createdAt: -1 });
+    } else if (currentUser.role === "Teamlead" || currentUser.role === "Team-Lead") {
+      // Team-lead sees only their department members' leaves (excluding themselves)
       const departmentModel = mongoose.models[`${currentUser.department}_department`];
       if (departmentModel) {
-        // For Team-admin, exclude Team-Leads
-        const queryFilter = { department: currentUser.department };
-        if (currentUser.role === "Team-admin") {
-          queryFilter.role = { $ne: "Team-Lead" };
-        }
-        
-        const departmentEmployees = await departmentModel.find(queryFilter);
+        const departmentEmployees = await departmentModel.find({ 
+          department: currentUser.department,
+          employeeId: { $ne: employeeId }
+        });
         const employeeIds = departmentEmployees.map(emp => emp.employeeId);
         absences = await Absence.find({ 
           employeeId: { $in: employeeIds },
-          employeeId: { $ne: employeeId } // Exclude their own requests
+          department: currentUser.department
+        }).sort({ createdAt: -1 });
+      }
+    } else if (currentUser.role === "Team-admin" || currentUser.role === "Team Admin") {
+      // Team-admin sees only their department members' leaves (excluding Team-lead and themselves)
+      const departmentModel = mongoose.models[`${currentUser.department}_department`];
+      if (departmentModel) {
+        const departmentEmployees = await departmentModel.find({ 
+          department: currentUser.department,
+          role: { $nin: ["Teamlead", "Team-Lead"] },
+          employeeId: { $ne: employeeId }
+        });
+        const employeeIds = departmentEmployees.map(emp => emp.employeeId);
+        absences = await Absence.find({ 
+          employeeId: { $in: employeeIds },
+          department: currentUser.department
         }).sort({ createdAt: -1 });
       }
     }
@@ -74,13 +104,15 @@ export async function GET(req) {
         const empData = await getEmployeeData(absence.employeeId);
         return {
           ...absence.toObject(),
-          employeeName: empData ? empData.name : 'Unknown Employee'
+          employeeName: empData ? empData.name : 'Unknown Employee',
+          department: empData ? empData.department : absence.department
         };
       })
     );
 
     return NextResponse.json(absencesWithNames);
   } catch (err) {
+    console.error('Error in team-absence GET:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
