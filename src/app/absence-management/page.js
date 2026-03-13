@@ -369,7 +369,7 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'my-absence' ? 'active' : ''}`}
                 onClick={() => setActiveTab('my-absence')}
                 style={{
-                  color: activeTab === 'my-absence' ? '#ffffff' : '#171212',
+                  color: activeTab === 'my-absence' ? '#ffffff' : '#462cba',
                   backgroundColor: activeTab === 'my-absence' ? '#007bff' : 'transparent',
                   borderColor: activeTab === 'my-absence' ? '#007bff' : 'transparent',
                   borderBottom: activeTab === 'my-absence' ? '3px solid #007bff' : 'none',
@@ -388,7 +388,7 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'team-absence' ? 'active' : ''}`}
                 onClick={() => setActiveTab('team-absence')}
                 style={{
-                  color: activeTab === 'team-absence' ? '#ffffff' : '#171212',
+                  color: activeTab === 'team-absence' ? '#ffffff' : '#462cba',
                   backgroundColor: activeTab === 'team-absence' ? '#007bff' : 'transparent',
                   borderColor: activeTab === 'team-absence' ? '#007bff' : 'transparent',
                   borderBottom: activeTab === 'team-absence' ? '3px solid #007bff' : 'none',
@@ -407,7 +407,7 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'approval-requests' ? 'active' : ''}`}
                 onClick={() => setActiveTab('approval-requests')}
                 style={{
-                  color: activeTab === 'approval-requests' ? '#ffffff' : '#171212',
+                  color: activeTab === 'approval-requests' ? '#ffffff' : '#462cba',
                   backgroundColor: activeTab === 'approval-requests' ? '#007bff' : 'transparent',
                   borderColor: activeTab === 'approval-requests' ? '#007bff' : 'transparent',
                   borderBottom: activeTab === 'approval-requests' ? '3px solid #007bff' : 'none',
@@ -426,7 +426,7 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'all-records' ? 'active' : ''}`}
                 onClick={() => setActiveTab('all-records')}
                 style={{
-                  color: activeTab === 'all-records' ? '#ffffff' : '#171212',
+                  color: activeTab === 'all-records' ? '#ffffff' : '#462cba',
                   backgroundColor: activeTab === 'all-records' ? '#007bff' : 'transparent',
                   borderColor: activeTab === 'all-records' ? '#007bff' : 'transparent',
                   borderBottom: activeTab === 'all-records' ? '3px solid #007bff' : 'none',
