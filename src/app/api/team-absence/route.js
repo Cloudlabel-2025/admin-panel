@@ -42,6 +42,8 @@ export async function GET(req) {
       console.log('Employee not found:', employeeId);
       return NextResponse.json([]);
     }
+    
+    console.log('Current user for team-absence:', currentUser);
 
     let absences = [];
 
@@ -68,33 +70,34 @@ export async function GET(req) {
         employeeId: { $in: employeeIds }
       }).sort({ createdAt: -1 });
     } else if (currentUser.role === "Teamlead" || currentUser.role === "Team-Lead") {
-      // Team-lead sees only their department members' leaves (excluding themselves)
+      // Team-lead sees Employee and Intern leaves from their department
       const departmentModel = mongoose.models[`${currentUser.department}_department`];
       if (departmentModel) {
         const departmentEmployees = await departmentModel.find({ 
-          department: currentUser.department,
+          role: { $in: ["Employee", "Intern", "Team-admin", "Team Admin"] },
           employeeId: { $ne: employeeId }
         });
         const employeeIds = departmentEmployees.map(emp => emp.employeeId);
+        console.log('Team-Lead can view leaves from:', employeeIds);
         absences = await Absence.find({ 
-          employeeId: { $in: employeeIds },
-          department: currentUser.department
+          employeeId: { $in: employeeIds }
         }).sort({ createdAt: -1 });
+        console.log('Team-Lead absences found:', absences.length);
       }
     } else if (currentUser.role === "Team-admin" || currentUser.role === "Team Admin") {
-      // Team-admin sees only their department members' leaves (excluding Team-lead and themselves)
+      // Team-admin sees Employee and Intern leaves from their department
       const departmentModel = mongoose.models[`${currentUser.department}_department`];
       if (departmentModel) {
         const departmentEmployees = await departmentModel.find({ 
-          department: currentUser.department,
-          role: { $nin: ["Teamlead", "Team-Lead"] },
+          role: { $in: ["Employee", "Intern"] },
           employeeId: { $ne: employeeId }
         });
         const employeeIds = departmentEmployees.map(emp => emp.employeeId);
+        console.log('Team-Admin can view leaves from:', employeeIds);
         absences = await Absence.find({ 
-          employeeId: { $in: employeeIds },
-          department: currentUser.department
+          employeeId: { $in: employeeIds }
         }).sort({ createdAt: -1 });
+        console.log('Team-Admin absences found:', absences.length);
       }
     }
 

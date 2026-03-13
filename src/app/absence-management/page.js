@@ -360,8 +360,8 @@ export default function AbsenceManagement() {
 
         {/* Role-based Tabs */}
         <ul className="nav nav-tabs mb-4" style={{
-          borderBottom: '2px solid #d4af37',
-          backgroundColor: '#f8f9fa'
+          borderBottom: '2px solid #007bff',
+          backgroundColor: 'transparent'
         }}>
           {canApplyLeave && (
             <li className="nav-item">
@@ -369,10 +369,10 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'my-absence' ? 'active' : ''}`}
                 onClick={() => setActiveTab('my-absence')}
                 style={{
-                  color: activeTab === 'my-absence' ? '#3a8f93' : '#171212',
-                  backgroundColor: activeTab === 'my-absence' ? '#ffffff' : 'transparent',
-                  borderColor: activeTab === 'my-absence' ? '#d4af37' : 'transparent',
-                  borderBottom: activeTab === 'my-absence' ? '3px solid #d4af37' : 'none',
+                  color: activeTab === 'my-absence' ? '#ffffff' : '#171212',
+                  backgroundColor: activeTab === 'my-absence' ? '#007bff' : 'transparent',
+                  borderColor: activeTab === 'my-absence' ? '#007bff' : 'transparent',
+                  borderBottom: activeTab === 'my-absence' ? '3px solid #007bff' : 'none',
                   fontWeight: activeTab === 'my-absence' ? '600' : '500'
                 }}
               >
@@ -388,10 +388,10 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'team-absence' ? 'active' : ''}`}
                 onClick={() => setActiveTab('team-absence')}
                 style={{
-                  color: activeTab === 'team-absence' ? '#3a8f93' : '#171212',
-                  backgroundColor: activeTab === 'team-absence' ? '#ffffff' : 'transparent',
-                  borderColor: activeTab === 'team-absence' ? '#d4af37' : 'transparent',
-                  borderBottom: activeTab === 'team-absence' ? '3px solid #d4af37' : 'none',
+                  color: activeTab === 'team-absence' ? '#ffffff' : '#171212',
+                  backgroundColor: activeTab === 'team-absence' ? '#007bff' : 'transparent',
+                  borderColor: activeTab === 'team-absence' ? '#007bff' : 'transparent',
+                  borderBottom: activeTab === 'team-absence' ? '3px solid #007bff' : 'none',
                   fontWeight: activeTab === 'team-absence' ? '600' : '500'
                 }}
               >
@@ -407,10 +407,10 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'approval-requests' ? 'active' : ''}`}
                 onClick={() => setActiveTab('approval-requests')}
                 style={{
-                  color: activeTab === 'approval-requests' ? '#3a8f93' : '#171212',
-                  backgroundColor: activeTab === 'approval-requests' ? '#ffffff' : 'transparent',
-                  borderColor: activeTab === 'approval-requests' ? '#d4af37' : 'transparent',
-                  borderBottom: activeTab === 'approval-requests' ? '3px solid #d4af37' : 'none',
+                  color: activeTab === 'approval-requests' ? '#ffffff' : '#171212',
+                  backgroundColor: activeTab === 'approval-requests' ? '#007bff' : 'transparent',
+                  borderColor: activeTab === 'approval-requests' ? '#007bff' : 'transparent',
+                  borderBottom: activeTab === 'approval-requests' ? '3px solid #007bff' : 'none',
                   fontWeight: activeTab === 'approval-requests' ? '600' : '500'
                 }}
               >
@@ -426,10 +426,10 @@ export default function AbsenceManagement() {
                 className={`nav-link ${activeTab === 'all-records' ? 'active' : ''}`}
                 onClick={() => setActiveTab('all-records')}
                 style={{
-                  color: activeTab === 'all-records' ? '#3a8f93' : '#171212',
-                  backgroundColor: activeTab === 'all-records' ? '#ffffff' : 'transparent',
-                  borderColor: activeTab === 'all-records' ? '#d4af37' : 'transparent',
-                  borderBottom: activeTab === 'all-records' ? '3px solid #d4af37' : 'none',
+                  color: activeTab === 'all-records' ? '#ffffff' : '#171212',
+                  backgroundColor: activeTab === 'all-records' ? '#007bff' : 'transparent',
+                  borderColor: activeTab === 'all-records' ? '#007bff' : 'transparent',
+                  borderBottom: activeTab === 'all-records' ? '3px solid #007bff' : 'none',
                   fontWeight: activeTab === 'all-records' ? '600' : '500'
                 }}
               >
