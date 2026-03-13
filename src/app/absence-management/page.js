@@ -19,12 +19,50 @@ export default function AbsenceManagement() {
     absenceType: '',
     startDate: '',
     endDate: '',
-    reason: ''
+    reason: '',
+    isHalfDay: false,
+    halfDayPeriod: ''
   });
   const [filter, setFilter] = useState({ status: '', employeeId: '' });
   const [selectedAbsence, setSelectedAbsence] = useState(null);
   const [adminComments, setAdminComments] = useState('');
   const [isLOP, setIsLOP] = useState(false);
+  const [dateConflict, setDateConflict] = useState(false);
+  const [conflictMessage, setConflictMessage] = useState('');
+
+  // Check for date conflicts when dates change
+  const checkDateConflict = (startDate, endDate) => {
+    if (!startDate || !endDate) {
+      setDateConflict(false);
+      setConflictMessage('');
+      return;
+    }
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const conflictingAbsence = absences.find(absence => {
+      if (absence.status === 'Rejected' || absence.status === 'Cancelled') {
+        return false;
+      }
+      
+      const existingStart = new Date(absence.startDate);
+      const existingEnd = new Date(absence.endDate);
+      
+      return (start <= existingEnd && end >= existingStart);
+    });
+    
+    if (conflictingAbsence) {
+      setDateConflict(true);
+      const conflictStart = new Date(conflictingAbsence.startDate).toLocaleDateString();
+      const conflictEnd = new Date(conflictingAbsence.endDate).toLocaleDateString();
+      const dateRange = conflictStart === conflictEnd ? conflictStart : `${conflictStart} to ${conflictEnd}`;
+      setConflictMessage(`You already have ${conflictingAbsence.status.toLowerCase()} leave on ${dateRange}. Please choose different dates.`);
+    } else {
+      setDateConflict(false);
+      setConflictMessage('');
+    }
+  };
 
   useEffect(() => {
     const role = localStorage.getItem('userRole') || '';
@@ -153,6 +191,36 @@ export default function AbsenceManagement() {
       setShowSuccess(true);
       return;
     }
+    if (form.isHalfDay && !form.halfDayPeriod) {
+      setSuccessMessage('Please select half day period');
+      setShowSuccess(true);
+      return;
+    }
+    
+    // Check for same date conflicts in existing absences
+    const startDate = new Date(form.startDate);
+    const endDate = new Date(form.endDate);
+    
+    const conflictingAbsence = absences.find(absence => {
+      if (absence.status === 'Rejected' || absence.status === 'Cancelled') {
+        return false; // Ignore rejected/cancelled leaves
+      }
+      
+      const existingStart = new Date(absence.startDate);
+      const existingEnd = new Date(absence.endDate);
+      
+      // Check for any date overlap
+      return (startDate <= existingEnd && endDate >= existingStart);
+    });
+    
+    if (conflictingAbsence) {
+      const conflictStart = new Date(conflictingAbsence.startDate).toLocaleDateString();
+      const conflictEnd = new Date(conflictingAbsence.endDate).toLocaleDateString();
+      const dateRange = conflictStart === conflictEnd ? conflictStart : `${conflictStart} to ${conflictEnd}`;
+      setSuccessMessage(`You already have ${conflictingAbsence.status.toLowerCase()} leave on ${dateRange}. Please choose different dates.`);
+      setShowSuccess(true);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -170,8 +238,12 @@ export default function AbsenceManagement() {
           absenceType: '',
           startDate: '',
           endDate: '',
-          reason: ''
+          reason: '',
+          isHalfDay: false,
+          halfDayPeriod: ''
         });
+        setDateConflict(false);
+        setConflictMessage('');
         const empId = localStorage.getItem('employeeId');
         fetchMyAbsences(empId);
       } else {
@@ -287,12 +359,22 @@ export default function AbsenceManagement() {
         </h2>
 
         {/* Role-based Tabs */}
-        <ul className="nav nav-tabs mb-4">
+        <ul className="nav nav-tabs mb-4" style={{
+          borderBottom: '2px solid #d4af37',
+          backgroundColor: '#f8f9fa'
+        }}>
           {canApplyLeave && (
             <li className="nav-item">
               <button 
                 className={`nav-link ${activeTab === 'my-absence' ? 'active' : ''}`}
                 onClick={() => setActiveTab('my-absence')}
+                style={{
+                  color: activeTab === 'my-absence' ? '#3a8f93' : '#171212',
+                  backgroundColor: activeTab === 'my-absence' ? '#ffffff' : 'transparent',
+                  borderColor: activeTab === 'my-absence' ? '#d4af37' : 'transparent',
+                  borderBottom: activeTab === 'my-absence' ? '3px solid #d4af37' : 'none',
+                  fontWeight: activeTab === 'my-absence' ? '600' : '500'
+                }}
               >
                 <i className="bi bi-person-fill me-2"></i>
                 My Absence
@@ -305,6 +387,13 @@ export default function AbsenceManagement() {
               <button 
                 className={`nav-link ${activeTab === 'team-absence' ? 'active' : ''}`}
                 onClick={() => setActiveTab('team-absence')}
+                style={{
+                  color: activeTab === 'team-absence' ? '#3a8f93' : '#171212',
+                  backgroundColor: activeTab === 'team-absence' ? '#ffffff' : 'transparent',
+                  borderColor: activeTab === 'team-absence' ? '#d4af37' : 'transparent',
+                  borderBottom: activeTab === 'team-absence' ? '3px solid #d4af37' : 'none',
+                  fontWeight: activeTab === 'team-absence' ? '600' : '500'
+                }}
               >
                 <i className="bi bi-people-fill me-2"></i>
                 Team Absence
@@ -317,6 +406,13 @@ export default function AbsenceManagement() {
               <button 
                 className={`nav-link ${activeTab === 'approval-requests' ? 'active' : ''}`}
                 onClick={() => setActiveTab('approval-requests')}
+                style={{
+                  color: activeTab === 'approval-requests' ? '#3a8f93' : '#171212',
+                  backgroundColor: activeTab === 'approval-requests' ? '#ffffff' : 'transparent',
+                  borderColor: activeTab === 'approval-requests' ? '#d4af37' : 'transparent',
+                  borderBottom: activeTab === 'approval-requests' ? '3px solid #d4af37' : 'none',
+                  fontWeight: activeTab === 'approval-requests' ? '600' : '500'
+                }}
               >
                 <i className="bi bi-check-circle-fill me-2"></i>
                 Approval Requests
@@ -329,6 +425,13 @@ export default function AbsenceManagement() {
               <button 
                 className={`nav-link ${activeTab === 'all-records' ? 'active' : ''}`}
                 onClick={() => setActiveTab('all-records')}
+                style={{
+                  color: activeTab === 'all-records' ? '#3a8f93' : '#171212',
+                  backgroundColor: activeTab === 'all-records' ? '#ffffff' : 'transparent',
+                  borderColor: activeTab === 'all-records' ? '#d4af37' : 'transparent',
+                  borderBottom: activeTab === 'all-records' ? '3px solid #d4af37' : 'none',
+                  fontWeight: activeTab === 'all-records' ? '600' : '500'
+                }}
               >
                 <i className="bi bi-file-earmark-bar-graph me-2"></i>
                 All Records
@@ -380,24 +483,67 @@ export default function AbsenceManagement() {
                       <label className="form-label">Start Date *</label>
                       <input
                         type="date"
-                        className="form-control"
+                        className={`form-control ${dateConflict ? 'border-danger' : ''}`}
                         value={form.startDate}
                         min={new Date().toISOString().split('T')[0]}
-                        onChange={(e) => setForm({...form, startDate: e.target.value})}
+                        onChange={(e) => {
+                          setForm({...form, startDate: e.target.value});
+                          checkDateConflict(e.target.value, form.endDate);
+                        }}
                         required
                       />
+                      {dateConflict && (
+                        <small className="text-danger">{conflictMessage}</small>
+                      )}
                     </div>
                     <div className="col-md-2 mb-3">
                       <label className="form-label">End Date *</label>
                       <input
                         type="date"
-                        className="form-control"
+                        className={`form-control ${dateConflict ? 'border-danger' : ''}`}
                         value={form.endDate}
                         min={form.startDate || new Date().toISOString().split('T')[0]}
-                        onChange={(e) => setForm({...form, endDate: e.target.value})}
+                        onChange={(e) => {
+                          setForm({...form, endDate: e.target.value});
+                          checkDateConflict(form.startDate, e.target.value);
+                        }}
                         required
                       />
+                      {dateConflict && (
+                        <small className="text-danger">{conflictMessage}</small>
+                      )}
                     </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-3 mb-3">
+                      <div className="form-check">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          id="halfDayCheck"
+                          checked={form.isHalfDay}
+                          onChange={(e) => setForm({...form, isHalfDay: e.target.checked, halfDayPeriod: ''})}
+                        />
+                        <label className="form-check-label" htmlFor="halfDayCheck">
+                          Half Day Leave
+                        </label>
+                      </div>
+                    </div>
+                    {form.isHalfDay && (
+                      <div className="col-md-3 mb-3">
+                        <label className="form-label">Half Day Period *</label>
+                        <select
+                          className="form-select"
+                          value={form.halfDayPeriod}
+                          onChange={(e) => setForm({...form, halfDayPeriod: e.target.value})}
+                          required={form.isHalfDay}
+                        >
+                          <option value="">Select Period</option>
+                          <option value="first">First Half (Morning)</option>
+                          <option value="second">Second Half (Afternoon)</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div className="row">
                     <div className="col-md-10 mb-3">
@@ -411,7 +557,7 @@ export default function AbsenceManagement() {
                       />
                     </div>
                     <div className="col-md-2 mb-3 d-flex align-items-end">
-                      <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                      <button type="submit" className="btn btn-primary w-100" disabled={loading || dateConflict}>
                         {loading ? 'Submitting...' : 'Submit Request'}
                       </button>
                     </div>
@@ -450,7 +596,7 @@ export default function AbsenceManagement() {
                       ) : (
                         absences.map(absence => (
                           <tr key={absence._id}>
-                            <td>{absence.absenceType}</td>
+                            <td>{absence.absenceType}{absence.isHalfDay && ` (Half Day - ${absence.halfDayPeriod === 'first' ? 'Morning' : 'Afternoon'})`}</td>
                             <td>{formatDate(absence.startDate)}</td>
                             <td>{formatDate(absence.endDate)}</td>
                             <td>{absence.totalDays}</td>
@@ -522,7 +668,7 @@ export default function AbsenceManagement() {
                             <small className="text-muted">{absence.employeeId}</small>
                           </td>
                           <td>{absence.department}</td>
-                          <td>{absence.absenceType}</td>
+                          <td>{absence.absenceType}{absence.isHalfDay && ` (Half Day - ${absence.halfDayPeriod === 'first' ? 'Morning' : 'Afternoon'})`}</td>
                           <td>{formatDate(absence.startDate)}</td>
                           <td>{formatDate(absence.endDate)}</td>
                           <td>{absence.totalDays}</td>
@@ -617,7 +763,7 @@ export default function AbsenceManagement() {
                                 <small className="text-muted">{absence.employeeId}</small>
                               </td>
                               <td>{absence.department}</td>
-                              <td>{absence.absenceType}</td>
+                              <td>{absence.absenceType}{absence.isHalfDay && ` (Half Day - ${absence.halfDayPeriod === 'first' ? 'Morning' : 'Afternoon'})`}</td>
                               <td>{formatDate(absence.startDate)}</td>
                               <td>{formatDate(absence.endDate)}</td>
                               <td>{absence.totalDays}</td>
@@ -711,7 +857,7 @@ export default function AbsenceManagement() {
                             <small className="text-muted">{absence.employeeId}</small>
                           </td>
                           <td>{absence.department}</td>
-                          <td>{absence.absenceType}</td>
+                          <td>{absence.absenceType}{absence.isHalfDay && ` (Half Day - ${absence.halfDayPeriod === 'first' ? 'Morning' : 'Afternoon'})`}</td>
                           <td>{formatDate(absence.startDate)}</td>
                           <td>{formatDate(absence.endDate)}</td>
                           <td>{absence.totalDays}</td>

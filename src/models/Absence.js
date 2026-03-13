@@ -13,6 +13,15 @@ const absenceSchema = new mongoose.Schema({
   endDate: { type: Date, required: true },
   totalDays: { type: Number, default: 0 },
   reason: { type: String, required: true },
+  isHalfDay: { type: Boolean, default: false },
+  halfDayPeriod: { 
+    type: String, 
+    enum: {
+      values: ["first", "second", ""],
+      message: "Half day period must be 'first', 'second', or empty"
+    },
+    default: "" 
+  },
   status: { 
     type: String, 
     enum: ["Pending", "Approved", "Rejected", "Cancelled"],
@@ -39,9 +48,16 @@ const absenceSchema = new mongoose.Schema({
 
 // Calculate total days before saving
 absenceSchema.pre("save", function (next) {
+  // Validate half day period requirement
+  if (this.isHalfDay && !this.halfDayPeriod) {
+    return next(new Error("Half day period is required when applying for half day leave"));
+  }
+  
   if (this.startDate && this.endDate) {
     const diffTime = Math.abs(this.endDate - this.startDate);
-    this.totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    // If it's a half day and single day, count as 0.5
+    this.totalDays = this.isHalfDay && days === 1 ? 0.5 : days;
   }
   this.updatedAt = new Date();
   next();

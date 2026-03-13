@@ -219,7 +219,7 @@ export async function POST(req) {
     
     if (startDate < today) {
       return NextResponse.json({ 
-        error: "Cannot apply for leave on past dates. Please select a future date." 
+        error: "Cannot apply for leave on past dates. Please select today or a future date." 
       }, { status: 400 });
     }
     
@@ -246,8 +246,12 @@ export async function POST(req) {
     });
     
     if (existingAbsences.length > 0) {
+      const conflictingDates = existingAbsences.map(abs => 
+        `${new Date(abs.startDate).toLocaleDateString()} to ${new Date(abs.endDate).toLocaleDateString()}`
+      ).join(', ');
+      
       return NextResponse.json({ 
-        error: "You already have a leave request for overlapping dates. Please check your existing requests." 
+        error: `You already have leave request(s) for overlapping dates: ${conflictingDates}. Please check your existing requests.` 
       }, { status: 400 });
     }
     
@@ -326,6 +330,15 @@ export async function PUT(req) {
         const currentDate = new Date(d);
         currentDate.setHours(0, 0, 0, 0);
         
+        // Determine attendance status based on leave type
+        let attendanceStatus = "Leave";
+        let remarks = `Leave: ${absence.reason || 'No reason provided'}`;
+        
+        if (absence.isHalfDay) {
+          attendanceStatus = "Half Day Leave";
+          remarks = `Half Day Leave (${absence.halfDayPeriod === 'first' ? 'Morning' : 'Afternoon'}): ${absence.reason || 'No reason provided'}`;
+        }
+        
         await Attendance.findOneAndUpdate(
           { employeeId: absence.employeeId, date: currentDate },
           {
@@ -333,10 +346,11 @@ export async function PUT(req) {
             employeeName: employeeData?.name || absence.employeeName || absence.employeeId,
             department: employeeData?.department || absence.department || "Unknown",
             date: currentDate,
-            status: "Leave",
+            status: attendanceStatus,
             leaveType: absence.absenceType || "General",
-            remarks: `Leave: ${absence.reason || 'No reason provided'}`,
+            remarks: remarks,
             absenceId: _id, // Link to absence record
+            halfDayPeriod: absence.isHalfDay ? absence.halfDayPeriod : undefined,
             updatedAt: new Date()
           },
           { upsert: true, new: true }
@@ -420,11 +434,11 @@ export async function PUT(req) {
       const endDate = new Date(absence.endDate);
       endDate.setHours(0, 0, 0, 0);
       
-      // Delete leave attendance records linked to this absence
+      // Delete leave attendance records linked to this absence (both full day and half day)
       await Attendance.deleteMany({
         employeeId: absence.employeeId,
         date: { $gte: startDate, $lte: endDate },
-        status: "Leave",
+        status: { $in: ["Leave", "Half Day Leave"] },
         absenceId: _id
       });
       
