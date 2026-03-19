@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SMELayout from "../../components/SMELayout";
 
-export default function SMETasks() {
+function SMETasksContent() {
   const [tasks, setTasks] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -200,6 +200,7 @@ export default function SMETasks() {
 
   return (
     <SMELayout>
+
       <div className="container-fluid">
         <div className="row">
           <div className="col-12">
@@ -442,5 +443,21 @@ export default function SMETasks() {
         </div>
       </div>
     </SMELayout>
+  );
+}
+
+export default function SMETasks() {
+  return (
+    <Suspense fallback={
+      <SMELayout>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <div className="spinner-border text-success" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </SMELayout>
+    }>
+      <SMETasksContent />
+    </Suspense>
   );
 }
