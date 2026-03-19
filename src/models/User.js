@@ -6,8 +6,9 @@ const UserSchema = new mongoose.Schema({
   employeeId: { type: String, required: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String }, // Not required for pending SME accounts
   role: { type: String, default: "Employee" },
+  status: { type: String, enum: ["active", "pending"], default: "active" }, // Account status
   isTerminated: { type: Boolean, default: false },
   resetOTP: { type: String },
   resetOTPExpiry: { type: Date },

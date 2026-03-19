@@ -1,6 +1,5 @@
 import connectMongoose from "@/app/utilis/connectMongoose";
-import User from "../../../models/User";
-import mongoose from "mongoose";
+import User from "../../../../models/User";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
@@ -32,64 +31,7 @@ function verifyToken(request) {
   }
 }
 
-export async function POST(req) {
-  try {
-    await connectMongoose();
-    
-    // Verify admin access
-    const user = verifyToken(req);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const adminRoles = ["super-admin", "Super-admin", "admin", "developer", "Team-Lead", "Team-admin"];
-    if (!adminRoles.includes(user.role)) {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
-    }
-
-    const { employeeId, name, email, password, role } = await req.json();
-    
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { error: "Name, email and password are required" },
-        { status: 400 }
-      );
-    }
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { employeeId: employeeId || "" }] 
-    });
-    
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "User with this email or employee ID already exists" },
-        { status: 400 }
-      );
-    }
-
-    // For SME users, we can create them directly without requiring employee record
-    const userData = {
-      employeeId: employeeId || `SME${Date.now().toString().slice(-6)}`,
-      name,
-      email,
-      password, // In production, hash the password
-      role: role || "Employee"
-    };
-
-    const newUser = await User.create(userData);
-    
-    return NextResponse.json(
-      { message: "User created successfully", user: newUser },
-      { status: 201 }
-    );
-  } catch (err) {
-    console.error("User creation error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
-export async function GET(request) {
+export async function PUT(request, { params }) {
   try {
     await connectMongoose();
     
@@ -104,20 +46,55 @@ export async function GET(request) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const roleFilter = searchParams.get("role");
+    const { id } = params;
+    const { isTerminated } = await request.json();
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { isTerminated },
+      { new: true, select: "employeeId name email role isTerminated" }
+    );
+
+    if (!updatedUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      message: `User ${isTerminated ? 'deactivated' : 'activated'} successfully`, 
+      user: updatedUser 
+    });
+  } catch (err) {
+    console.error("User update error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    await connectMongoose();
     
-    let query = {};
-    if (roleFilter) {
-      query.role = roleFilter;
+    // Verify admin access
+    const user = verifyToken(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
-    const users = await User.find(query, "employeeId name email role isTerminated createdAt")
-      .sort({ createdAt: -1 });
-    
-    return NextResponse.json({ users });
+    const adminRoles = ["super-admin", "Super-admin", "admin", "developer"];
+    if (!adminRoles.includes(user.role)) {
+      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+    }
+
+    const { id } = params;
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "User deleted successfully" });
   } catch (err) {
-    console.error("User GET error:", err);
+    console.error("User delete error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

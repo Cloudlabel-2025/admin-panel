@@ -54,6 +54,20 @@ export async function POST(req) {
       return NextResponse.json({ error: "Your account has been terminated. Please contact administrator." }, { status: 403 });
     }
 
+    // Check if account is pending (for SME users)
+    if (user.status === "pending") {
+      return NextResponse.json({ 
+        error: "Your account is pending activation. Please complete the signup process to set your password and activate your account." 
+      }, { status: 403 });
+    }
+
+    // Check if password exists (should not happen for active accounts, but safety check)
+    if (!user.password) {
+      return NextResponse.json({ 
+        error: "Account setup incomplete. Please complete the signup process." 
+      }, { status: 403 });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 400 });

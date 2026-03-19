@@ -97,7 +97,9 @@ export default function HomePage() {
       
       setTimeout(() => {
         const userRole = data.user.role;
-        if (userRole === "super-admin" || userRole === "Super-admin" || userRole === "developer") {
+        if (userRole === "SME") {
+          router.push("/sme");
+        } else if (userRole === "super-admin" || userRole === "Super-admin" || userRole === "developer") {
           router.push("/admin-dashboard");
         } else if (userRole === "admin") {
           router.push("/admin-dashboard");
@@ -145,12 +147,21 @@ export default function HomePage() {
       }
 
       setShowSignupSuccess(true);
+      
+      // Show different message for SME activation vs regular signup
+      const isActivation = data.message && data.message.includes("activated");
+      
       setTimeout(() => {
         setShowSignupSuccess(false);
         setIsLogin(true);
         setEmail("");
         if (passwordRef.current) passwordRef.current.value = "";
         if (confirmPasswordRef.current) confirmPasswordRef.current.value = "";
+        
+        // Show specific success message
+        if (isActivation) {
+          alert("SME Account Activated Successfully!\n\nYou can now login with your email and password to access the SME work tracking portal.");
+        }
       }, 3000);
     } catch (err) {
       console.error(err);

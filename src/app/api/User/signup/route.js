@@ -15,7 +15,39 @@ export async function POST(req) {
     if (!email || !password)
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
 
-    // Search email in all department collections
+    // Check if this is an SME account activation
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      // If user exists and is SME with pending status, allow password setup
+      if (existingUser.role === "SME" && existingUser.status === "pending") {
+        if (existingUser.password) {
+          return NextResponse.json({ error: "SME account is already activated" }, { status: 400 });
+        }
+        
+        // Hash password and activate account
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        existingUser.password = hashedPassword;
+        existingUser.status = "active";
+        await existingUser.save();
+        
+        console.log('SME account activated successfully:', { employeeId: existingUser.employeeId });
+        return NextResponse.json({ 
+          message: "SME account activated successfully. You can now login.", 
+          user: { 
+            employeeId: existingUser.employeeId, 
+            name: existingUser.name, 
+            email: existingUser.email, 
+            role: existingUser.role 
+          } 
+        }, { status: 200 });
+      } else {
+        console.log('User already exists for email:', email);
+        return NextResponse.json({ error: "User already exists" }, { status: 400 });
+      }
+    }
+
+    // For non-SME users, search email in all department collections
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
     const departmentCollections = collections
@@ -42,13 +74,6 @@ export async function POST(req) {
 
     console.log('Employee found:', { employeeId: employee.employeeId, role: employee.role });
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      console.log('User already exists for email:', email);
-      return NextResponse.json({ error: "User already exists" }, { status: 400 });
-    }
-
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -59,6 +84,7 @@ export async function POST(req) {
       email,
       password: hashedPassword,
       role: employee.role || "Employee",
+      status: "active" // Regular employees are active by default
     });
 
     console.log('User created successfully:', { employeeId: user.employeeId, role: user.role });

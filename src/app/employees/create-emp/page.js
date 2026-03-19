@@ -21,6 +21,7 @@ export default function CreateEmployeePage() {
     joiningDate: "",
     department: "",
     role: "",
+    password: "", // Add password field for SME users
     emergencyContact: {
       contactPerson: "",
       contactNumber: "",
@@ -91,7 +92,19 @@ export default function CreateEmployeePage() {
     setValidated(true);
 
     // Validate required fields
-    if (!formData.firstName || !formData.email || !formData.phone || !formData.joiningDate || !formData.department || !formData.role || !formData.emergencyContact.contactNumber || !formData.payroll.salary || !formData.address.street || !formData.address.city || !formData.address.state || !formData.address.zip || !formData.address.country) {
+    const requiredFields = ['firstName', 'email', 'phone', 'joiningDate', 'department', 'role', 'emergencyContact.contactNumber', 'payroll.salary', 'address.street', 'address.city', 'address.state', 'address.zip', 'address.country'];
+    
+    // Password is not required for SME users during creation
+    
+    const missingFields = requiredFields.filter(field => {
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        return !formData[parent] || !formData[parent][child];
+      }
+      return !formData[field];
+    });
+    
+    if (missingFields.length > 0) {
       setError("Please fill all required fields marked with *");
       setTimeout(() => setError(""), 3000);
       return;
@@ -130,6 +143,14 @@ export default function CreateEmployeePage() {
 
       if (response.ok) {
         setShowSuccess(true);
+        
+        // Show SME-specific success message if applicable
+        if (data.smeInfo) {
+          setTimeout(() => {
+            alert(`SME Account Created Successfully!\n\nAccount Status: Pending\nEmail: ${data.smeInfo.email}\n\nThe SME can activate their account by visiting the signup page and creating their password.`);
+          }, 2000);
+        }
+        
         setTimeout(() => setShowSuccess(false), 3000);
         setFormData({
           employeeId: "",
@@ -142,6 +163,7 @@ export default function CreateEmployeePage() {
           joiningDate: "",
           department: "",
           role: "",
+          password: "",
           emergencyContact: {
             contactPerson: "",
             contactNumber: "",
@@ -567,11 +589,22 @@ export default function CreateEmployeePage() {
                           <option value="Team-Lead">Team-Lead</option>
                           <option value="Team-admin">Team-admin</option>
                           <option value="Employee">Employee</option>
+                          <option value="SME">SME (Subject Matter Expert)</option>
                           <option value="Intern">Intern</option>
                         </>
                       )}
                     </select>
 
+                  </div>
+                )}
+                
+                {/* SME Account Setup - Simplified */}
+                {formData.role === "SME" && (
+                  <div className="col-12">
+                    <div className="alert alert-info" role="alert">
+                      <i className="bi bi-info-circle-fill me-2"></i>
+                      <strong>SME Account Setup:</strong> The SME account will be created in pending status. The SME can activate their account by using the signup page to set their password.
+                    </div>
                   </div>
                 )}
               </>
@@ -938,6 +971,7 @@ export default function CreateEmployeePage() {
                       if (!formData.department || !formData.role) {
                         hasError = true;
                       }
+                      // No password validation needed for SME users during creation
                     } else if (currentStep === 4) {
                       const country = countryOptions.find(c => c.code === emergencyCountryCode);
                       const emergencyPhoneValid = formData.emergencyContact.contactNumber && country.regex.test(formData.emergencyContact.contactNumber);

@@ -1,10 +1,10 @@
 import connectMongoose from "../../utilis/connectMongoose";
-
-
 import { createEmployeeModel } from "../../../models/Employee";
+import User from "../../../models/User";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { requireRole, requireAuth } from "../../utilis/authMiddleware";
+import bcrypt from "bcryptjs";
 
 // helper: find the latest employeeId across all departments
 async function getNextEmployeeId() {
@@ -65,7 +65,7 @@ async function handlePOST(req) {
     await connectMongoose();
 
     const body = await req.json();
-    const { email, phone, emergencyContact, department } = body;
+    const { email, phone, emergencyContact, department, role, firstName, lastName } = body;
 
     if (!email || !phone || !emergencyContact?.contactNumber || !department) {
       return NextResponse.json(
@@ -101,11 +101,48 @@ async function handlePOST(req) {
       }
     }
 
+    // Check if user already exists in User collection
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User with this email already exists" },
+        { status: 400 }
+      );
+    }
+
     // Generate global employeeId
     const employeeId = await getNextEmployeeId();
 
-    // Save directly in department collection
+    // Save employee in department collection
     const employee = await DepartmentModel.create({ ...body, employeeId });
+
+    // If role is SME, create User record for authentication in pending status
+    if (role === "SME") {
+      const userData = {
+        employeeId,
+        name: `${firstName || ''} ${lastName || ''}`.trim(),
+        email,
+        role: "SME",
+        status: "pending" // SME account starts in pending status
+        // No password - will be set during signup
+      };
+
+      await User.create(userData);
+      
+      // Return success with SME info
+      return NextResponse.json(
+        { 
+          message: "SME Employee created successfully", 
+          employee,
+          smeInfo: {
+            email,
+            status: "pending",
+            message: "SME account created in pending status. User must complete signup process to activate account."
+          }
+        },
+        { status: 201 }
+      );
+    }
 
     return NextResponse.json(
       { message: "Employee created successfully", employee },
