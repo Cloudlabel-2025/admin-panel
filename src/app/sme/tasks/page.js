@@ -3,445 +3,311 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SMELayout from "../../components/SMELayout";
+import { apiFetch } from "../../utilis/apiFetch";
 
 function SMETasksContent() {
-  const [tasks, setTasks] = useState([]);
-  const [currentSession, setCurrentSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ title: "", description: "", priority: "medium" });
-  const [error, setError] = useState("");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get('sessionId');
+  const [tasks, setTasks]               = useState([]);
+  const [session, setSession]           = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [showModal, setShowModal]       = useState(false);
+  const [newTask, setNewTask]           = useState({ title: "", description: "" });
+  const [error, setError]               = useState("");
+  const router                          = useRouter();
+  const searchParams                    = useSearchParams();
+  const sessionId                       = searchParams.get("sessionId");
 
   useEffect(() => {
-    checkUserRole();
-    fetchCurrentSession();
+    const role = localStorage.getItem("userRole");
+    if (role !== "SME") router.replace("/");
+    fetchSession();
     fetchTasks();
   }, [sessionId]);
 
-  const checkUserRole = () => {
-    const role = localStorage.getItem("userRole");
-    if (role !== "SME") {
-      router.replace("/");
-    }
-  };
-
-  const fetchCurrentSession = async () => {
+  const fetchSession = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch('/api/sme/session?type=active', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentSession(data.session);
-      }
-    } catch (error) {
-      console.error('Error fetching current session:', error);
-    }
+      const res = await apiFetch("/api/sme/session?type=active");
+      if (res.ok) { const d = await res.json(); setSession(d.session || null); }
+    } catch {}
   };
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      let url = '/api/sme/tasks';
-      if (sessionId) {
-        url += `?sessionId=${sessionId}`;
-      }
-      
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(data.tasks || []);
-      }
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-    } finally {
-      setLoading(false);
-    }
+      const employeeId = localStorage.getItem("employeeId");
+      const params = new URLSearchParams();
+      if (employeeId) params.append("employeeId", employeeId);
+      if (sessionId)  params.append("sessionId", sessionId);
+      const res = await apiFetch(`/api/sme/tasks${params.toString() ? "?" + params : ""}`);
+      if (res.ok) { const d = await res.json(); setTasks(d.tasks || []); }
+    } catch {}
+    finally { setLoading(false); }
   };
 
   const addTask = async (e) => {
     e.preventDefault();
-    if (!newTask.title.trim()) {
-      setError("Task title is required");
-      return;
-    }
-
+    if (!newTask.title.trim()) { setError("Task title is required"); return; }
     try {
-      const token = localStorage.getItem("token");
-      const employeeId = localStorage.getItem("employeeId");
-      const today = new Date().toISOString().split('T')[0];
-      
-      const response = await fetch('/api/sme/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...newTask,
-          employeeId,
-          date: today
-        })
+      const res = await apiFetch("/api/sme/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newTask, employeeId: localStorage.getItem("employeeId"), date: new Date().toISOString().split("T")[0] }),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(prev => [data.task, ...prev]);
-        setNewTask({ title: "", description: "", priority: "medium" });
-        setShowAddTask(false);
-        setError("");
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error);
-      }
-    } catch (error) {
-      setError("Failed to add task");
-    }
+      if (res.ok) {
+        const d = await res.json();
+        setTasks(p => [d.task, ...p]);
+        setNewTask({ title: "", description: "" });
+        setShowModal(false); setError("");
+      } else { const d = await res.json(); setError(d.error); }
+    } catch { setError("Failed to add task"); }
   };
 
-  const updateTaskStatus = async (taskId, status) => {
+  const updateStatus = async (id, status) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/sme/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
+      const res = await apiFetch(`/api/sme/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(prev => prev.map(task => 
-          task._id === taskId ? data.task : task
-        ));
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to update task");
-      }
-    } catch (error) {
-      console.error('Error updating task:', error);
-      setError("Network error. Please try again.");
-    }
+      if (res.ok) { const d = await res.json(); setTasks(p => p.map(t => t._id === id ? d.task : t)); }
+      else { const d = await res.json(); setError(d.error || "Failed to update"); }
+    } catch { setError("Network error"); }
   };
 
-  const deleteTask = async (taskId) => {
-    if (!confirm("Are you sure you want to delete this task?")) return;
-
+  const deleteTask = async (id) => {
+    if (!confirm("Delete this task?")) return;
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/sme/tasks/${taskId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        setTasks(prev => prev.filter(task => task._id !== taskId));
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to delete task");
-      }
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      setError("Network error. Please try again.");
-    }
+      const res = await apiFetch(`/api/sme/tasks/${id}`, { method: "DELETE" });
+      if (res.ok) setTasks(p => p.filter(t => t._id !== id));
+      else { const d = await res.json(); setError(d.error || "Failed to delete"); }
+    } catch { setError("Network error"); }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'danger';
-      case 'medium': return 'warning';
-      case 'low': return 'info';
-      default: return 'secondary';
-    }
+  const fmtDT = (d) => d
+    ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "—";
+
+  const statusStyle = (s) => {
+    const m = {
+      completed:   { bg: "#f0fdf4", color: "#065f46" },
+      "in-progress": { bg: "#ede9fe", color: "#4c1d95" },
+      pending:     { bg: "#f9fafb", color: "#6b7280" },
+    };
+    return { ...(m[s] || m.pending), padding: "3px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.4px" };
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'in-progress': return 'primary';
-      case 'pending': return 'secondary';
-      default: return 'secondary';
-    }
-  };
+  const canAdd = session?.status === "active";
+  const total  = tasks.length;
+  const done   = tasks.filter(t => t.status === "completed").length;
+  const inProg = tasks.filter(t => t.status === "in-progress").length;
+  const pend   = tasks.filter(t => t.status === "pending").length;
 
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const canAddTasks = currentSession && currentSession.status === 'active';
-
-  if (loading) {
-    return (
-      <SMELayout>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-          <div className="spinner-border text-success" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-        </div>
-      </SMELayout>
-    );
-  }
+  if (loading) return (
+    <SMELayout>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+        <div className="sme-spinner"></div>
+      </div>
+    </SMELayout>
+  );
 
   return (
     <SMELayout>
-
-      <div className="container-fluid">
-        <div className="row">
-          <div className="col-12">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h2 className="mb-0" style={{ color: '#2c5530', fontWeight: '700' }}>
-                <i className="bi bi-list-task me-2"></i>My Tasks
-                {sessionId && <small className="text-muted ms-2">(Session View)</small>}
-              </h2>
-              <div className="d-flex gap-2">
-                {sessionId && (
-                  <button 
-                    className="btn btn-outline-secondary"
-                    onClick={() => router.push('/sme/tasks')}
-                  >
-                    <i className="bi bi-arrow-left me-2"></i>
-                    All Tasks
-                  </button>
-                )}
-                <button 
-                  className="btn btn-success"
-                  onClick={() => setShowAddTask(true)}
-                  disabled={!canAddTasks}
-                  title={!canAddTasks ? "Can only add tasks during active work session" : ""}
-                >
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Add Task
-                </button>
-              </div>
-            </div>
-
-            {!canAddTasks && !sessionId && (
-              <div className="alert alert-warning" role="alert">
-                <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                You can only add tasks during an active work session. Tasks cannot be added during breaks or lunch.
-              </div>
-            )}
-
-            {error && (
-              <div className="alert alert-danger" role="alert">
-                <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                {error}
-              </div>
-            )}
-
-            {/* Add Task Modal */}
-            {showAddTask && (
-              <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                <div className="modal-dialog">
-                  <div className="modal-content">
-                    <div className="modal-header">
-                      <h5 className="modal-title">Add New Task</h5>
-                      <button 
-                        type="button" 
-                        className="btn-close"
-                        onClick={() => {
-                          setShowAddTask(false);
-                          setError("");
-                          setNewTask({ title: "", description: "", priority: "medium" });
-                        }}
-                      ></button>
-                    </div>
-                    <form onSubmit={addTask}>
-                      <div className="modal-body">
-                        <div className="mb-3">
-                          <label className="form-label">Task Title *</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={newTask.title}
-                            onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                            placeholder="Enter task title"
-                            required
-                          />
-                        </div>
-                        <div className="mb-3">
-                          <label className="form-label">Description</label>
-                          <textarea
-                            className="form-control"
-                            rows="3"
-                            value={newTask.description}
-                            onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Enter task description (optional)"
-                          ></textarea>
-                        </div>
-                        <div className="mb-3">
-                          <label className="form-label">Priority</label>
-                          <select
-                            className="form-select"
-                            value={newTask.priority}
-                            onChange={(e) => setNewTask(prev => ({ ...prev, priority: e.target.value }))}
-                          >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="modal-footer">
-                        <button 
-                          type="button" 
-                          className="btn btn-secondary"
-                          onClick={() => {
-                            setShowAddTask(false);
-                            setError("");
-                            setNewTask({ title: "", description: "", priority: "medium" });
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button type="submit" className="btn btn-success">
-                          <i className="bi bi-plus-circle me-2"></i>
-                          Add Task
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tasks Table */}
-            <div className="card border-0 shadow-sm">
-              {tasks.length === 0 ? (
-                <div className="card-body text-center p-5">
-                  <i className="bi bi-list-task" style={{ fontSize: '4rem', color: '#4CAF50', opacity: 0.3 }}></i>
-                  <h4 className="mt-3 mb-2">No Tasks Found</h4>
-                  <p className="text-muted">
-                    {sessionId ? 'No tasks found for this session.' : "You haven't added any tasks yet."}
-                  </p>
-                  {canAddTasks && (
-                    <button className="btn btn-success" onClick={() => setShowAddTask(true)}>
-                      <i className="bi bi-plus-circle me-2"></i>Add Your First Task
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Task</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th>Started</th>
-                        <th>Completed</th>
-                        <th style={{ width: '130px' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tasks.map((task, index) => (
-                        <tr key={task._id}>
-                          <td>
-                            <div className="fw-semibold">Task {index + 1} - {task.title}</div>
-                            {task.description && (
-                              <small className="text-muted">{task.description}</small>
-                            )}
-                          </td>
-                          <td>
-                            <span className={`badge bg-${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`badge bg-${getStatusColor(task.status)}`}>
-                              {task.status}
-                            </span>
-                          </td>
-                          <td><small className="text-muted">{formatDateTime(task.createdAt)}</small></td>
-                          <td><small className="text-muted">{task.startTime ? formatDateTime(task.startTime) : '-'}</small></td>
-                          <td><small className="text-muted">{task.endTime ? formatDateTime(task.endTime) : '-'}</small></td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              {task.status === 'pending' && (
-                                <button className="btn btn-sm btn-outline-primary" onClick={() => updateTaskStatus(task._id, 'in-progress')}>Start</button>
-                              )}
-                              {task.status === 'in-progress' && (
-                                <button className="btn btn-sm btn-outline-success" onClick={() => updateTaskStatus(task._id, 'completed')}>Complete</button>
-                              )}
-                              {task.status === 'completed' && (
-                                <button className="btn btn-sm btn-outline-warning" onClick={() => updateTaskStatus(task._id, 'in-progress')}>Reopen</button>
-                              )}
-                              <button className="btn btn-sm btn-outline-danger" onClick={() => deleteTask(task._id)}>
-                                <i className="bi bi-trash"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Task Statistics */}
-            {tasks.length > 0 && (
-              <div className="card border-0 shadow-sm mt-3">
-                <div className="card-body">
-                  <h5 className="card-title">
-                    <i className="bi bi-graph-up me-2"></i>
-                    Task Statistics
-                  </h5>
-                  <div className="row text-center">
-                    <div className="col-md-3">
-                      <div className="p-3">
-                        <h4 className="text-primary mb-1">{tasks.length}</h4>
-                        <small className="text-muted">Total Tasks</small>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="p-3">
-                        <h4 className="text-success mb-1">
-                          {tasks.filter(t => t.status === 'completed').length}
-                        </h4>
-                        <small className="text-muted">Completed</small>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="p-3">
-                        <h4 className="text-warning mb-1">
-                          {tasks.filter(t => t.status === 'in-progress').length}
-                        </h4>
-                        <small className="text-muted">In Progress</small>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="p-3">
-                        <h4 className="text-secondary mb-1">
-                          {tasks.filter(t => t.status === 'pending').length}
-                        </h4>
-                        <small className="text-muted">Pending</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* ── Header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 className="sme-page-title">
+            <i className="bi bi-list-task me-2"></i>My Tasks
+            {sessionId && <span style={{ fontSize: "14px", color: "#8b5cf6", fontWeight: "500", marginLeft: "10px" }}>— Session View</span>}
+          </h1>
+          <p style={{ color: "#8b5cf6", fontSize: "14px", margin: "4px 0 0" }}>Manage and track your work tasks</p>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {sessionId && (
+            <button className="sme-btn sme-btn-ghost" onClick={() => router.push("/sme/tasks")}>
+              <i className="bi bi-arrow-left"></i>All Tasks
+            </button>
+          )}
+          <button
+            className="sme-btn sme-btn-primary"
+            onClick={() => setShowModal(true)}
+            disabled={!canAdd}
+            title={!canAdd ? "Only available during an active session" : ""}
+          >
+            <i className="bi bi-plus-lg"></i>Add Task
+          </button>
         </div>
       </div>
+
+      {/* ── Warning ── */}
+      {!canAdd && !sessionId && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "12px 16px", marginBottom: "20px", color: "#92400e", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <i className="bi bi-exclamation-triangle-fill"></i>
+          Tasks can only be added during an active work session.
+        </div>
+      )}
+
+      {/* ── Error ── */}
+      {error && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", padding: "12px 16px", marginBottom: "20px", color: "#dc2626", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <i className="bi bi-exclamation-triangle-fill"></i>{error}
+          <button onClick={() => setError("")} style={{ marginLeft: "auto", background: "none", border: "none", color: "#dc2626", cursor: "pointer" }}>✕</button>
+        </div>
+      )}
+
+      {/* ── Tasks table ── */}
+      <div className="sme-panel" style={{ marginBottom: "16px" }}>
+        <div className="sme-panel-header">
+          <span style={{ fontWeight: "600", color: "#4c1d95", fontSize: "14px" }}>
+            <i className="bi bi-table me-2" style={{ color: "#7c3aed" }}></i>Task List
+          </span>
+          <span style={{ fontSize: "13px", color: "#8b5cf6" }}>{total} task{total !== 1 ? "s" : ""}</span>
+        </div>
+
+        {tasks.length === 0 ? (
+          <div style={{ padding: "60px 20px", textAlign: "center" }}>
+            <i className="bi bi-inbox" style={{ fontSize: "40px", color: "#c4b5fd" }}></i>
+            <p style={{ color: "#6d28d9", fontWeight: "600", marginTop: "12px", marginBottom: "4px" }}>No tasks yet</p>
+            <p style={{ color: "#a78bfa", fontSize: "13px", marginBottom: "20px" }}>
+              {sessionId ? "No tasks found for this session." : "Start a session and add your first task."}
+            </p>
+            {canAdd && (
+              <button className="sme-btn sme-btn-primary" onClick={() => setShowModal(true)}>
+                <i className="bi bi-plus-lg"></i>Add First Task
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="sme-table">
+              <thead>
+                <tr>
+                  <th>Task Name</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Started</th>
+                  <th>Completed</th>
+                  <th style={{ width: "140px" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map(task => (
+                  <tr key={task._id}>
+                    <td style={{ fontWeight: "600", color: "#1e1b4b", maxWidth: "260px" }}>
+                      {task.title}
+                      {task.description && (
+                        <div style={{ fontWeight: "400", color: "#8b5cf6", fontSize: "12px", marginTop: "2px" }}>{task.description}</div>
+                      )}
+                    </td>
+                    <td><span style={statusStyle(task.status)}>{task.status}</span></td>
+                    <td style={{ color: "#6b7280", fontSize: "13px" }}>{fmtDT(task.createdAt)}</td>
+                    <td style={{ color: "#6b7280", fontSize: "13px" }}>{fmtDT(task.startTime)}</td>
+                    <td style={{ color: "#6b7280", fontSize: "13px" }}>{fmtDT(task.endTime)}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        {task.status === "pending" && (
+                          <button className="sme-btn sme-btn-outline" style={{ padding: "4px 12px", fontSize: "12px" }} onClick={() => updateStatus(task._id, "in-progress")}>
+                            Start
+                          </button>
+                        )}
+                        {task.status === "in-progress" && (
+                          <button className="sme-btn sme-btn-teal" style={{ padding: "4px 12px", fontSize: "12px" }} onClick={() => updateStatus(task._id, "completed")}>
+                            Complete
+                          </button>
+                        )}
+                        {task.status === "completed" && (
+                          <button className="sme-btn sme-btn-amber" style={{ padding: "4px 12px", fontSize: "12px" }} onClick={() => updateStatus(task._id, "in-progress")}>
+                            Reopen
+                          </button>
+                        )}
+                        <button className="sme-btn sme-btn-danger" style={{ padding: "4px 10px", fontSize: "12px" }} onClick={() => deleteTask(task._id)}>
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Inline stats row ── */}
+      {tasks.length > 0 && (
+        <div className="sme-stat-row">
+          <div className="sme-stat-cell">
+            <div className="sme-stat-label">Total Tasks</div>
+            <div className="sme-stat-value" style={{ color: "#4c1d95" }}>{total}</div>
+          </div>
+          <div className="sme-stat-cell">
+            <div className="sme-stat-label">Completed</div>
+            <div className="sme-stat-value" style={{ color: "#065f46" }}>{done}</div>
+          </div>
+          <div className="sme-stat-cell">
+            <div className="sme-stat-label">In Progress</div>
+            <div className="sme-stat-value" style={{ color: "#4c1d95" }}>{inProg}</div>
+          </div>
+          <div className="sme-stat-cell">
+            <div className="sme-stat-label">Pending</div>
+            <div className="sme-stat-value" style={{ color: "#6b7280" }}>{pend}</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Task Modal ── */}
+      {showModal && (
+        <div className="sme-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="sme-modal" onClick={e => e.stopPropagation()}>
+            <div className="sme-modal-header">
+              <span style={{ fontWeight: "700", color: "#4c1d95", fontSize: "15px" }}>
+                <i className="bi bi-plus-circle me-2" style={{ color: "#7c3aed" }}></i>Add New Task
+              </span>
+              <button onClick={() => { setShowModal(false); setError(""); setNewTask({ title: "", description: "" }); }}
+                style={{ background: "none", border: "none", color: "#8b5cf6", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}>✕</button>
+            </div>
+            <form onSubmit={addTask}>
+              <div className="sme-modal-body">
+                {error && (
+                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "6px", padding: "10px 14px", marginBottom: "16px", color: "#dc2626", fontSize: "13px" }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ marginBottom: "16px" }}>
+                  <label className="sme-label">Task Title <span style={{ color: "#dc2626" }}>*</span></label>
+                  <input
+                    className="sme-input"
+                    type="text"
+                    value={newTask.title}
+                    onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Enter task title"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="sme-label">Description <span style={{ color: "#a78bfa", fontWeight: "400" }}>(optional)</span></label>
+                  <textarea
+                    className="sme-input"
+                    rows="3"
+                    value={newTask.description}
+                    onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Brief description of the task"
+                    style={{ resize: "vertical" }}
+                  />
+                </div>
+              </div>
+              <div className="sme-modal-footer">
+                <button type="button" className="sme-btn sme-btn-ghost"
+                  onClick={() => { setShowModal(false); setError(""); setNewTask({ title: "", description: "" }); }}>
+                  Cancel
+                </button>
+                <button type="submit" className="sme-btn sme-btn-primary">
+                  <i className="bi bi-plus-lg"></i>Add Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </SMELayout>
   );
 }
@@ -450,10 +316,8 @@ export default function SMETasks() {
   return (
     <Suspense fallback={
       <SMELayout>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-          <div className="spinner-border text-success" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+          <div className="sme-spinner"></div>
         </div>
       </SMELayout>
     }>

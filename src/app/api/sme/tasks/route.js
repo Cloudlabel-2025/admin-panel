@@ -88,8 +88,23 @@ export async function GET(request) {
     const date = searchParams.get("date");
     const sessionId = searchParams.get("sessionId");
 
+    // Security: SME users can only see their own tasks
+    const adminRoles = ["super-admin", "Super-admin", "admin", "developer", "Team-Lead", "Team-admin"];
+    const isAdmin = adminRoles.includes(user.role);
+    
     let query = {};
-    if (employeeId) query.employeeId = employeeId;
+    
+    // If SME role, force filter by their own employeeId
+    if (user.role === "SME") {
+      query.employeeId = user.employeeId;
+    } else if (isAdmin && employeeId) {
+      // Admins can query specific employees
+      query.employeeId = employeeId;
+    } else if (!isAdmin && !employeeId) {
+      // Non-admin, non-SME without employeeId - deny
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
     if (date) query.date = date;
     if (sessionId) query.sessionId = sessionId;
 

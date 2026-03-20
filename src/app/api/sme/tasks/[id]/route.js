@@ -30,19 +30,30 @@ export async function PUT(request, { params }) {
     const { id } = await params; // Await params for Next.js 15
     const updates = await request.json();
 
-    const task = await SMETask.findByIdAndUpdate(
-      id,
-      { 
-        ...updates,
-        ...(updates.status === 'in-progress' && !updates.startTime ? { startTime: new Date() } : {}),
-        ...(updates.status === 'completed' && !updates.endTime ? { endTime: new Date() } : {})
-      },
-      { new: true }
-    );
-
+    const task = await SMETask.findById(id);
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
+
+    // Security: SME users can only update their own tasks
+    const adminRoles = ["super-admin", "Super-admin", "admin", "developer", "Team-Lead", "Team-admin"];
+    const isAdmin = adminRoles.includes(user.role);
+    
+    if (user.role === "SME" && task.employeeId !== user.employeeId) {
+      return NextResponse.json({ error: "Unauthorized - Cannot modify other users' tasks" }, { status: 403 });
+    }
+
+    // Apply updates
+    Object.assign(task, updates);
+    
+    if (updates.status === 'in-progress' && !task.startTime) {
+      task.startTime = new Date();
+    }
+    if (updates.status === 'completed' && !task.endTime) {
+      task.endTime = new Date();
+    }
+
+    await task.save();
 
     // Calculate time spent if task is completed
     if (updates.status === 'completed' && task.startTime && task.endTime) {
@@ -77,6 +88,14 @@ export async function DELETE(request, { params }) {
     const task = await SMETask.findById(id);
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    // Security: SME users can only delete their own tasks
+    const adminRoles = ["super-admin", "Super-admin", "admin", "developer", "Team-Lead", "Team-admin"];
+    const isAdmin = adminRoles.includes(user.role);
+    
+    if (user.role === "SME" && task.employeeId !== user.employeeId) {
+      return NextResponse.json({ error: "Unauthorized - Cannot delete other users' tasks" }, { status: 403 });
     }
 
     // Remove task from session

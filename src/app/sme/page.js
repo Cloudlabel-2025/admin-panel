@@ -1,376 +1,249 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import SMELayout from "../components/SMELayout";
+import { apiFetch } from "../utilis/apiFetch";
 
 export default function SMEDashboard() {
-  const [currentSession, setCurrentSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [sessionTime, setSessionTime] = useState(0);
-  const [breakTime, setBreakTime] = useState(0);
-  const router = useRouter();
+  const [session, setSession]     = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [actionLoading, setAL]    = useState(false);
+  const [error, setError]         = useState("");
+  const [elapsed, setElapsed]     = useState({ total: "0h 0m", net: "0h 0m" });
+  const timerRef                  = useRef(null);
+  const router                    = useRouter();
 
   useEffect(() => {
-    checkUserRole();
-    fetchActiveSession();
-    
-    // Update session time every minute
-    const interval = setInterval(() => {
-      if (currentSession && currentSession.status !== 'completed') {
-        updateSessionTime();
-      }
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [currentSession]);
-
-  const checkUserRole = () => {
     const role = localStorage.getItem("userRole");
-    if (role !== "SME") {
-      router.replace("/");
-    }
-  };
+    if (role !== "SME") router.replace("/");
+    fetchSession();
+  }, []);
 
-  const fetchActiveSession = async () => {
+  useEffect(() => {
+    clearInterval(timerRef.current);
+    if (!session || session.status === "completed") return;
+    const tick = () => {
+      const now      = Date.now();
+      const loginMs  = new Date(session.loginTime).getTime();
+      const totalMin = Math.floor((now - loginMs) / 60000);
+
+      let breakMin = (session.totalBreakTime || 0) + (session.totalLunchTime || 0);
+      if ((session.status === "break" || session.status === "lunch") && session.breaks?.length) {
+        const cur = session.breaks[session.breaks.length - 1];
+        if (cur && !cur.endTime)
+          breakMin += Math.floor((now - new Date(cur.startTime).getTime()) / 60000);
+      }
+      const netMin = Math.max(0, totalMin - breakMin);
+      setElapsed({ total: fmt(totalMin), net: fmt(netMin) });
+    };
+    tick();
+    timerRef.current = setInterval(tick, 60000);
+    return () => clearInterval(timerRef.current);
+  }, [session?.loginTime, session?.status]);
+
+  const fetchSession = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/sme/session?type=active', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentSession(data.session);
-        if (data.session) {
-          updateSessionTime(data.session);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching session:', error);
-    } finally {
-      setLoading(false);
-    }
+      if (!token) return;
+      const res = await apiFetch("/api/sme/session?type=active");
+      if (res.ok) { const d = await res.json(); setSession(d.session || null); }
+    } catch {}
+    finally { setLoading(false); }
   };
 
-  const updateSessionTime = (session = currentSession) => {
-    if (!session) return;
-    
-    const now = new Date();
-    const loginTime = new Date(session.loginTime);
-    const totalMinutes = Math.floor((now - loginTime) / (1000 * 60));
-    setSessionTime(totalMinutes);
-    
-    // Calculate current break time
-    let currentBreakMinutes = session.totalBreakTime + session.totalLunchTime;
-    if (session.status === 'break' || session.status === 'lunch') {
-      const currentBreak = session.breaks[session.breaks.length - 1];
-      if (currentBreak && !currentBreak.endTime) {
-        const breakStart = new Date(currentBreak.startTime);
-        const breakMinutes = Math.floor((now - breakStart) / (1000 * 60));
-        currentBreakMinutes += breakMinutes;
-      }
-    }
-    setBreakTime(currentBreakMinutes);
-  };
-
-  const startSession = async () => {
+  const doAction = async (action) => {
+    setAL(true); setError("");
     try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch('/api/sme/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: 'start' })
+      const res = await apiFetch("/api/sme/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentSession(data.session);
-        setError("");
+      if (res.ok) {
+        const d = await res.json();
+        setSession(d.session || null);
+        if (action === "end") setTimeout(() => window.location.reload(), 1200);
       } else {
-        const errorData = await response.json();
-        setError(errorData.error);
+        const d = await res.json();
+        setError(d.error || `Failed to ${action}`);
       }
-    } catch (error) {
-      setError("Failed to start session");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError(`Failed to ${action}`); }
+    finally { setAL(false); }
   };
 
-  const handleSessionAction = async (action) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch('/api/sme/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action })
-      });
+  const fmt = (m) => `${Math.floor(m / 60)}h ${m % 60}m`;
 
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentSession(data.session);
-        setError("");
-        
-        if (action === 'end') {
-          // Session ended, redirect or refresh
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error);
-      }
-    } catch (error) {
-      setError(`Failed to ${action} session`);
-    } finally {
-      setLoading(false);
-    }
+  const fmtTime = (d) =>
+    d ? new Date(d).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "—";
+
+  const statusMeta = {
+    active: { label: "Active",   bg: "#ede9fe", color: "#4c1d95", dot: "#6d28d9" },
+    break:  { label: "On Break", bg: "#fef3c7", color: "#92400e", dot: "#f59e0b" },
+    lunch:  { label: "On Lunch", bg: "#fee2e2", color: "#991b1b", dot: "#ef4444" },
   };
+  const meta = session ? (statusMeta[session.status] || statusMeta.active) : null;
 
-  const formatTime = (minutes) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return '#4CAF50';
-      case 'break': return '#FF9800';
-      case 'lunch': return '#F44336';
-      default: return '#9E9E9E';
-    }
-  };
-
-  if (loading) {
-    return (
-      <SMELayout>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-          <div className="spinner-border text-success" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-        </div>
-      </SMELayout>
-    );
-  }
+  if (loading) return (
+    <SMELayout>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
+        <div className="sme-spinner"></div>
+      </div>
+    </SMELayout>
+  );
 
   return (
     <SMELayout>
-      <div className="container-fluid">
-        <div className="row">
-          <div className="col-12">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h2 className="mb-0" style={{ color: '#2c5530', fontWeight: '700' }}>
-                <i className="bi bi-speedometer2 me-2"></i>SME Dashboard
-              </h2>
-              <div className="text-muted">
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </div>
-            </div>
-
-            {error && (
-              <div className="alert alert-danger" role="alert">
-                <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                {error}
-              </div>
-            )}
-
-            {!currentSession ? (
-              <div className="row justify-content-center">
-                <div className="col-md-6">
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-body text-center p-5">
-                      <div className="mb-4">
-                        <i className="bi bi-play-circle" style={{ fontSize: '4rem', color: '#4CAF50' }}></i>
-                      </div>
-                      <h4 className="mb-3">Ready to Start Your Work Session?</h4>
-                      <p className="text-muted mb-4">
-                        Click the button below to begin tracking your work time. 
-                        Your session will automatically track breaks, lunch, and tasks.
-                      </p>
-                      <button 
-                        className="btn btn-lg px-5"
-                        onClick={startSession}
-                        disabled={loading}
-                        style={{
-                          background: 'linear-gradient(135deg, #4CAF50 0%, #81C784 100%)',
-                          border: 'none',
-                          color: 'white',
-                          fontWeight: '600'
-                        }}
-                      >
-                        <i className="bi bi-play-fill me-2"></i>
-                        Start Work Session
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="row">
-                {/* Session Status Card */}
-                <div className="col-md-4 mb-4">
-                  <div className="card border-0 shadow-sm h-100">
-                    <div className="card-body">
-                      <div className="d-flex align-items-center mb-3">
-                        <div 
-                          className="rounded-circle d-flex align-items-center justify-content-center me-3"
-                          style={{
-                            width: '50px',
-                            height: '50px',
-                            backgroundColor: getStatusColor(currentSession.status) + '20',
-                            border: `2px solid ${getStatusColor(currentSession.status)}`
-                          }}
-                        >
-                          <i className={`bi ${
-                            currentSession.status === 'active' ? 'bi-play-fill' :
-                            currentSession.status === 'break' ? 'bi-pause-fill' :
-                            currentSession.status === 'lunch' ? 'bi-cup-hot-fill' : 'bi-stop-fill'
-                          }`} style={{ color: getStatusColor(currentSession.status), fontSize: '1.5rem' }}></i>
-                        </div>
-                        <div>
-                          <h5 className="mb-1">Session Status</h5>
-                          <span 
-                            className="badge"
-                            style={{ backgroundColor: getStatusColor(currentSession.status) }}
-                          >
-                            {currentSession.status.toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="row text-center">
-                        <div className="col-6">
-                          <div className="border-end">
-                            <h6 className="text-muted mb-1">Total Time</h6>
-                            <strong>{formatTime(sessionTime)}</strong>
-                          </div>
-                        </div>
-                        <div className="col-6">
-                          <h6 className="text-muted mb-1">Net Work</h6>
-                          <strong>{formatTime(sessionTime - breakTime)}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Session Controls */}
-                <div className="col-md-8 mb-4">
-                  <div className="card border-0 shadow-sm h-100">
-                    <div className="card-body">
-                      <h5 className="card-title mb-4">Session Controls</h5>
-                      <div className="row g-3">
-                        {currentSession.status === 'active' && (
-                          <>
-                            <div className="col-md-4">
-                              <button 
-                                className="btn btn-warning w-100"
-                                onClick={() => handleSessionAction('break')}
-                                disabled={loading}
-                              >
-                                <i className="bi bi-pause-fill me-2"></i>
-                                Start Break
-                              </button>
-                            </div>
-                            <div className="col-md-4">
-                              <button 
-                                className="btn btn-info w-100"
-                                onClick={() => handleSessionAction('lunch')}
-                                disabled={loading}
-                              >
-                                <i className="bi bi-cup-hot-fill me-2"></i>
-                                Start Lunch
-                              </button>
-                            </div>
-                            <div className="col-md-4">
-                              <button 
-                                className="btn btn-danger w-100"
-                                onClick={() => handleSessionAction('end')}
-                                disabled={loading}
-                              >
-                                <i className="bi bi-stop-fill me-2"></i>
-                                End Session
-                              </button>
-                            </div>
-                          </>
-                        )}
-                        
-                        {(currentSession.status === 'break' || currentSession.status === 'lunch') && (
-                          <div className="col-md-6 mx-auto">
-                            <button 
-                              className="btn btn-success w-100"
-                              onClick={() => handleSessionAction('resume')}
-                              disabled={loading}
-                            >
-                              <i className="bi bi-play-fill me-2"></i>
-                              Resume Work
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="col-12">
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-body">
-                      <h5 className="card-title mb-4">Quick Actions</h5>
-                      <div className="row g-3">
-                        <div className="col-md-4">
-                          <button 
-                            className="btn btn-outline-success w-100"
-                            onClick={() => router.push('/sme/tasks')}
-                            disabled={currentSession.status !== 'active'}
-                          >
-                            <i className="bi bi-plus-circle me-2"></i>
-                            Add Task
-                          </button>
-                        </div>
-                        <div className="col-md-4">
-                          <button 
-                            className="btn btn-outline-primary w-100"
-                            onClick={() => router.push('/sme/sessions')}
-                          >
-                            <i className="bi bi-clock-history me-2"></i>
-                            View Sessions
-                          </button>
-                        </div>
-                        <div className="col-md-4">
-                          <button 
-                            className="btn btn-outline-info w-100"
-                            onClick={() => router.push('/sme/tasks')}
-                          >
-                            <i className="bi bi-list-task me-2"></i>
-                            Manage Tasks
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* ── Page header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "8px" }}>
+        <div>
+          <h1 className="sme-page-title"><i className="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+          <p style={{ color: "#8b5cf6", fontSize: "14px", margin: "4px 0 0" }}>
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          </p>
         </div>
       </div>
+
+      {error && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", padding: "12px 16px", marginBottom: "20px", color: "#dc2626", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <i className="bi bi-exclamation-triangle-fill"></i>{error}
+          <button onClick={() => setError("")} style={{ marginLeft: "auto", background: "none", border: "none", color: "#dc2626", cursor: "pointer" }}>✕</button>
+        </div>
+      )}
+
+      {/* ── No session ── */}
+      {!session ? (
+        <div style={{ maxWidth: "520px", margin: "60px auto 0", textAlign: "center" }}>
+          <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <i className="bi bi-play-circle" style={{ fontSize: "32px", color: "#6d28d9" }}></i>
+          </div>
+          <h3 style={{ color: "#1e1b4b", fontWeight: "700", marginBottom: "8px" }}>Ready to start your day?</h3>
+          <p style={{ color: "#8b5cf6", fontSize: "15px", marginBottom: "28px" }}>
+            Start a session to begin tracking your work time, breaks, and tasks.
+          </p>
+          <button className="sme-btn sme-btn-primary sme-btn-lg" onClick={() => doAction("start")} disabled={actionLoading}>
+            {actionLoading ? <span className="sme-spinner" style={{ width: "16px", height: "16px", borderWidth: "2px" }}></span> : <i className="bi bi-play-fill"></i>}
+            Start Work Session
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+          {/* ── Session status strip ── */}
+          <div className="sme-status-strip" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+              {/* Status badge */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: meta.dot, display: "inline-block", boxShadow: `0 0 0 3px ${meta.dot}30` }}></span>
+                <span style={{ fontWeight: "700", color: "#1e1b4b", fontSize: "15px" }}>{meta.label}</span>
+                <span className="sme-badge" style={{ background: meta.bg, color: meta.color }}>{session.status}</span>
+              </div>
+
+              <div style={{ width: "1px", height: "20px", background: "#ddd6fe" }}></div>
+
+              {/* Start time */}
+              <div>
+                <div className="sme-section-label">Started</div>
+                <div style={{ fontWeight: "600", color: "#1e1b4b", fontSize: "15px" }}>{fmtTime(session.loginTime)}</div>
+              </div>
+
+              <div style={{ width: "1px", height: "20px", background: "#ddd6fe" }}></div>
+
+              {/* Total time */}
+              <div>
+                <div className="sme-section-label">Total Time</div>
+                <div style={{ fontWeight: "700", color: "#4c1d95", fontSize: "18px", fontFamily: "monospace" }}>{elapsed.total}</div>
+              </div>
+
+              <div style={{ width: "1px", height: "20px", background: "#ddd6fe" }}></div>
+
+              {/* Net work */}
+              <div>
+                <div className="sme-section-label">Net Working</div>
+                <div style={{ fontWeight: "700", color: "#065f46", fontSize: "18px", fontFamily: "monospace" }}>{elapsed.net}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Session controls ── */}
+          <div className="sme-panel">
+            <div className="sme-panel-header">
+              <span style={{ fontWeight: "600", color: "#4c1d95", fontSize: "14px" }}>
+                <i className="bi bi-sliders me-2" style={{ color: "#7c3aed" }}></i>Session Controls
+              </span>
+            </div>
+            <div style={{ padding: "16px 20px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+              {session.status === "active" && (
+                <>
+                  <button className="sme-btn sme-btn-amber" onClick={() => doAction("break")} disabled={actionLoading}>
+                    <i className="bi bi-pause-fill"></i>Start Break
+                  </button>
+                  <button className="sme-btn sme-btn-outline" onClick={() => doAction("lunch")} disabled={actionLoading}>
+                    <i className="bi bi-cup-hot-fill"></i>Start Lunch
+                  </button>
+                  <div style={{ flex: 1 }}></div>
+                  <button className="sme-btn sme-btn-danger" onClick={() => doAction("end")} disabled={actionLoading}>
+                    <i className="bi bi-stop-fill"></i>End Session
+                  </button>
+                </>
+              )}
+              {(session.status === "break" || session.status === "lunch") && (
+                <>
+                  <div style={{ color: "#92400e", fontSize: "14px", fontWeight: "500" }}>
+                    <i className="bi bi-clock me-2"></i>
+                    {session.status === "break" ? "On break" : "On lunch"} — click Resume to continue working
+                  </div>
+                  <div style={{ flex: 1 }}></div>
+                  <button className="sme-btn sme-btn-teal" onClick={() => doAction("resume")} disabled={actionLoading}>
+                    <i className="bi bi-play-fill"></i>Resume Work
+                  </button>
+                </>
+              )}
+              {actionLoading && <span className="sme-spinner" style={{ width: "20px", height: "20px", borderWidth: "2px" }}></span>}
+            </div>
+          </div>
+
+          {/* ── Quick actions ── */}
+          <div className="sme-panel">
+            <div className="sme-panel-header">
+              <span style={{ fontWeight: "600", color: "#4c1d95", fontSize: "14px" }}>
+                <i className="bi bi-lightning-charge me-2" style={{ color: "#7c3aed" }}></i>Quick Actions
+              </span>
+            </div>
+            <div>
+              <div
+                className="sme-quick-action"
+                onClick={() => session.status === "active" && router.push("/sme/tasks")}
+                style={{ opacity: session.status !== "active" ? 0.45 : 1, cursor: session.status !== "active" ? "not-allowed" : "pointer" }}
+              >
+                <div className="sme-quick-action-icon"><i className="bi bi-plus-circle"></i></div>
+                <div>
+                  <div style={{ fontWeight: "600", color: "#1e1b4b", fontSize: "14px" }}>Add Task</div>
+                  <div style={{ color: "#8b5cf6", fontSize: "12px" }}>Log a new task to your active session</div>
+                </div>
+                <i className="bi bi-chevron-right" style={{ marginLeft: "auto", color: "#c4b5fd" }}></i>
+              </div>
+              <div className="sme-quick-action" onClick={() => router.push("/sme/tasks")}>
+                <div className="sme-quick-action-icon"><i className="bi bi-list-task"></i></div>
+                <div>
+                  <div style={{ fontWeight: "600", color: "#1e1b4b", fontSize: "14px" }}>Manage Tasks</div>
+                  <div style={{ color: "#8b5cf6", fontSize: "12px" }}>View and update your task list</div>
+                </div>
+                <i className="bi bi-chevron-right" style={{ marginLeft: "auto", color: "#c4b5fd" }}></i>
+              </div>
+              <div className="sme-quick-action" onClick={() => router.push("/sme/sessions")}>
+                <div className="sme-quick-action-icon"><i className="bi bi-clock-history"></i></div>
+                <div>
+                  <div style={{ fontWeight: "600", color: "#1e1b4b", fontSize: "14px" }}>View Sessions</div>
+                  <div style={{ color: "#8b5cf6", fontSize: "12px" }}>Browse your session history and stats</div>
+                </div>
+                <i className="bi bi-chevron-right" style={{ marginLeft: "auto", color: "#c4b5fd" }}></i>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
     </SMELayout>
   );
 }
