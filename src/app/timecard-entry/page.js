@@ -267,7 +267,7 @@ export default function TimecardPage() {
     if (employeeId && requiredLoginTime) {
       fetchTimecards();
     }
-  }, [employeeId, requiredLoginTime]);
+  }, [employeeId, requiredLoginTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!current?.logIn || current?.logOut) return;
@@ -306,7 +306,7 @@ export default function TimecardPage() {
 
     const interval = setInterval(checkAutoLogout, 60000);
     return () => clearInterval(interval);
-  }, [current, requiredLoginTime, breaks]);
+  }, [current, requiredLoginTime, breaks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (lateLogin && current?.logIn) {

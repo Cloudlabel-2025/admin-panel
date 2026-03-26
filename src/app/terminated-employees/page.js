@@ -19,7 +19,7 @@ export default function TerminatedEmployees() {
     }
     
     fetchTerminatedEmployees();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTerminatedEmployees = async () => {
     try {

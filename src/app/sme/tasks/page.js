@@ -21,7 +21,7 @@ function SMETasksContent() {
     if (role !== "SME") router.replace("/");
     fetchSession();
     fetchTasks();
-  }, [sessionId]);
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSession = async () => {
     try {

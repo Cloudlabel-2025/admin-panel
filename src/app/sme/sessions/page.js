@@ -15,11 +15,11 @@ export default function SMESessions() {
     const role = localStorage.getItem("userRole");
     if (role !== "SME") router.replace("/");
     fetchSessions();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchSessions();
-  }, [selectedDate]);
+  }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSessions = async () => {
     try {
@@ -168,7 +168,7 @@ export default function SMESessions() {
             <i className="bi bi-calendar-x" style={{ fontSize: "40px", color: "#c4b5fd" }}></i>
             <p style={{ color: "#6d28d9", fontWeight: "600", marginTop: "12px", marginBottom: "4px" }}>No sessions found</p>
             <p style={{ color: "#a78bfa", fontSize: "15px", marginBottom: "20px" }}>
-              {selectedDate ? "No sessions recorded for this date." : "You haven't started any sessions yet."}
+              {selectedDate ? "No sessions recorded for this date." : "You haven’t started any sessions yet."}
             </p>
             <button
               onClick={() => router.push("/sme")}
