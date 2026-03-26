@@ -59,6 +59,7 @@ export async function POST(request) {
     // Add task to session if exists
     if (session) {
       session.tasks.push(newTask._id);
+      session.tasksAdded = (session.tasksAdded || 0) + 1;
       await session.save();
     }
 

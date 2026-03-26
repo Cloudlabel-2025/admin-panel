@@ -56,38 +56,46 @@ export async function GET(request) {
     }
 
     if (type === "active") {
-      // Get active session
-      const today = new Date().toISOString().split('T')[0];
       const activeSession = await SMESession.findOne({
         employeeId,
-        date: today,
         status: { $in: ['active', 'break', 'lunch'] }
       }).populate('tasks');
+      if (!activeSession) return NextResponse.json({ message: "No active session found", session: null });
+      return NextResponse.json({ message: "Active session found", session: activeSession });
 
-      if (!activeSession) {
-        return NextResponse.json({ 
-          message: "No active session found",
-          session: null 
-        });
-      }
-
-      return NextResponse.json({ 
-        message: "Active session found",
-        session: activeSession 
-      });
     } else if (type === "history") {
-      // Get session history
       const query = { employeeId };
-      if (date) {
-        query.date = date;
-      }
-
-      const sessions = await SMESession.find(query)
-        .populate('tasks')
-        .sort({ createdAt: -1 })
-        .limit(50);
-
+      if (date) query.date = date;
+      const sessions = await SMESession.find(query).populate('tasks').sort({ createdAt: -1 }).limit(50);
       return NextResponse.json({ sessions });
+
+    } else if (type === "report") {
+      const startDate = searchParams.get("startDate");
+      const endDate   = searchParams.get("endDate");
+      if (!startDate || !endDate)
+        return NextResponse.json({ error: "startDate and endDate are required" }, { status: 400 });
+
+      const [reportSessions, reportTasks] = await Promise.all([
+        SMESession.find({ employeeId, date: { $gte: startDate, $lte: endDate } }).sort({ date: 1, loginTime: 1 }),
+        SMETask.find({   employeeId, date: { $gte: startDate, $lte: endDate } }).sort({ date: 1, createdAt: 1 }),
+      ]);
+
+      const grandTotalNet   = reportSessions.reduce((s, x) => s + (x.netWorkingTime || 0), 0);
+      const grandTotalDur   = reportSessions.reduce((s, x) => s + (x.totalDuration  || 0), 0);
+      const grandTotalBreak = reportSessions.reduce((s, x) => s + (x.totalBreakTime || 0) + (x.totalLunchTime || 0), 0);
+
+      return NextResponse.json({
+        startDate, endDate, employeeId,
+        sessions: reportSessions.map(s => s.toObject()),
+        tasks:    reportTasks.map(t => t.toObject()),
+        summary: {
+          totalSessions: reportSessions.length,
+          totalTasks: reportTasks.length,
+          completedTasks: reportTasks.filter(t => t.status === "completed").length,
+          grandTotalNet, grandTotalDur, grandTotalBreak,
+          grandTotalNetHours: +(grandTotalNet / 60).toFixed(2),
+        },
+      });
     }
 
     return NextResponse.json({ error: "Invalid request type" }, { status: 400 });
@@ -118,7 +126,7 @@ export async function POST(request) {
       });
 
       if (existingSession) {
-        return NextResponse.json({ error: "Active session already exists" }, { status: 400 });
+        return NextResponse.json({ session: existingSession });
       }
 
       // Create new session
@@ -211,13 +219,12 @@ export async function POST(request) {
         return NextResponse.json({ error: "No active session found" }, { status: 400 });
       }
 
-      // Check if user has added at least one task
-      const taskCount = await SMETask.countDocuments({
-        employeeId: user.employeeId,
-        sessionId: session._id
-      });
-
-      if (taskCount === 0) {
+      // Check if user has added at least one task (use tasksAdded so deletes don't block logout)
+      // Fallback to tasks array length for sessions created before tasksAdded field existed
+      // Also allow ending if session is from a previous day (stuck session escape hatch)
+      const isStuckFromPreviousDay = session.date < today;
+      const addedCount = session.tasksAdded > 0 ? session.tasksAdded : session.tasks?.length || 0;
+      if (addedCount === 0 && !isStuckFromPreviousDay) {
         return NextResponse.json({ error: "Cannot logout without adding at least one task" }, { status: 400 });
       }
 

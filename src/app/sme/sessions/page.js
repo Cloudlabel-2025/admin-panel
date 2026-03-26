@@ -1,61 +1,25 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import SMELayout from "../../components/SMELayout";
 import { apiFetch } from "../../utilis/apiFetch";
 
 export default function SMESessions() {
   const [sessions, setSessions] = useState([]);
-  const [activeSession, setActiveSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState("");
-  const [elapsed, setElapsed] = useState("");
-  const timerRef = useRef(null);
-  const activeLoginTime = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     if (role !== "SME") router.replace("/");
-    fetchActiveSession();
-  }, []); // only once on mount
+    fetchSessions();
+  }, []);
 
   useEffect(() => {
     fetchSessions();
   }, [selectedDate]);
-
-  useEffect(() => {
-    if (activeSession?.loginTime && activeSession.loginTime !== activeLoginTime.current) {
-      activeLoginTime.current = activeSession.loginTime;
-      clearInterval(timerRef.current);
-      const loginMs = new Date(activeSession.loginTime).getTime();
-      const tick = () => {
-        const diff = Date.now() - loginMs;
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-        setElapsed(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-      };
-      tick();
-      timerRef.current = setInterval(tick, 1000);
-    }
-    return () => {};
-  }, [activeSession?.loginTime]); // only re-run if loginTime actually changes
-
-  useEffect(() => {
-    return () => clearInterval(timerRef.current); // cleanup on unmount
-  }, []);
-
-  const fetchActiveSession = async () => {
-    try {
-      const res = await apiFetch("/api/sme/session?type=active");
-      if (res.ok) {
-        const data = await res.json();
-        setActiveSession(data.session || null);
-      }
-    } catch {}
-  };
 
   const fetchSessions = async () => {
     try {
@@ -118,6 +82,8 @@ export default function SMESessions() {
         .view-btn:hover { background: #ede9fe; }
       `}</style>
 
+      <div>
+
       {/* Page Header */}
       <div style={{ marginBottom: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
@@ -145,53 +111,7 @@ export default function SMESessions() {
         </div>
       </div>
 
-      {/* Active Session Strip */}
-      {activeSession && (
-        <div style={{
-          background: "#f0ebff",
-          borderLeft: "4px solid #6d28d9",
-          borderRadius: "0 8px 8px 0",
-          padding: "14px 20px",
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "12px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{
-                width: "8px", height: "8px", borderRadius: "50%",
-                background: "#6d28d9", display: "inline-block",
-                boxShadow: "0 0 0 3px rgba(109,40,217,0.2)",
-                animation: "pulse 1.5s infinite"
-              }}></span>
-              <span style={{ fontWeight: "700", color: "#4c1d95", fontSize: "16px" }}>
-                {activeSession.status === "active" ? "Session Active" :
-                 activeSession.status === "break" ? "On Break" : "On Lunch"}
-              </span>
-            </div>
-            <div style={{ height: "16px", width: "1px", background: "#c4b5fd" }}></div>
-            <span style={{ fontSize: "15px", color: "#5b21b6" }}>
-              <i className="bi bi-play-circle me-1"></i>
-              Started at <strong>{fmtTime(activeSession.loginTime)}</strong>
-            </span>
-            <div style={{ height: "16px", width: "1px", background: "#c4b5fd" }}></div>
-            <span style={{ fontSize: "15px", color: "#5b21b6" }}>
-              <i className="bi bi-stopwatch me-1"></i>
-              Running for <strong style={{ fontFamily: "monospace", fontSize: "16px", color: "#4c1d95" }}>{elapsed}</strong>
-            </span>
-          </div>
-          <button
-            className="view-btn"
-            onClick={() => router.push("/sme")}
-            style={{ borderColor: "#a78bfa", color: "#5b21b6" }}
-          >
-            <i className="bi bi-arrow-right-circle me-1"></i>Go to Dashboard
-          </button>
-        </div>
-      )}
+      </div>
 
       {/* Summary Strip */}
       {sessions.length > 0 && (

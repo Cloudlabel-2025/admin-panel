@@ -6,15 +6,15 @@ import SMELayout from "../../components/SMELayout";
 import { apiFetch } from "../../utilis/apiFetch";
 
 function SMETasksContent() {
-  const [tasks, setTasks]               = useState([]);
-  const [session, setSession]           = useState(null);
-  const [loading, setLoading]           = useState(true);
-  const [showModal, setShowModal]       = useState(false);
-  const [newTask, setNewTask]           = useState({ title: "", description: "" });
-  const [error, setError]               = useState("");
-  const router                          = useRouter();
-  const searchParams                    = useSearchParams();
-  const sessionId                       = searchParams.get("sessionId");
+  const [tasks, setTasks] = useState([]);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [newTask, setNewTask] = useState({ title: "", description: "" });
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("sessionId");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");

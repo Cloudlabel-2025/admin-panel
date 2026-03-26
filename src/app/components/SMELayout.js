@@ -28,6 +28,8 @@ export default function SMELayout({ children }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed]   = useState(false);
   const [currentSession, setCurrentSession]       = useState(null);
+  const [sessionTasks, setSessionTasks]           = useState([]);
+  const [stripExpanded, setStripExpanded]         = useState(false);
   const [mounted, setMounted]                     = useState(false);
   const router   = useRouter();
   const pathname = usePathname();
@@ -45,7 +47,19 @@ export default function SMELayout({ children }) {
   const checkActiveSession = async () => {
     try {
       const res = await apiFetch("/api/sme/session?type=active");
-      if (res.ok) { const d = await res.json(); setCurrentSession(d.session); }
+      if (res.ok) {
+        const d = await res.json();
+        setCurrentSession(d.session || null);
+        if (d.session?._id) fetchSessionTasks(d.session._id);
+      }
+    } catch {}
+  };
+
+  const fetchSessionTasks = async (sessionId) => {
+    try {
+      const empId = localStorage.getItem("employeeId");
+      const res = await apiFetch(`/api/sme/tasks?employeeId=${empId}&sessionId=${sessionId}`);
+      if (res.ok) { const d = await res.json(); setSessionTasks(d.tasks || []); }
     } catch {}
   };
 
@@ -64,17 +78,13 @@ export default function SMELayout({ children }) {
   };
 
   const navItems = [
-    { path: "/sme",          icon: "bi-speedometer2",  label: "Dashboard"   },
-    { path: "/sme/sessions", icon: "bi-clock-history", label: "My Sessions" },
-    { path: "/sme/tasks",    icon: "bi-list-task",     label: "My Tasks"    },
+    { path: "/sme",          icon: "bi-speedometer2",       label: "Dashboard"   },
+    { path: "/sme/sessions", icon: "bi-clock-history",      label: "My Sessions" },
+    { path: "/sme/tasks",    icon: "bi-list-task",          label: "My Tasks"    },
+    { path: "/sme/report",   icon: "bi-file-earmark-excel", label: "Reports"     },
   ];
 
-  const statusDot = currentSession
-    ? currentSession.status === "active" ? "#22c55e"
-    : currentSession.status === "break"  ? "#f59e0b" : "#ef4444"
-    : null;
-
-  return (
+return (
     <>
       <style jsx global>{`
         * { box-sizing: border-box; }
@@ -318,24 +328,10 @@ export default function SMELayout({ children }) {
               </button>
             ))}
           </div>
-
-          {/* Session indicator at bottom */}
-          {currentSession && (
-            <div style={{ position: "absolute", bottom: "20px", left: "16px", right: "16px" }}>
-              <div style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "8px", padding: "10px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: statusDot, display: "inline-block", flexShrink: 0 }}></span>
-                  <span style={{ color: "#c4b5fd", fontSize: "12px", fontWeight: "500" }}>
-                    Session {currentSession.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ── Main ── */}
-        <div className="sme-main" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div className="sme-main" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
 
           {/* Topbar */}
           <div style={{
@@ -414,9 +410,131 @@ export default function SMELayout({ children }) {
           )}
 
           {/* Page content */}
-          <div style={{ flex: 1, padding: "24px", background: T.lavenderBg, overflowX: "hidden" }}>
+          <div style={{
+            flex: 1,
+            padding: "24px",
+            background: T.lavenderBg,
+            overflowX: "hidden",
+            overflowY: "auto",
+          }}>
             {children}
           </div>
+
+          {/* ── Bottom Session Strip ── */}
+          {currentSession && (
+            <div style={{
+              position: "sticky",
+              bottom: 0,
+              zIndex: 200,
+              background: "rgba(245,243,255,0.97)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              borderTop: "2px solid #a78bfa",
+              boxShadow: "0 -4px 20px rgba(109,40,217,0.10)",
+              flexShrink: 0,
+            }}>
+
+              {/* Task list — grows upward, scrollable */}
+              {stripExpanded && sessionTasks.length > 0 && (
+                <div style={{
+                  maxHeight: "190px",
+                  overflowY: "auto",
+                  borderBottom: "1px solid #ddd6fe",
+                  display: "flex",
+                  flexDirection: "column-reverse",
+                }}>
+                  {[...sessionTasks].reverse().map((task, i) => (
+                    <div key={task._id} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "8px 20px",
+                      borderBottom: "1px solid #ede9fe",
+                      background: i % 2 === 0 ? "white" : "#faf5ff",
+                    }}>
+                      <span style={{
+                        width: "7px", height: "7px", borderRadius: "50%", flexShrink: 0,
+                        background: task.status === "completed" ? "#22c55e" : task.status === "in-progress" ? "#7c3aed" : "#d1d5db",
+                      }} />
+                      <span style={{ flex: 1, fontSize: "13px", color: "#1e1b4b", fontWeight: "500", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {task.title}
+                      </span>
+                      <span style={{
+                        fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.4px", padding: "2px 8px", borderRadius: "20px", flexShrink: 0,
+                        background: task.status === "completed" ? "#f0fdf4" : task.status === "in-progress" ? "#ede9fe" : "#f3f4f6",
+                        color:      task.status === "completed" ? "#065f46" : task.status === "in-progress" ? "#4c1d95" : "#6b7280",
+                      }}>{task.status.replace("-", " ")}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {stripExpanded && sessionTasks.length === 0 && (
+                <div style={{ padding: "12px 20px", textAlign: "center", color: "#a78bfa", fontSize: "13px", borderBottom: "1px solid #ddd6fe" }}>
+                  <i className="bi bi-inbox me-2"></i>No tasks added yet for this session
+                </div>
+              )}
+
+              {/* Strip footer — always visible */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 20px",
+                flexWrap: "wrap",
+                gap: "8px",
+                minHeight: "52px",
+              }}>
+                {/* Left: status + timing */}
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                    <span style={{
+                      width: "8px", height: "8px", borderRadius: "50%", display: "inline-block", flexShrink: 0,
+                      background: currentSession.status === "active" ? "#22c55e" : currentSession.status === "break" ? "#f59e0b" : "#ef4444",
+                      boxShadow: `0 0 0 3px ${ currentSession.status === "active" ? "rgba(34,197,94,0.2)" : currentSession.status === "break" ? "rgba(245,158,11,0.2)" : "rgba(239,68,68,0.2)" }`,
+                    }} />
+                    <span style={{ fontWeight: "700", color: "#4c1d95", fontSize: "13px" }}>
+                      {currentSession.status === "active" ? "Session Active" : currentSession.status === "break" ? "On Break" : "On Lunch"}
+                    </span>
+                  </div>
+                  <div style={{ width: "1px", height: "14px", background: "#ddd6fe" }} />
+                  <span style={{ fontSize: "12px", color: "#6d28d9" }}>
+                    <i className="bi bi-play-circle me-1"></i>
+                    Login <strong>{new Date(currentSession.loginTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</strong>
+                  </span>
+                  <div style={{ width: "1px", height: "14px", background: "#ddd6fe" }} />
+                  <span style={{ fontSize: "12px", color: "#6d28d9" }}>
+                    <i className="bi bi-list-task me-1"></i>
+                    <strong>{sessionTasks.length}</strong> task{sessionTasks.length !== 1 ? "s" : ""}
+                    {sessionTasks.length > 0 && (
+                      <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                        · {sessionTasks.filter(t => t.status === "completed").length} done
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Right: expand toggle + dashboard link */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {sessionTasks.length > 0 && (
+                    <button
+                      onClick={() => setStripExpanded(p => !p)}
+                      style={{ background: "#ede9fe", border: "1px solid #c4b5fd", color: "#6d28d9", borderRadius: "6px", padding: "4px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}
+                    >
+                      <i className={`bi bi-chevron-${stripExpanded ? "down" : "up"}`}></i>
+                      {stripExpanded ? "Hide" : "Tasks"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => router.push("/sme")}
+                    style={{ background: "#6d28d9", border: "none", color: "white", borderRadius: "6px", padding: "4px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}
+                  >
+                    <i className="bi bi-speedometer2"></i>Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -6,13 +6,13 @@ import SMELayout from "../components/SMELayout";
 import { apiFetch } from "../utilis/apiFetch";
 
 export default function SMEDashboard() {
-  const [session, setSession]     = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [actionLoading, setAL]    = useState(false);
-  const [error, setError]         = useState("");
-  const [elapsed, setElapsed]     = useState({ total: "0h 0m", net: "0h 0m" });
-  const timerRef                  = useRef(null);
-  const router                    = useRouter();
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setAL] = useState(false);
+  const [error, setError] = useState("");
+  const [elapsed, setElapsed] = useState({ total: "0h 0m", net: "0h 0m" });
+  const timerRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");

@@ -161,49 +161,68 @@ export async function GET(request) {
       return NextResponse.json({ smes: smeStats });
 
     } else if (type === "analytics") {
-      // Get analytics data
       const today = new Date().toISOString().split('T')[0];
       const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      const [
-        totalSMEs,
-        activeSessions,
-        todaySessions,
-        weekSessions,
-        monthSessions,
-        totalTasks,
-        completedTasks
-      ] = await Promise.all([
-        User.countDocuments({ role: "SME" }),
-        SMESession.countDocuments({ status: { $in: ['active', 'break', 'lunch'] } }),
-        SMESession.countDocuments({ date: today }),
-        SMESession.countDocuments({ date: { $gte: lastWeek } }),
-        SMESession.countDocuments({ date: { $gte: lastMonth } }),
-        SMETask.countDocuments({}),
-        SMETask.countDocuments({ status: 'completed' })
-      ]);
+      const [totalSMEs, activeSessions, todaySessions, weekSessions, monthSessions, totalTasks, completedTasks] =
+        await Promise.all([
+          User.countDocuments({ role: "SME" }),
+          SMESession.countDocuments({ status: { $in: ['active', 'break', 'lunch'] } }),
+          SMESession.countDocuments({ date: today }),
+          SMESession.countDocuments({ date: { $gte: lastWeek } }),
+          SMESession.countDocuments({ date: { $gte: lastMonth } }),
+          SMETask.countDocuments({}),
+          SMETask.countDocuments({ status: 'completed' }),
+        ]);
 
-      // Get total working hours
-      const completedSessions = await SMESession.find({ 
-        status: 'completed' 
-      }).select('netWorkingTime');
-      
+      const completedSessions = await SMESession.find({ status: 'completed' }).select('netWorkingTime');
       const totalWorkingMinutes = completedSessions.reduce((sum, s) => sum + (s.netWorkingTime || 0), 0);
 
       return NextResponse.json({
         analytics: {
-          totalSMEs,
-          activeSessions,
-          todaySessions,
-          weekSessions,
-          monthSessions,
-          totalTasks,
-          completedTasks,
+          totalSMEs, activeSessions, todaySessions, weekSessions, monthSessions, totalTasks, completedTasks,
           totalWorkingHours: Math.round(totalWorkingMinutes / 60 * 100) / 100,
           averageSessionsPerSME: totalSMEs > 0 ? Math.round(monthSessions / totalSMEs * 100) / 100 : 0,
-          taskCompletionRate: totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0
-        }
+          taskCompletionRate: totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0,
+        },
+      });
+
+    } else if (type === "report") {
+      if (!startDate || !endDate)
+        return NextResponse.json({ error: "startDate and endDate are required" }, { status: 400 });
+
+      const sessionQuery = { date: { $gte: startDate, $lte: endDate } };
+      if (employeeId) sessionQuery.employeeId = employeeId;
+      const taskQuery = { date: { $gte: startDate, $lte: endDate } };
+      if (employeeId) taskQuery.employeeId = employeeId;
+
+      const [reportSessions, reportTasks] = await Promise.all([
+        SMESession.find(sessionQuery).sort({ date: 1, loginTime: 1 }),
+        SMETask.find(taskQuery).sort({ date: 1, createdAt: 1 }),
+      ]);
+
+      const empIds = [...new Set([...reportSessions.map(s => s.employeeId), ...reportTasks.map(t => t.employeeId)])];
+      const smeUsers = await User.find({ employeeId: { $in: empIds } }).select("employeeId name email");
+      const userMap = Object.fromEntries(smeUsers.map(u => [u.employeeId, { name: u.name, email: u.email }]));
+
+      const grandTotalNet   = reportSessions.reduce((s, x) => s + (x.netWorkingTime || 0), 0);
+      const grandTotalDur   = reportSessions.reduce((s, x) => s + (x.totalDuration  || 0), 0);
+      const grandTotalBreak = reportSessions.reduce((s, x) => s + (x.totalBreakTime || 0) + (x.totalLunchTime || 0), 0);
+
+      return NextResponse.json({
+        startDate, endDate,
+        employeeId: employeeId || "all",
+        userMap,
+        sessions: reportSessions.map(s => ({ ...s.toObject(), userInfo: userMap[s.employeeId] })),
+        tasks:    reportTasks.map(t => ({ ...t.toObject(), userInfo: userMap[t.employeeId] })),
+        summary: {
+          totalSessions: reportSessions.length,
+          totalTasks: reportTasks.length,
+          completedTasks: reportTasks.filter(t => t.status === "completed").length,
+          grandTotalNet, grandTotalDur, grandTotalBreak,
+          grandTotalNetHours: +(grandTotalNet / 60).toFixed(2),
+        },
       });
     }
 

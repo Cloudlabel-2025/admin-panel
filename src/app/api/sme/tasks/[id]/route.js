@@ -98,13 +98,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Unauthorized - Cannot delete other users' tasks" }, { status: 403 });
     }
 
-    // Remove task from session
-    if (task.sessionId) {
-      await SMESession.findByIdAndUpdate(
-        task.sessionId,
-        { $pull: { tasks: task._id } }
-      );
-    }
+    // Keep task reference in session.tasks for history — do not pull
 
     await SMETask.findByIdAndDelete(id);
 

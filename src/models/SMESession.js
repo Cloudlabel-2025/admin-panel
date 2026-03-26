@@ -20,6 +20,7 @@ const SMESessionSchema = new mongoose.Schema({
     type: { type: String, enum: ['break', 'lunch'], required: true }
   }],
   tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SMETask' }],
+  tasksAdded: { type: Number, default: 0 }, // total tasks ever added, never decremented
   date: { type: String, required: true }, // YYYY-MM-DD format
 }, { timestamps: true });
 
