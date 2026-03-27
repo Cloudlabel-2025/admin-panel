@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
 
@@ -15,6 +15,35 @@ export default function EmployeeDailyTasksPage() {
     limit: 10
   });
 
+  const fetchTasks = useCallback(async (page = 1, limit = 10) => {
+    try {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(selectedDate)) {
+        console.error('Invalid date format');
+        return;
+      }
+      const validPage = Math.max(1, parseInt(page) || 1);
+      const validLimit = Math.max(1, Math.min(100, parseInt(limit) || 10));
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        admin: 'true',
+        date: selectedDate,
+        page: validPage.toString(),
+        limit: validLimit.toString()
+      });
+      const res = await fetch(`/api/daily-task?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTasks(data.tasks);
+        setPagination(data.pagination);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [selectedDate]);
+
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     if (!role) {
@@ -28,41 +57,7 @@ export default function EmployeeDailyTasksPage() {
     }
     setUserRole(role);
     fetchTasks();
-  }, [router, selectedDate]);
-
-  const fetchTasks = async (page = 1, limit = 10) => {
-    try {
-      // Validate date format (YYYY-MM-DD) to prevent SSRF
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(selectedDate)) {
-        console.error('Invalid date format');
-        return;
-      }
-
-      // Validate page and limit are positive integers
-      const validPage = Math.max(1, parseInt(page) || 1);
-      const validLimit = Math.max(1, Math.min(100, parseInt(limit) || 10));
-
-      const token = localStorage.getItem('token');
-      const params = new URLSearchParams({
-        admin: 'true',
-        date: selectedDate,
-        page: validPage.toString(),
-        limit: validLimit.toString()
-      });
-
-      const res = await fetch(`/api/daily-task?${params.toString()}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(data.tasks);
-        setPagination(data.pagination);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  }, [router, selectedDate, fetchTasks]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {

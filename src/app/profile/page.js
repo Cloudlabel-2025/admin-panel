@@ -24,15 +24,16 @@ export default function ProfilePage() {
       return;
     }
 
-    // Handle super admin profile
-    if (userRole === "super-admin") {
+    // Handle admin/developer profile — they exist only in Users collection
+    const adminRoles = ['super-admin', 'Super-admin', 'admin', 'developer'];
+    if (adminRoles.includes(userRole)) {
       setUser({
         email: userEmail,
-        firstName: "Super",
-        lastName: "Admin",
-        role: "Administrator",
-        department: "Management",
-        employeeId: "ADMIN001"
+        firstName: userRole === 'developer' ? 'Developer' : 'Admin',
+        lastName: 'Account',
+        role: userRole,
+        department: 'System',
+        employeeId: localStorage.getItem('employeeId') || 'N/A'
       });
       return;
     }

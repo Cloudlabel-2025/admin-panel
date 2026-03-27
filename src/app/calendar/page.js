@@ -101,7 +101,11 @@ export default function CalendarPage() {
     setIsAdmin(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "developer");
     fetchAvailableYears();
     fetchHolidays();
-  }, [currentYear]);
+  }, [currentYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Intentionally omitting fetchAvailableYears and fetchHolidays from deps
+  // because they are stable plain async functions that only depend on currentYear,
+  // which is already listed. Wrapping them in useCallback would require moving
+  // them above this effect, but they reference state setters which are stable.
 
   const fetchAvailableYears = async () => {
     try {

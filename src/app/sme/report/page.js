@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import SMELayout from "../../components/SMELayout";
 import { apiFetch } from "../../utilis/apiFetch";
@@ -16,11 +16,9 @@ export default function SMEReport() {
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     if (role !== "SME") router.replace("/");
-  }, []);
+  }, [router]);
 
-  useEffect(() => { fetchReport(); }, [selectedDate]);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     setLoading(true); setError("");
     try {
       const res = await apiFetch(
@@ -30,7 +28,9 @@ export default function SMEReport() {
       setData(await res.json());
     } catch { setError("Failed to load report"); setData(null); }
     finally { setLoading(false); }
-  };
+  }, [selectedDate]);
+
+  useEffect(() => { fetchReport(); }, [fetchReport]);
 
   const downloadExcel = async () => {
     setDlLoading(true);

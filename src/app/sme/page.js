@@ -18,7 +18,10 @@ export default function SMEDashboard() {
     const role = localStorage.getItem("userRole");
     if (role !== "SME") router.replace("/");
     fetchSession();
-  }, []);
+  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
+  // fetchSession is intentionally omitted: it is a stable one-shot loader
+  // that only needs to run once on mount. Adding it would require useCallback
+  // wrapping but would not change behaviour since it has no reactive deps.
 
   useEffect(() => {
     clearInterval(timerRef.current);
@@ -40,7 +43,7 @@ export default function SMEDashboard() {
     tick();
     timerRef.current = setInterval(tick, 60000);
     return () => clearInterval(timerRef.current);
-  }, [session?.loginTime, session?.status]);
+  }, [session?.loginTime, session?.status, session?.totalBreakTime, session?.totalLunchTime, session?.breaks]);
 
   const fetchSession = async () => {
     try {

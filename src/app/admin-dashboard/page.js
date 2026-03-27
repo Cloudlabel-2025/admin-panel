@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
@@ -19,23 +19,7 @@ export default function AdminDashboard() {
     recentActivities: []
   });
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole");
-    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "developer" || role === "Team-Lead" || role === "Team-admin")) {
-      router.push("/");
-      return;
-    }
-
-
-    setUserRole(role);
-    if (role === "admin") {
-      fetchNotifications();
-    }
-    fetchDashboardData();
-    setLoading(false);
-  }, [router]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const response = await fetch("/api/notifications?role=admin");
       const data = await response.json();
@@ -43,22 +27,9 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
-  };
+  }, []);
 
-  const markAsRead = async (id) => {
-    try {
-      await fetch(`/api/notifications/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ read: true })
-      });
-      fetchNotifications();
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
-  };
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       // Fetch employees data
       const employeesRes = await fetch('/api/Employee').catch(() => ({ json: () => [] }));
@@ -177,6 +148,34 @@ export default function AdminDashboard() {
         activeProjects: 0,
         recentActivities: []
       });
+    }
+  }, []);
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "developer" || role === "Team-Lead" || role === "Team-admin")) {
+      router.push("/");
+      return;
+    }
+
+    setUserRole(role);
+    if (role === "admin") {
+      fetchNotifications();
+    }
+    fetchDashboardData();
+    setLoading(false);
+  }, [router, fetchNotifications, fetchDashboardData]);
+
+  const markAsRead = async (id) => {
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: true })
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
     }
   };
 

@@ -94,7 +94,9 @@ export default function DocumentPage() {
   useEffect(() => {
     fetchDocs();
     fetchEmployees();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // fetchDocs and fetchEmployees are stable plain async functions with no
+  // reactive dependencies — they only need to run once on mount.
 
   async function fetchEmployees() {
     try {

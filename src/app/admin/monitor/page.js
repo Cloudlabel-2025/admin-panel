@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 
@@ -9,401 +9,316 @@ export default function MonitorEmployees() {
   const [dailyTasks, setDailyTasks] = useState([]);
   const [timecards, setTimecards] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [lastFetchTime, setLastFetchTime] = useState('');
-  const [userRole, setUserRole] = useState('');
-  const [timecardSearch, setTimecardSearch] = useState('');
-  const [taskSearch, setTaskSearch] = useState('');
-  const [showTimecardSearch, setShowTimecardSearch] = useState(false);
-  const [showTaskSearch, setShowTaskSearch] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [search, setSearch] = useState("");
   const [countdown, setCountdown] = useState(300);
+  const [expandedEmployee, setExpandedEmployee] = useState(null);
+
+  const fetchAllData = useCallback(async () => {
+    setLoading(true);
+    const today = new Date().toISOString().split("T")[0];
+    const token = localStorage.getItem("token");
+    const headers = { "Cache-Control": "no-cache", Authorization: `Bearer ${token}` };
+
+    await Promise.all([
+      fetch(`/api/daily-task?admin=true&date=${today}&_t=${Date.now()}`, { cache: "no-store", headers })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setDailyTasks(d ? (Array.isArray(d.tasks) ? d.tasks : Array.isArray(d) ? d : []) : []))
+        .catch(() => setDailyTasks([])),
+
+      fetch(`/api/timecard?admin=true&date=${today}&_t=${Date.now()}`, { cache: "no-store", headers })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setTimecards(d ? (Array.isArray(d) ? d : []) : []))
+        .catch(() => setTimecards([]))
+    ]);
+
+    setLastFetchTime(new Date().toLocaleTimeString());
+    setCountdown(300);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     if (!(role === "super-admin" || role === "Super-admin" || role === "admin" || role === "developer" || role === "Team-Lead" || role === "Team-admin")) {
-      router.push("/");
-      return;
+      router.push("/"); return;
     }
     setUserRole(role);
     fetchAllData();
 
-    // Auto-refresh every 5 minutes
-    const refreshInterval = setInterval(() => {
-      fetchAllData();
-      setCountdown(300);
-    }, 300000);
+    const refreshInterval = setInterval(() => { fetchAllData(); }, 300000);
+    const countdownInterval = setInterval(() => setCountdown(prev => prev > 0 ? prev - 1 : 300), 1000);
+    return () => { clearInterval(refreshInterval); clearInterval(countdownInterval); };
+  }, [router, fetchAllData]);
 
-    const countdownInterval = setInterval(() => {
-      setCountdown(prev => prev > 0 ? prev - 1 : 300);
-    }, 1000);
-
-    return () => {
-      clearInterval(refreshInterval);
-      clearInterval(countdownInterval);
-    };
-  }, [router]);
-
-  const fetchAllData = async () => {
-    setLoading(true);
-    await Promise.all([fetchAllDailyTasks(), fetchAllTimecards()]);
-    setLastFetchTime(new Date().toLocaleTimeString());
-    setCountdown(300);
-    setLoading(false);
+  // Derive employee status from timecard
+  const getStatus = (tc) => {
+    if (!tc.logIn) return { label: "Not In", color: "secondary" };
+    if (tc.logOut) return { label: "Logged Out", color: "danger" };
+    const onBreak = (tc.breaks || []).some(b => b.breakOut && !b.breakIn);
+    if (onBreak) return { label: "On Break", color: "warning" };
+    if (tc.lunchOut && !tc.lunchIn) return { label: "Lunch", color: "info" };
+    return { label: "Active", color: "success" };
   };
 
-  const fetchAllDailyTasks = async () => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const token = localStorage.getItem('token');
-      // Backend handles role-based filtering when admin=true is passed with a valid token
-      let url = `/api/daily-task?admin=true&date=${today}&_t=${Date.now()}`;
+  const filteredTimecards = timecards.filter(tc =>
+    tc.employeeId?.toLowerCase().includes(search.toLowerCase()) ||
+    tc.employeeName?.toLowerCase().includes(search.toLowerCase())
+  );
 
-      const res = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setDailyTasks(Array.isArray(data.tasks) ? data.tasks : (Array.isArray(data) ? data : []));
-      } else {
-        setDailyTasks([]);
-      }
-    } catch (err) {
-      console.error("Error fetching daily tasks:", err);
-    }
-  };
+  const filteredTasks = dailyTasks.filter(t =>
+    t.employeeId?.toLowerCase().includes(search.toLowerCase()) ||
+    t.employeeName?.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const fetchAllTimecards = async () => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const token = localStorage.getItem('token');
-      // Backend handles role-based filtering when admin=true is passed with a valid token
-      let url = `/api/timecard?admin=true&date=${today}&_t=${Date.now()}`;
-
-      const res = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTimecards(Array.isArray(data) ? data : []);
-      } else {
-        setTimecards([]);
-      }
-    } catch (err) {
-      console.error("Error fetching timecards:", err);
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-GB");
-  };
+  const countdownPct = (countdown / 300) * 100;
 
   return (
     <Layout>
-      <div className="card border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #2c3e50 0%, #1a252f 100%)' }}>
-        <div className="card-body">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-            <div>
-              <h2 className="mb-1 text-white">
-                <i className="bi bi-display me-2"></i>
-                Real-time {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Employee" : "Team"} Monitor
-              </h2>
-              <small style={{ color: '#d4af37' }}><i className="bi bi-clock-history me-1"></i>Last updated: {lastFetchTime || 'Never'}</small>
-            </div>
-            <div className="d-flex flex-column align-items-end">
-              <button className="btn btn-light mb-2 refresh-btn" onClick={fetchAllData} disabled={loading} style={{ transition: 'all 0.3s ease' }}>
-                {loading ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-arrow-clockwise me-2"></i>
-                    Refresh Now
-                  </>
-                )}
-              </button>
-              <small style={{ color: '#d4af37' }}>
-                <i className="bi bi-clock me-1"></i>
-                Next refresh: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div className="container-fluid px-3 px-md-4 py-3">
 
-      {/* Timecards Section */}
-      <div className="card mb-4 shadow-sm border-0">
-        <div className="card-header text-white border-0" style={{ background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)' }}>
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-            <h5 className="mb-0">
-              <i className="bi bi-clock-history me-2"></i>
-              Today&apos;s Timecards <span className="badge bg-light text-dark ms-2">{timecards.filter(tc =>
-                tc.employeeId?.toLowerCase().includes(timecardSearch.toLowerCase()) ||
-                tc.employeeName?.toLowerCase().includes(timecardSearch.toLowerCase())
-              ).length}</span>
+        {/* ── Header ── */}
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <div className="me-auto">
+            <h5 className="mb-0 fw-bold">
+              <i className="bi bi-display me-2 text-primary"></i>
+              {(userRole === "super-admin" || userRole === "Super-admin" || userRole === "admin") ? "Employee" : "Team"} Monitor
             </h5>
-            <div className="d-flex align-items-center">
-              {showTimecardSearch ? (
-                <div className="input-group" style={{ width: '250px', transition: 'all 0.3s ease' }}>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    placeholder="Search by ID or name..."
-                    value={timecardSearch}
-                    onChange={(e) => setTimecardSearch(e.target.value)}
-                    onBlur={() => !timecardSearch && setShowTimecardSearch(false)}
-                    autoFocus
-                  />
-                  <button
-                    className="btn btn-outline-light btn-sm"
-                    onClick={() => {
-                      setTimecardSearch('');
-                      setShowTimecardSearch(false);
-                    }}
-                  >
-                    <i className="bi bi-x"></i>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  className="btn btn-light btn-sm"
-                  onClick={() => setShowTimecardSearch(true)}
-                >
-                  <i className="bi bi-search"></i>
-                </button>
-              )}
-            </div>
+            <small className="text-muted">
+              Last updated: <strong>{lastFetchTime || "—"}</strong>
+            </small>
+          </div>
+
+          {/* Search */}
+          <input type="text" className="form-control form-control-sm" style={{ maxWidth: 200 }}
+            placeholder="Search by ID or name..." value={search}
+            onChange={e => setSearch(e.target.value)} />
+
+          {/* Refresh */}
+          <button className="btn btn-sm btn-outline-primary" onClick={fetchAllData} disabled={loading}>
+            {loading
+              ? <><span className="spinner-border spinner-border-sm me-1"></span>Loading</>
+              : <><i className="bi bi-arrow-clockwise me-1"></i>Refresh</>}
+          </button>
+        </div>
+
+        {/* ── Countdown progress bar ── */}
+        <div className="mb-3">
+          <div className="d-flex justify-content-between mb-1">
+            <small className="text-muted">Auto-refresh in {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, "0")}</small>
+            <small className="text-muted">{timecards.length} timecards · {dailyTasks.length} employees with tasks</small>
+          </div>
+          <div className="progress" style={{ height: 4 }}>
+            <div className="progress-bar bg-primary" style={{ width: `${countdownPct}%`, transition: "width 1s linear" }}></div>
           </div>
         </div>
-        <div className="card-body">
-          {loading ? (
-            <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-                <span className="visually-hidden">Loading...</span>
+
+        {/* ── Timecards table ── */}
+        <div className="card border-0 shadow-sm mb-3">
+          <div className="card-header bg-transparent border-bottom py-2 d-flex align-items-center justify-content-between">
+            <span className="fw-semibold small">
+              <i className="bi bi-clock-history me-1"></i>Today&apos;s Timecards
+            </span>
+            <span className="badge bg-secondary">{filteredTimecards.length}</span>
+          </div>
+          <div className="card-body p-0">
+            {loading ? (
+              <div className="text-center py-4">
+                <div className="spinner-border spinner-border-sm text-primary"></div>
               </div>
-              <p className="mt-3 text-muted">Loading timecard data...</p>
-            </div>
-          ) : timecards.length > 0 ? (
-            <div className="table-responsive">
-              <table className="table table-hover table-sm mb-0">
-                <thead className="table-dark">
-                  <tr>
-                    <th><i className="bi bi-person-badge me-1"></i>Employee ID</th>
-                    <th><i className="bi bi-person me-1"></i>Employee Name</th>
-                    <th><i className="bi bi-box-arrow-in-right me-1"></i>Punch In</th>
-                    <th><i className="bi bi-box-arrow-right me-1"></i>Punch Out</th>
-                    <th><i className="bi bi-cup-hot me-1"></i>Lunch Out</th>
-                    <th><i className="bi bi-cup-hot-fill me-1"></i>Lunch In</th>
-                    <th><i className="bi bi-clock me-1"></i>Permission</th>
-                    <th><i className="bi bi-chat-text me-1"></i>Reason</th>
-                    <th><i className="bi bi-stopwatch me-1"></i>Total Hours</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {timecards.filter(tc =>
-                    tc.employeeId?.toLowerCase().includes(timecardSearch.toLowerCase()) ||
-                    tc.employeeName?.toLowerCase().includes(timecardSearch.toLowerCase())
-                  ).map((tc, idx) => (
-                    <tr key={idx}>
-                      <td><span className="badge bg-secondary">{tc.employeeId}</span></td>
-                      <td className="fw-semibold">{tc.employeeName || 'Unknown'}</td>
-                      <td><span className="badge bg-success">{tc.logIn || '-'}</span></td>
-                      <td><span className="badge bg-danger">{tc.logOut || '-'}</span></td>
-                      <td>{tc.lunchOut || '-'}</td>
-                      <td>{tc.lunchIn || '-'}</td>
-                      <td>{tc.permission ? tc.permission + 'Hr' : '-'}</td>
-                      <td><small className="text-muted">{tc.reason || '-'}</small></td>
-                      <td><span className="badge bg-info text-dark">{tc.totalHours ? (() => {
-                        const [h, m] = (tc.totalHours || '0:0').split(':').map(Number);
-                        const hours = h + (m || 0) / 60;
-                        return hours.toFixed(2) + 'h';
-                      })() : '-'}</span></td>
+            ) : filteredTimecards.length === 0 ? (
+              <div className="text-center py-4 text-muted small">
+                <i className="bi bi-clock-history" style={{ fontSize: "2rem", opacity: 0.3 }}></i>
+                <p className="mt-2 mb-0">{search ? `No results for "${search}"` : "No timecard data for today"}</p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover table-sm align-middle mb-0">
+                  <thead className="table-dark">
+                    <tr>
+                      <th>Employee</th>
+                      <th className="text-center">Status</th>
+                      <th className="text-center">Punch In</th>
+                      <th className="text-center">Punch Out</th>
+                      <th className="text-center">Lunch</th>
+                      <th className="text-center">Permission</th>
+                      <th className="text-center">Total Hrs</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-5">
-              <i className="bi bi-clock-history text-muted" style={{ fontSize: '4rem' }}></i>
-              <p className="text-muted mb-0 mt-3">No timecard data for today</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Debug Section - Commented out for production 
-      <div className="card mb-3">
-        <div className="card-header bg-warning text-dark">
-          <h6 className="mb-0">Debug Info</h6>
-        </div>
-        <div className="card-body">
-          <small>
-            <strong>Daily Tasks Count:</strong> {dailyTasks.length}<br/>
-            <strong>Timecards Count:</strong> {timecards.length}<br/>
-            <strong>Last Fetch:</strong> {lastFetchTime || 'Not fetched yet'}
-          </small>
-          {dailyTasks.length > 0 && (
-            <details className="mt-2">
-              <summary>Raw Daily Tasks Data</summary>
-              <pre className="small mt-2" style={{maxHeight: '200px', overflow: 'auto'}}>
-                {JSON.stringify(dailyTasks, null, 2)}
-              </pre>
-            </details>
-          )}
-        </div>
-      </div>
-      */}
-
-      {/* Daily Tasks Section */}
-      <div className="card shadow-sm border-0">
-        <div className="card-header text-white border-0" style={{ background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)' }}>
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-            <h5 className="mb-0">
-              <i className="bi bi-list-task me-2"></i>
-              Today&apos;s Employee Tasks <span className="badge bg-light text-dark ms-2">{dailyTasks.filter(task =>
-                task.employeeId?.toLowerCase().includes(taskSearch.toLowerCase()) ||
-                task.employeeName?.toLowerCase().includes(taskSearch.toLowerCase())
-              ).length}</span>
-            </h5>
-            <div className="d-flex align-items-center">
-              {showTaskSearch ? (
-                <div className="input-group" style={{ width: '250px', transition: 'all 0.3s ease' }}>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    placeholder="Search by ID or name..."
-                    value={taskSearch}
-                    onChange={(e) => setTaskSearch(e.target.value)}
-                    onBlur={() => !taskSearch && setShowTaskSearch(false)}
-                    autoFocus
-                  />
-                  <button
-                    className="btn btn-outline-light btn-sm"
-                    onClick={() => {
-                      setTaskSearch('');
-                      setShowTaskSearch(false);
-                    }}
-                  >
-                    <i className="bi bi-x"></i>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  className="btn btn-light btn-sm"
-                  onClick={() => setShowTaskSearch(true)}
-                >
-                  <i className="bi bi-search"></i>
-                </button>
-              )}
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredTimecards.map((tc, idx) => {
+                      const status = getStatus(tc);
+                      return (
+                        <tr key={idx}>
+                          <td>
+                            <div className="fw-semibold">{tc.employeeName || "Unknown"}</div>
+                            <code className="small text-muted">{tc.employeeId}</code>
+                          </td>
+                          <td className="text-center">
+                            <span className={`badge bg-${status.color}`}>{status.label}</span>
+                          </td>
+                          <td className="text-center">
+                            {tc.logIn ? <span className="badge bg-success">{tc.logIn}</span> : <span className="text-muted">—</span>}
+                          </td>
+                          <td className="text-center">
+                            {tc.logOut ? <span className="badge bg-danger">{tc.logOut}</span> : <span className="text-muted">—</span>}
+                          </td>
+                          <td className="text-center">
+                            <small className="text-muted">
+                              {tc.lunchOut || "—"} {tc.lunchIn ? `→ ${tc.lunchIn}` : ""}
+                            </small>
+                          </td>
+                          <td className="text-center">
+                            <small>{tc.permission ? `${tc.permission}h` : "—"}</small>
+                          </td>
+                          <td className="text-center">
+                            {tc.totalHours ? (
+                              <span className="badge bg-info text-dark">
+                                {(() => {
+                                  const [h, m] = (tc.totalHours || "0:0").split(":").map(Number);
+                                  return (h + (m || 0) / 60).toFixed(2) + "h";
+                                })()}
+                              </span>
+                            ) : <span className="text-muted">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
-        <div className="card-body">
-          {dailyTasks.filter(task =>
-            task.employeeId?.toLowerCase().includes(taskSearch.toLowerCase()) ||
-            task.employeeName?.toLowerCase().includes(taskSearch.toLowerCase())
-          ).length > 0 ? (
-            <div className="row">
-              {dailyTasks.filter(task =>
-                task.employeeId?.toLowerCase().includes(taskSearch.toLowerCase()) ||
-                task.employeeName?.toLowerCase().includes(taskSearch.toLowerCase())
-              ).map((employeeTask, idx) => {
-                return (
-                  <div key={idx} className="col-12 mb-3">
-                    <div className="border rounded p-3" style={{ borderRadius: '8px', background: '#f8f9fa' }}>
-                      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
-                        <h6 className="mb-0 text-dark">
-                          <i className="bi bi-person-circle me-2 text-primary"></i>
-                          <span className="fw-bold">{employeeTask.employeeName || 'Unknown'}</span>
-                          <span className="badge bg-secondary ms-2">{employeeTask.employeeId || 'N/A'}</span>
-                          <span className="badge bg-info text-dark ms-2">{employeeTask.designation || 'N/A'}</span>
-                        </h6>
-                        <small className="text-muted"><i className="bi bi-clock me-1"></i>Last updated: {new Date(employeeTask.updatedAt || employeeTask.createdAt).toLocaleTimeString()}</small>
-                      </div>
-                      {employeeTask.tasks && employeeTask.tasks.length > 0 ? (
-                        <div className="table-responsive">
-                          <table className="table table-sm mb-0">
-                            <thead className="table-dark">
-                              <tr>
-                                <th>#</th>
-                                <th>Task Details</th>
-                                <th>Start Time</th>
-                                <th>End Time</th>
-                                <th>Status</th>
-                                <th>Saved</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {employeeTask.tasks.map((task, taskIdx) => (
-                                <tr key={taskIdx} style={{ background: task.isSaved ? '#fff' : '#fff3cd' }}>
-                                  <td><span className="badge bg-secondary">{task.Serialno}</span></td>
-                                  <td>{task.details || <em className="text-muted">Entering...</em>}</td>
-                                  <td><span className="badge bg-success">{task.startTime || '-'}</span></td>
-                                  <td>{task.endTime ? <span className="badge bg-danger">{task.endTime}</span> : <em className="text-muted">In progress...</em>}</td>
-                                  <td>
-                                    <span className={`badge ${task.status === 'Completed' ? 'bg-success' :
-                                        task.status === 'In Progress' ? 'bg-warning text-dark' : 'bg-secondary'
-                                      }`}>
-                                      {task.status}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    {task.isSaved ?
-                                      <span className="badge bg-success"><i className="bi bi-check-circle me-1"></i>Saved</span> :
-                                      <span className="badge bg-warning text-dark"><i className="bi bi-pencil me-1"></i>Draft</span>
-                                    }
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="text-muted mb-0 text-center py-3"><i className="bi bi-inbox me-2"></i>No tasks added today</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-5">
-              <i className="bi bi-list-task text-muted" style={{ fontSize: '4rem' }}></i>
-              <p className="text-muted mb-0 mt-3">
-                {taskSearch ? `No tasks found matching "${taskSearch}"` : 'No employee tasks found for today'}
-              </p>
-            </div>
-          )}
+
+        {/* ── Daily Tasks — expandable rows ── */}
+        <div className="card border-0 shadow-sm">
+          <div className="card-header bg-transparent border-bottom py-2 d-flex align-items-center justify-content-between">
+            <span className="fw-semibold small">
+              <i className="bi bi-list-task me-1"></i>Today&apos;s Employee Tasks
+            </span>
+            <span className="badge bg-secondary">{filteredTasks.length}</span>
+          </div>
+          <div className="card-body p-0">
+            {loading ? (
+              <div className="text-center py-4">
+                <div className="spinner-border spinner-border-sm text-primary"></div>
+              </div>
+            ) : filteredTasks.length === 0 ? (
+              <div className="text-center py-4 text-muted small">
+                <i className="bi bi-list-task" style={{ fontSize: "2rem", opacity: 0.3 }}></i>
+                <p className="mt-2 mb-0">{search ? `No results for "${search}"` : "No tasks found for today"}</p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead className="table-dark">
+                    <tr>
+                      <th>Employee</th>
+                      <th className="text-center">Tasks</th>
+                      <th className="text-center">Completed</th>
+                      <th className="text-center">In Progress</th>
+                      <th className="text-center">Last Updated</th>
+                      <th className="text-center">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTasks.map((emp, idx) => {
+                      const tasks = emp.tasks || [];
+                      const completed = tasks.filter(t => t.status === "Completed").length;
+                      const inProgress = tasks.filter(t => t.status === "In Progress").length;
+                      const isExpanded = expandedEmployee === emp.employeeId;
+
+                      return (
+                        <React.Fragment key={emp.employeeId || idx}>
+                          <tr style={{ cursor: "pointer" }}
+                            onClick={() => setExpandedEmployee(isExpanded ? null : emp.employeeId)}>
+                            <td>
+                              <div className="fw-semibold">{emp.employeeName || "Unknown"}</div>
+                              <code className="small text-muted">{emp.employeeId}</code>
+                              {emp.designation && <span className="badge bg-light text-dark ms-1 small">{emp.designation}</span>}
+                            </td>
+                            <td className="text-center"><span className="badge bg-secondary">{tasks.length}</span></td>
+                            <td className="text-center"><span className="badge bg-success">{completed}</span></td>
+                            <td className="text-center"><span className="badge bg-warning text-dark">{inProgress}</span></td>
+                            <td className="text-center">
+                              <small className="text-muted">
+                                {new Date(emp.updatedAt || emp.createdAt).toLocaleTimeString()}
+                              </small>
+                            </td>
+                            <td className="text-center">
+                              <i className={`bi bi-chevron-${isExpanded ? "up" : "down"} text-muted`}></i>
+                            </td>
+                          </tr>
+
+                          {/* Expanded task rows */}
+                          {isExpanded && tasks.length > 0 && (
+                            <tr>
+                              <td colSpan={6} className="p-0">
+                                <div className="table-responsive bg-light">
+                                  <table className="table table-sm mb-0">
+                                    <thead>
+                                      <tr className="table-secondary">
+                                        <th style={{ paddingLeft: 32 }}>#</th>
+                                        <th>Task Details</th>
+                                        <th className="text-center">Start</th>
+                                        <th className="text-center">End</th>
+                                        <th className="text-center">Status</th>
+                                        <th className="text-center">Saved</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {tasks.map((task, ti) => (
+                                        <tr key={ti}>
+                                          <td style={{ paddingLeft: 32 }}>
+                                            <span className="badge bg-secondary">{task.Serialno}</span>
+                                          </td>
+                                          <td>{task.details || <em className="text-muted">Entering...</em>}</td>
+                                          <td className="text-center">
+                                            <span className="badge bg-success">{task.startTime || "—"}</span>
+                                          </td>
+                                          <td className="text-center">
+                                            {task.endTime
+                                              ? <span className="badge bg-danger">{task.endTime}</span>
+                                              : <em className="text-muted small">In progress</em>}
+                                          </td>
+                                          <td className="text-center">
+                                            <span className={`badge ${task.status === "Completed" ? "bg-success" : task.status === "In Progress" ? "bg-warning text-dark" : "bg-secondary"}`}>
+                                              {task.status}
+                                            </span>
+                                          </td>
+                                          <td className="text-center">
+                                            {task.detailsLocked
+                                              ? <span className="badge bg-success"><i className="bi bi-lock-fill me-1"></i>Saved</span>
+                                              : <span className="badge bg-warning text-dark"><i className="bi bi-pencil me-1"></i>Draft</span>}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {isExpanded && tasks.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="text-center text-muted small py-2 bg-light">
+                                No tasks added today
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
     </Layout>
   );
-}
-
-// Add styles
-const styles = `
-  .refresh-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 100%) !important;
-    color: #000 !important;
-    border-color: #d4af37 !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
-  }
-`;
-
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
 }

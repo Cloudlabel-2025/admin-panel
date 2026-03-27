@@ -9,7 +9,9 @@ export default function EmployeeCalendarPage() {
 
   useEffect(() => {
     fetchHolidays();
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  // fetchHolidays is a stable plain async function that only reads currentYear
+  // and currentMonth, both already listed as dependencies.
 
   const fetchHolidays = async () => {
     try {

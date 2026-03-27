@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import SuccessMessage from '../components/SuccessMessage';
 
@@ -64,6 +64,70 @@ export default function AbsenceManagement() {
     }
   };
 
+  const fetchMyAbsences = useCallback(async (empId) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/absence?employeeId=${empId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAbsences(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchTeamAbsences = useCallback(async () => {
+    try {
+      setLoading(true);
+      const empId = localStorage.getItem('employeeId');
+      const res = await fetch(`/api/team-absence?employeeId=${empId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTeamAbsences(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchApprovalRequests = useCallback(async () => {
+    try {
+      setLoading(true);
+      let url = '/api/absence';
+      if (filter.status) url += `?status=${filter.status}`;
+      
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setAllAbsences(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter.status]);
+
+  const fetchAllRecords = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/absence');
+      if (res.ok) {
+        const data = await res.json();
+        setAllAbsences(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const role = localStorage.getItem('userRole') || '';
     const empId = localStorage.getItem('employeeId') || '';
@@ -87,7 +151,7 @@ export default function AbsenceManagement() {
       fetchCurrentEmployee(empId);
       fetchMyAbsences(empId);
     }
-  }, []);
+  }, [fetchMyAbsences]);
 
   useEffect(() => {
     // Fetch data when tab changes
@@ -101,7 +165,7 @@ export default function AbsenceManagement() {
     } else if (activeTab === 'all-records') {
       fetchAllRecords();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchMyAbsences, fetchTeamAbsences, fetchApprovalRequests, fetchAllRecords]);
 
   const fetchCurrentEmployee = async (empId) => {
     try {
@@ -120,69 +184,7 @@ export default function AbsenceManagement() {
     }
   };
 
-  const fetchMyAbsences = async (empId) => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/absence?employeeId=${empId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAbsences(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchTeamAbsences = async () => {
-    try {
-      setLoading(true);
-      const empId = localStorage.getItem('employeeId');
-      const res = await fetch(`/api/team-absence?employeeId=${empId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTeamAbsences(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchApprovalRequests = async () => {
-    try {
-      setLoading(true);
-      let url = '/api/absence';
-      if (filter.status) url += `?status=${filter.status}`;
-      
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setAllAbsences(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAllRecords = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/absence');
-      if (res.ok) {
-        const data = await res.json();
-        setAllAbsences(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

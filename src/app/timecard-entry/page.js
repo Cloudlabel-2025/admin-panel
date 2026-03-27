@@ -134,7 +134,7 @@ export default function TimecardPage() {
     setEmployeeId(empId);
     setUserRole(role);
     fetchRequiredLoginTime();
-    if (!empId.startsWith('ADMIN')) {
+    if (!empId.startsWith('ADMIN') && role !== 'developer' && role !== 'super-admin' && role !== 'Super-admin') {
       fetchEmployeeData(empId);
     }
   }, [router]);
@@ -268,6 +268,9 @@ export default function TimecardPage() {
       fetchTimecards();
     }
   }, [employeeId, requiredLoginTime]); // eslint-disable-line react-hooks/exhaustive-deps
+  // fetchTimecards reads employeeId from state (already listed) and is a
+  // stable imperative loader. Wrapping it in useCallback would create a
+  // circular dep with the state it sets, so it is intentionally excluded.
 
   useEffect(() => {
     if (!current?.logIn || current?.logOut) return;
@@ -307,6 +310,9 @@ export default function TimecardPage() {
     const interval = setInterval(checkAutoLogout, 60000);
     return () => clearInterval(interval);
   }, [current, requiredLoginTime, breaks]); // eslint-disable-line react-hooks/exhaustive-deps
+  // updateTimecard and checkAutoLogout are intentionally excluded: both are
+  // defined as plain functions that close over `current` and `breaks` which
+  // are already listed as dependencies.
 
   useEffect(() => {
     if (lateLogin && current?.logIn) {

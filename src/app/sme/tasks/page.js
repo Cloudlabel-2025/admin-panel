@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SMELayout from "../../components/SMELayout";
 import { apiFetch } from "../../utilis/apiFetch";
@@ -16,21 +16,14 @@ function SMETasksContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole");
-    if (role !== "SME") router.replace("/");
-    fetchSession();
-    fetchTasks();
-  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchSession = async () => {
+  const fetchSession = useCallback(async () => {
     try {
       const res = await apiFetch("/api/sme/session?type=active");
       if (res.ok) { const d = await res.json(); setSession(d.session || null); }
     } catch {}
-  };
+  }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const employeeId = localStorage.getItem("employeeId");
@@ -41,7 +34,14 @@ function SMETasksContent() {
       if (res.ok) { const d = await res.json(); setTasks(d.tasks || []); }
     } catch {}
     finally { setLoading(false); }
-  };
+  }, [sessionId]);
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (role !== "SME") router.replace("/");
+    fetchSession();
+    fetchTasks();
+  }, [router, fetchSession, fetchTasks]);
 
   const addTask = async (e) => {
     e.preventDefault();

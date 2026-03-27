@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Layout from "../components/Layout";
@@ -18,20 +18,14 @@ export default function EmployeeDashboard() {
     recentActivities: []
   });
 
-  useEffect(() => {
+  const fetchDashboardData = useCallback(async (empId) => {
+    // Skip data fetch for admin/developer roles — they don't have employee records
     const role = localStorage.getItem("userRole");
-    const empId = localStorage.getItem("employeeId");
-    
-    if (!empId || !role) {
-      router.push("/");
+    const adminRoles = ['super-admin', 'Super-admin', 'admin', 'developer'];
+    if (adminRoles.includes(role)) {
+      setLoading(false);
       return;
     }
-
-    setEmployeeId(empId);
-    fetchDashboardData(empId);
-  }, [router]);
-
-  const fetchDashboardData = async (empId) => {
     try {
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -100,7 +94,20 @@ export default function EmployeeDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    const empId = localStorage.getItem("employeeId");
+    
+    if (!empId || !role) {
+      router.push("/");
+      return;
+    }
+
+    setEmployeeId(empId);
+    fetchDashboardData(empId);
+  }, [router, fetchDashboardData]);
 
   if (loading) {
     return (

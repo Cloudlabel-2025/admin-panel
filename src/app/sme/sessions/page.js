@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import SMELayout from "../../components/SMELayout";
 import { apiFetch } from "../../utilis/apiFetch";
@@ -11,17 +11,7 @@ export default function SMESessions() {
   const [selectedDate, setSelectedDate] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole");
-    if (role !== "SME") router.replace("/");
-    fetchSessions();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetchSessions();
-  }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       let url = "/api/sme/session?type=history";
@@ -33,7 +23,13 @@ export default function SMESessions() {
       }
     } catch {}
     finally { setLoading(false); }
-  };
+  }, [selectedDate]);
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (role !== "SME") router.replace("/");
+    fetchSessions();
+  }, [router, fetchSessions]);
 
   const fmt = (mins) => {
     if (!mins) return "—";

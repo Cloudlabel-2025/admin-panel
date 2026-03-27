@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "../components/Layout";
 import SuccessMessage from "../components/SuccessMessage";
 import * as XLSX from "xlsx";
@@ -50,7 +50,7 @@ export default function AttendancePage() {
     fetchEmployees();
   }, []);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     try {
       const userRole = localStorage.getItem("userRole");
       const empId = localStorage.getItem("employeeId");
@@ -75,9 +75,9 @@ export default function AttendancePage() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
-  const fetchAttendance = async (page = 1) => {
+  const fetchAttendance = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -134,7 +134,7 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin, employeeId, startDate, endDate, selectedEmployee, statusFilter]);
 
   const calculateStats = (data) => {
     const today = new Date();
@@ -267,7 +267,7 @@ export default function AttendancePage() {
         checkMonthlyReports();
       }
     }
-  }, [isAdmin, employeeId]);
+  }, [isAdmin, employeeId, fetchAttendance]);
 
   const checkMonthlyReports = () => {
     const today = new Date();

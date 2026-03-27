@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
 import SuccessMessage from "../components/SuccessMessage";
@@ -40,17 +40,7 @@ export default function AdminTaskPage() {
   });
   const router = useRouter();
 
-  useEffect(() => {
-    const userRole = localStorage.getItem("userRole");
-    if (!userRole || !["admin", "super-admin", "Super-admin", "developer", "Team-Lead", "Team-admin"].includes(userRole)) {
-      router.push("/");
-      return;
-    }
-    fetchTasks();
-    fetchEmployees();
-  }, [router]);
-
-  const fetchTasks = async (page = 1, limit = 10) => {
+  const fetchTasks = useCallback(async (page = 1, limit = 10) => {
     try {
       const response = await fetch(`/api/task?admin=true&page=${page}&limit=${limit}`);
       if (response.ok) {
@@ -64,7 +54,36 @@ export default function AdminTaskPage() {
     } catch (err) {
       setError("Network error: " + err.message);
     }
-  };
+  }, []);
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const response = await fetch("/api/Employee");
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data);
+        return data;
+      } else {
+        setEmployees([]);
+        return [];
+      }
+    } catch (err) {
+      setEmployees([]);
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    const userRole = localStorage.getItem("userRole");
+    if (!userRole || !["admin", "super-admin", "Super-admin", "developer", "Team-Lead", "Team-admin"].includes(userRole)) {
+      router.push("/");
+      return;
+    }
+    fetchTasks();
+    fetchEmployees();
+  }, [router, fetchTasks, fetchEmployees]);
+
+
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
@@ -141,22 +160,7 @@ export default function AdminTaskPage() {
     setReportDates({ startDate: '', endDate: '' });
   };
 
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch("/api/Employee");
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
-        return data;
-      } else {
-        setEmployees([]);
-        return [];
-      }
-    } catch (err) {
-      setEmployees([]);
-      return [];
-    }
-  };
+
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];

@@ -41,9 +41,13 @@ export default function RBACControlPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/User');
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/User', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
-      const formattedUsers = data.map(user => ({
+      const userList = Array.isArray(data) ? data : (data.users || []);
+      const formattedUsers = userList.map(user => ({
         id: user._id,
         name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email.split('@')[0],
         email: user.email,

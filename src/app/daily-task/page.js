@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import Layout from "../components/Layout";
@@ -40,7 +40,7 @@ export default function DailyTaskComponent() {
   const router = useRouter();
 
   // Fetch Timecard and DailyTask
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -119,7 +119,7 @@ export default function DailyTaskComponent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, router]);
 
   useEffect(() => {
     const userRole = localStorage.getItem("userRole");
@@ -127,6 +127,17 @@ export default function DailyTaskComponent() {
 
     if (!userRole || !employeeId) {
       router.push("/");
+      return;
+    }
+
+    // Skip Employee fetch for admin/developer roles — they exist only in Users collection
+    const adminRoles = ['super-admin', 'Super-admin', 'admin', 'developer'];
+    if (adminRoles.includes(userRole)) {
+      setUser({
+        employeeId: employeeId,
+        name: userRole,
+        designation: userRole
+      });
       return;
     }
 
@@ -174,7 +185,7 @@ export default function DailyTaskComponent() {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, fetchData]);
 
   // Sync existing tasks with Timecard (only for existing tasks)
   useEffect(() => {
@@ -189,7 +200,7 @@ export default function DailyTaskComponent() {
           : task.remarks,
       }))
     );
-  }, [timecard]);
+  }, [timecard.lunchOut, timecard.lunchIn]);
 
   // Validate task before saving
   const validateTask = (task, index) => {

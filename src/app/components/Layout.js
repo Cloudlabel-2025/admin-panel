@@ -42,7 +42,9 @@ export default function Layout({ children }) {
     }
 
     // Fetch user name and profile picture
-    if (empId && !empId.startsWith('ADMIN')) {
+    // Skip Employee fetch for admin/developer roles — they exist only in Users collection
+    const adminRoles = ['super-admin', 'Super-admin', 'admin', 'developer'];
+    if (empId && !empId.startsWith('ADMIN') && !adminRoles.includes(role)) {
       fetch(`/api/Employee/${empId}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -59,7 +61,9 @@ export default function Layout({ children }) {
           setUserName(email ? email.split('@')[0] : 'User');
         });
     } else {
-      setUserName(email ? email.split('@')[0] : 'User');
+      // For admin/developer roles use stored name or derive from email
+      const storedName = localStorage.getItem('userName');
+      setUserName(storedName || (email ? email.split('@')[0] : 'User'));
     }
   }, []);
 
@@ -78,7 +82,9 @@ export default function Layout({ children }) {
     const handleStorageChange = (e) => {
       if (e.key === 'profilePictureUpdated') {
         const empId = localStorage.getItem('employeeId');
-        if (empId && !empId.startsWith('ADMIN')) {
+        const currentRole = localStorage.getItem('userRole');
+        const adminRoles = ['super-admin', 'Super-admin', 'admin', 'developer'];
+        if (empId && !empId.startsWith('ADMIN') && !adminRoles.includes(currentRole)) {
           fetch(`/api/Employee/${empId}`)
             .then(res => res.ok ? res.json() : null)
             .then(data => {
